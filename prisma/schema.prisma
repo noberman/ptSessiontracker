@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User roles enum
+enum Role {
+  TRAINER
+  CLUB_MANAGER
+  PT_MANAGER
+  ADMIN
+}
+
+// Location/Club model
+model Location {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users    User[]
+  clients  Client[]
+  sessions Session[]
+
+  @@map("locations")
+}
+
+// User model (trainers, managers, admins)
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  name       String
+  role       Role     @default(TRAINER)
+  locationId String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  location        Location? @relation(fields: [locationId], references: [id])
+  sessions        Session[]
+  assignedClients Client[]  @relation("ClientPrimaryTrainer")
+
+  @@map("users")
+}
+
+// Client model
+model Client {
+  id               String   @id @default(cuid())
+  name             String
+  email            String   @unique
+  phone            String?
+  locationId       String
+  primaryTrainerId String?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  location       Location  @relation(fields: [locationId], references: [id])
+  primaryTrainer User?     @relation("ClientPrimaryTrainer", fields: [primaryTrainerId], references: [id])
+  packages       Package[]
+  sessions       Session[]
+
+  @@map("clients")
+}
+
+// Package model (training packages purchased by clients)
+model Package {
+  id            String   @id @default(cuid())
+  clientId      String
+  name          String
+  totalValue    Float
+  totalSessions Int
+  sessionValue  Float // Calculated: totalValue / totalSessions
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  client   Client    @relation(fields: [clientId], references: [id])
+  sessions Session[]
+
+  @@map("packages")
+}
+
+// Session model (training sessions)
+model Session {
+  id               String    @id @default(cuid())
+  trainerId        String
+  clientId         String
+  packageId        String?
+  locationId       String
+  sessionDate      DateTime
+  sessionValue     Float
+  validatedAt      DateTime?
+  validationToken  String?   @unique
+  validationExpiry DateTime?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  trainer  User      @relation(fields: [trainerId], references: [id])
+  client   Client    @relation(fields: [clientId], references: [id])
+  package  Package?  @relation(fields: [packageId], references: [id])
+  location Location  @relation(fields: [locationId], references: [id])
+
+  @@index([trainerId, sessionDate])
+  @@index([validationToken])
+  @@map("sessions")
+}
+
+// Commission tier configuration
+model CommissionTier {
+  id          String   @id @default(cuid())
+  minSessions Int
+  maxSessions Int?
+  percentage  Float // Store as decimal (e.g., 0.25 for 25%)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("commission_tiers")
+}
+
+// Audit log for tracking changes
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
