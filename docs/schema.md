@@ -189,6 +189,8 @@ model CommissionTier {
 - Applied to validated sessions only
 - Percentage stored as decimal
 - No overlapping ranges allowed
+- **IMPORTANT**: The achieved tier rate applies to ALL sessions in the month (not progressive)
+- Example: 65 sessions = 35% on all 65 sessions, not just sessions 61-65
 
 ### AuditLog
 Tracks all data modifications for compliance and debugging.

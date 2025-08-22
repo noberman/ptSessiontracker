@@ -91,8 +91,10 @@ Month: December 2024
 Validated Sessions: 45
 Total Session Value: $4,500
 
-HR Note: "Apply 30% commission rate per policy"
-Commission Due: $1,350 (calculated by HR)
+Commission Tier Achieved: 31-60 sessions = 30% rate
+Commission Due: $1,350 (30% × $4,500)
+
+Note: The 30% rate applies to ALL 45 sessions, not just sessions 31-45
 ```
 
 ## Report Format

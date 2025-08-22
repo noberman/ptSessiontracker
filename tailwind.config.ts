@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+const designSystem = require('./docs/design-system.json')
 
 const config: Config = {
   darkMode: ["class"],
@@ -10,45 +11,62 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+        primary: designSystem.colors.primary,
+        secondary: designSystem.colors.secondary,
+        gray: designSystem.colors.gray,
+        success: designSystem.colors.success,
+        warning: designSystem.colors.warning,
+        error: designSystem.colors.error,
+        background: {
+          DEFAULT: designSystem.colors.background.DEFAULT,
+          secondary: designSystem.colors.background.secondary,
+          tertiary: designSystem.colors.background.tertiary,
         },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+        surface: designSystem.colors.surface,
+        border: {
+          DEFAULT: designSystem.colors.border.DEFAULT,
+          light: designSystem.colors.border.light,
+          dark: designSystem.colors.border.dark,
         },
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
+        text: designSystem.colors.text,
       },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        mono: ['JetBrains Mono', 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', 'monospace'],
       },
+      fontSize: designSystem.typography.fontSize,
+      fontWeight: designSystem.typography.fontWeight,
+      lineHeight: designSystem.typography.lineHeight,
+      letterSpacing: designSystem.typography.letterSpacing,
+      spacing: designSystem.spacing,
+      borderRadius: designSystem.borderRadius,
+      boxShadow: designSystem.boxShadow,
+      screens: designSystem.breakpoints,
+      animation: {
+        'fade-in': 'fadeIn 250ms ease-out',
+        'fade-out': 'fadeOut 250ms ease-in',
+        'slide-in': 'slideIn 350ms ease-out',
+        'slide-out': 'slideOut 350ms ease-in',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        fadeOut: {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
+        },
+        slideIn: {
+          '0%': { transform: 'translateY(-10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        slideOut: {
+          '0%': { transform: 'translateY(0)', opacity: '1' },
+          '100%': { transform: 'translateY(-10px)', opacity: '0' },
+        },
+      },
+      zIndex: designSystem.zIndex,
     },
   },
   plugins: [],
