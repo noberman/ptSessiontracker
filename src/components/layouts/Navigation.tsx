@@ -69,6 +69,12 @@ export function Navigation() {
                     Clients
                   </Link>
                   <Link
+                    href="/packages"
+                    className="text-text-secondary hover:text-text-primary hover:bg-surface-hover px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    Packages
+                  </Link>
+                  <Link
                     href="/users"
                     className="text-text-secondary hover:text-text-primary hover:bg-surface-hover px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >

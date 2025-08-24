@@ -77,15 +77,19 @@ model Client {
 
 // Package model (training packages purchased by clients)
 model Package {
-  id            String   @id @default(cuid())
-  clientId      String
-  name          String
-  totalValue    Float
-  totalSessions Int
-  sessionValue  Float // Calculated: totalValue / totalSessions
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String    @id @default(cuid())
+  clientId          String
+  packageType       String    @default("Custom") // e.g., "Starter", "Standard", "Premium", "Elite", "Custom"
+  name              String    // Display name
+  totalValue        Float     // Total package cost
+  totalSessions     Int       // Total sessions in package
+  remainingSessions Int       @default(0) // Sessions left to use
+  sessionValue      Float     // Calculated: totalValue / totalSessions
+  startDate         DateTime? // When package becomes active
+  expiresAt         DateTime? // Expiration date
+  active            Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // Relations
   client   Client    @relation(fields: [clientId], references: [id])
@@ -103,6 +107,7 @@ model Session {
   locationId       String
   sessionDate      DateTime
   sessionValue     Float
+  validated        Boolean   @default(false)
   validatedAt      DateTime?
   validationToken  String?   @unique
   validationExpiry DateTime?
