@@ -106,13 +106,3 @@
       ```
     - User MUST explicitly approve before implementing any schema changes
     - This prevents adding unnecessary fields that later require migrations to remove
-
-## PT Session Tracker Specific Rules
-50. Session records must capture: trainer, client, date, time, location, package details
-51. Email validation links must expire after 30 days for security
-52. Commission calculations must be transparent and auditable
-53. Support for multiple club locations with proper access control
-54. Trainer dashboard must show real-time commission tier progress
-55. All session modifications require manager-level permissions or higher
-56. Client email addresses must be validated before sending confirmation emails
-57. System must handle edge cases: duplicate sessions, backdated entries, future sessions

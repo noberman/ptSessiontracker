@@ -138,6 +138,27 @@ model CommissionTier {
   @@map("commission_tiers")
 }
 
+// Email log for tracking sent emails
+model EmailLog {
+  id           String    @id @default(cuid())
+  to           String
+  subject      String
+  template     String?
+  status       String    @default("pending") // pending, success, failed
+  messageId    String?
+  sentAt       DateTime?
+  error        String?
+  metadata     Json?
+  responseTime Int?      // in milliseconds
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([messageId])
+  @@map("email_logs")
+}
+
 // Audit log for tracking changes
 model AuditLog {
   id         String   @id @default(cuid())

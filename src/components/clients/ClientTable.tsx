@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -48,6 +48,12 @@ export function ClientTable({
   const [clients, setClients] = useState(initialClients)
   const [pagination, setPagination] = useState(initialPagination)
   const [loading, setLoading] = useState(false)
+
+  // Update state when props change (when filters are applied)
+  useEffect(() => {
+    setClients(initialClients)
+    setPagination(initialPagination)
+  }, [initialClients, initialPagination])
 
   const handleDelete = async (clientId: string) => {
     if (!confirm('Are you sure you want to deactivate this client?')) {

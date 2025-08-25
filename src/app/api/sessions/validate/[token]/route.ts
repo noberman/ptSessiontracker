@@ -1,0 +1,221 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+// GET - Check validation token status
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { token: string } }
+) {
+  try {
+    const { token } = params
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Validation token is required' },
+        { status: 400 }
+      )
+    }
+
+    // Find session by validation token
+    const session = await prisma.session.findUnique({
+      where: { validationToken: token },
+      include: {
+        client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        },
+        trainer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        },
+        location: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        package: {
+          select: {
+            id: true,
+            name: true,
+            packageType: true,
+          }
+        }
+      }
+    })
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Invalid or expired validation token' },
+        { status: 404 }
+      )
+    }
+
+    // Check if already validated
+    if (session.validated) {
+      return NextResponse.json({
+        status: 'already_validated',
+        validatedAt: session.validatedAt,
+        session: {
+          id: session.id,
+          sessionDate: session.sessionDate,
+          sessionValue: session.sessionValue,
+          client: session.client,
+          trainer: session.trainer,
+          location: session.location,
+          package: session.package,
+        }
+      })
+    }
+
+    // Check if token has expired
+    if (session.validationExpiry && new Date(session.validationExpiry) < new Date()) {
+      return NextResponse.json({
+        status: 'expired',
+        expiredAt: session.validationExpiry,
+        session: {
+          id: session.id,
+          sessionDate: session.sessionDate,
+          sessionValue: session.sessionValue,
+          client: session.client,
+          trainer: session.trainer,
+          location: session.location,
+          package: session.package,
+        }
+      })
+    }
+
+    // Token is valid and ready for validation
+    return NextResponse.json({
+      status: 'pending',
+      session: {
+        id: session.id,
+        sessionDate: session.sessionDate,
+        sessionValue: session.sessionValue,
+        notes: session.notes,
+        client: session.client,
+        trainer: session.trainer,
+        location: session.location,
+        package: session.package,
+      }
+    })
+  } catch (error: any) {
+    console.error('Validation check error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST - Validate the session
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { token: string } }
+) {
+  try {
+    const { token } = params
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Validation token is required' },
+        { status: 400 }
+      )
+    }
+
+    // Find session by validation token
+    const session = await prisma.session.findUnique({
+      where: { validationToken: token },
+      include: {
+        client: true,
+        trainer: true,
+        package: true,
+      }
+    })
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Invalid or expired validation token' },
+        { status: 404 }
+      )
+    }
+
+    // Check if already validated
+    if (session.validated) {
+      return NextResponse.json({
+        message: 'Session already validated',
+        validatedAt: session.validatedAt,
+      })
+    }
+
+    // Check if token has expired
+    if (session.validationExpiry && new Date(session.validationExpiry) < new Date()) {
+      return NextResponse.json(
+        { error: 'Validation token has expired' },
+        { status: 400 }
+      )
+    }
+
+    // Validate the session
+    const updatedSession = await prisma.session.update({
+      where: { id: session.id },
+      data: {
+        validated: true,
+        validatedAt: new Date(),
+      },
+      include: {
+        client: {
+          select: {
+            name: true,
+            email: true,
+          }
+        },
+        trainer: {
+          select: {
+            name: true,
+            email: true,
+          }
+        },
+      }
+    })
+
+    // Log the validation in audit log
+    await prisma.auditLog.create({
+      data: {
+        action: 'SESSION_VALIDATED',
+        entityType: 'Session',
+        entityId: session.id,
+        newValue: {
+          validated: true,
+          validatedAt: new Date().toISOString(),
+          validatedBy: 'client',
+          clientEmail: session.client.email,
+        },
+      }
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Session validated successfully',
+      session: {
+        id: updatedSession.id,
+        sessionDate: updatedSession.sessionDate,
+        validatedAt: updatedSession.validatedAt,
+        client: updatedSession.client,
+        trainer: updatedSession.trainer,
+      }
+    })
+  } catch (error: any) {
+    console.error('Validation error:', error)
+    return NextResponse.json(
+      { error: 'Failed to validate session' },
+      { status: 500 }
+    )
+  }
+}

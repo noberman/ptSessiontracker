@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { EmailService } from '@/lib/email/sender'
+import { renderSessionValidationEmail } from '@/lib/email/render'
 import crypto from 'crypto'
 
 export async function GET(request: Request) {
@@ -338,6 +340,40 @@ export async function POST(request: Request) {
 
       return createdSession
     })
+
+    // Send validation email to client
+    try {
+      const validationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/validate/${newSession.validationToken}`
+      
+      const { html, text } = await renderSessionValidationEmail({
+        clientName: newSession.client.name,
+        trainerName: newSession.trainer.name,
+        sessionDate: newSession.sessionDate,
+        location: newSession.location.name,
+        sessionValue: newSession.sessionValue,
+        validationUrl,
+        expiryDays: parseInt(process.env.SESSION_VALIDATION_EXPIRY_DAYS || '30'),
+      })
+
+      await EmailService.sendWithRetry({
+        to: newSession.client.email,
+        subject: `Please confirm your training session with ${newSession.trainer.name}`,
+        html,
+        text,
+        template: 'session-validation',
+        metadata: {
+          sessionId: newSession.id,
+          clientId: newSession.client.id,
+          trainerId: newSession.trainer.id,
+        }
+      })
+
+      console.log(`Validation email sent to ${newSession.client.email} for session ${newSession.id}`)
+    } catch (emailError) {
+      // Log error but don't fail the session creation
+      console.error('Failed to send validation email:', emailError)
+      // You might want to create a notification for admins here
+    }
 
     return NextResponse.json(newSession, { status: 201 })
   } catch (error) {

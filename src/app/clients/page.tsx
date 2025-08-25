@@ -13,8 +13,10 @@ export default async function ClientsPage({
   searchParams: Promise<{ 
     page?: string
     search?: string
-    locationId?: string
-    primaryTrainerId?: string
+    locationId?: string // Keep for backwards compatibility
+    locationIds?: string // New multi-select
+    primaryTrainerId?: string // Keep for backwards compatibility
+    trainerIds?: string // New multi-select
     active?: string 
   }>
 }) {
@@ -28,8 +30,20 @@ export default async function ClientsPage({
   const page = parseInt(params.page || '1')
   const limit = 10
   const search = params.search || ''
-  const locationId = params.locationId || ''
-  const primaryTrainerId = params.primaryTrainerId || ''
+  
+  // Handle both old single and new multi-select parameters
+  const locationIds = params.locationIds 
+    ? params.locationIds.split(',').filter(Boolean)
+    : params.locationId 
+    ? [params.locationId]
+    : []
+    
+  const trainerIds = params.trainerIds
+    ? params.trainerIds.split(',').filter(Boolean)
+    : params.primaryTrainerId
+    ? [params.primaryTrainerId]
+    : []
+    
   const active = params.active !== 'false'
   
   const skip = (page - 1) * limit
@@ -43,27 +57,72 @@ export default async function ClientsPage({
     where.active = true
   }
 
-  if (search) {
-    where.OR = [
+  // Build search conditions separately
+  const searchConditions = search ? {
+    OR: [
       { name: { contains: search, mode: 'insensitive' } },
       { email: { contains: search, mode: 'insensitive' } },
       { phone: { contains: search, mode: 'insensitive' } },
     ]
+  } : {}
+
+  // Handle multi-select locations
+  const locationConditions = locationIds.length > 0 ? {
+    locationId: { in: locationIds }
+  } : {}
+
+  // Combine all conditions properly
+  if (search && locationIds.length > 0) {
+    // When both search and location filters are present, use AND
+    where.AND = [searchConditions, locationConditions]
+  } else if (search) {
+    Object.assign(where, searchConditions)
+  } else if (locationIds.length > 0) {
+    Object.assign(where, locationConditions)
   }
 
-  if (locationId) {
-    where.locationId = locationId
-  }
+  console.log('Server: Final where clause:', JSON.stringify(where, null, 2))
 
-  if (primaryTrainerId) {
-    where.primaryTrainerId = primaryTrainerId
+  // Handle multi-select trainers (including unassigned)
+  if (trainerIds.length > 0) {
+    if (trainerIds.includes('unassigned')) {
+      // If unassigned is selected along with other trainers
+      if (trainerIds.length > 1) {
+        const actualTrainerIds = trainerIds.filter(id => id !== 'unassigned')
+        const orConditions = [
+          { primaryTrainerId: null },
+          { primaryTrainerId: { in: actualTrainerIds } }
+        ]
+        // Combine with existing OR if present
+        if (where.OR) {
+          where.AND = [
+            { OR: where.OR },
+            { OR: orConditions }
+          ]
+          delete where.OR
+        } else {
+          where.OR = orConditions
+        }
+      } else {
+        // Only unassigned is selected
+        where.primaryTrainerId = null
+      }
+    } else {
+      // Regular trainer IDs
+      where.primaryTrainerId = { in: trainerIds }
+    }
   }
 
   // Restrict based on user role
   if (session.user.role === 'TRAINER') {
     where.primaryTrainerId = session.user.id
   } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    where.locationId = session.user.locationId
+    // Only restrict to manager's location if no location filter is applied
+    if (!locationIds.length) {
+      where.locationId = session.user.locationId
+    }
+    // If location filter is applied, let them see only clients from their location
+    // that match the filter (intersection of filtered locations and their location)
   }
 
   const [clients, total, locations, trainers] = await Promise.all([

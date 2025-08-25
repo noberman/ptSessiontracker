@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { ClientActions } from '@/components/clients/ClientActions'
 
 export default async function ClientDetailPage({
   params,
@@ -80,16 +81,31 @@ export default async function ClientDetailPage({
   const totalPackages = client._count.packages
   const validatedSessions = client.sessions.filter(s => s.validated).length
 
+  const canManage = ['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(session.user.role)
+
   return (
     <div className="min-h-screen bg-background-secondary">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-text-primary">{client.name}</h1>
+            <div className="flex items-center space-x-3">
+              <h1 className="text-2xl font-bold text-text-primary">{client.name}</h1>
+              {!client.active && (
+                <Badge variant="error" size="sm">
+                  Inactive
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-text-secondary mt-1">{client.email}</p>
           </div>
           <div className="flex space-x-3">
-            {canEdit && (
+            <ClientActions
+              clientId={client.id}
+              clientName={client.name}
+              isActive={client.active}
+              canManage={canManage}
+            />
+            {canEdit && client.active && (
               <Link href={`/clients/${client.id}/edit`}>
                 <Button variant="outline">Edit Client</Button>
               </Link>

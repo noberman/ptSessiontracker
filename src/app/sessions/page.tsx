@@ -330,17 +330,31 @@ export default async function SessionsPage({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {session.validated ? (
-                          <Badge variant="success" size="sm">
-                            Validated
-                          </Badge>
+                          <div className="flex flex-col space-y-1">
+                            <Badge variant="success" size="sm">
+                              ✅ Validated
+                            </Badge>
+                            {session.validatedAt && (
+                              <span className="text-xs text-text-secondary">
+                                {new Date(session.validatedAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
                         ) : isExpired ? (
                           <Badge variant="error" size="sm">
-                            Expired
+                            ❌ Expired
                           </Badge>
                         ) : (
-                          <Badge variant="warning" size="sm">
-                            Pending
-                          </Badge>
+                          <div className="flex flex-col space-y-1">
+                            <Badge variant="warning" size="sm">
+                              ⏳ Pending
+                            </Badge>
+                            {session.validationExpiry && (
+                              <span className="text-xs text-text-secondary">
+                                {Math.ceil((new Date(session.validationExpiry).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}d left
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
