@@ -302,7 +302,6 @@ export async function GET(request: Request) {
       
       // Get trainer details for those with sessions
       const trainerIds = [...new Set(trainerStats.map(stat => stat.trainerId))]
-      const trainersWithSessions = allTrainers.filter(t => trainerIds.includes(t.id))
 
       // Combine trainer stats with trainer info
       const trainerStatsWithInfo = trainerStats.map(stat => {

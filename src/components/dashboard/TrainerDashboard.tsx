@@ -7,12 +7,9 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { 
   Calendar, 
-  Users, 
   DollarSign, 
-  TrendingUp, 
   Clock, 
   CheckCircle,
-  AlertCircle,
   Plus,
   RefreshCw,
   Mail
@@ -68,27 +65,28 @@ interface DashboardData {
   }>
 }
 
-export function TrainerDashboard({ userId, userName }: TrainerDashboardProps) {
+export function TrainerDashboard({ userName }: TrainerDashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resendingIds, setResendingIds] = useState<Set<string>>(new Set())
   const [period, setPeriod] = useState('month')
 
   useEffect(() => {
-    fetchDashboardData()
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`/api/dashboard?period=${period}`)
+        const data = await response.json()
+        setData(data)
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchData()
   }, [period])
 
-  const fetchDashboardData = async () => {
-    try {
-      const response = await fetch(`/api/dashboard?period=${period}`)
-      const data = await response.json()
-      setData(data)
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleResendValidation = async (sessionId: string) => {
     setResendingIds(prev => new Set(prev).add(sessionId))
@@ -139,7 +137,7 @@ export function TrainerDashboard({ userId, userName }: TrainerDashboardProps) {
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Welcome back, {userName}!</h1>
           <p className="text-sm text-text-secondary mt-1">
-            Here's your performance for {period === 'month' ? 'this month' : period === 'week' ? 'this week' : 'today'}
+            Here&apos;s your performance for {period === 'month' ? 'this month' : period === 'week' ? 'this week' : 'today'}
           </p>
         </div>
         <Link href="/sessions/new">
@@ -219,7 +217,7 @@ export function TrainerDashboard({ userId, userName }: TrainerDashboardProps) {
         {/* Today's Sessions */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Today's Sessions</CardTitle>
+            <CardTitle>Today&apos;s Sessions</CardTitle>
           </CardHeader>
           <CardContent>
             {data.todaysSessions.length > 0 ? (

@@ -268,7 +268,7 @@ export async function POST(request: Request) {
     validationExpiry.setDate(validationExpiry.getDate() + 30) // 30 days from now
 
     // Combine date and time if provided
-    let sessionDateTime = new Date(sessionDate)
+    const sessionDateTime = new Date(sessionDate)
     if (sessionTime) {
       const [hours, minutes] = sessionTime.split(':')
       sessionDateTime.setHours(parseInt(hours), parseInt(minutes))

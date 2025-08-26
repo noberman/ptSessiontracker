@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { 
-  Calendar,
   Download
 } from 'lucide-react'
 import {
@@ -66,7 +64,7 @@ interface DashboardData {
   }>
 }
 
-export function ManagerDashboard({ userId, userName, userRole, locationId }: ManagerDashboardProps) {
+export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('month')
@@ -92,28 +90,28 @@ export function ManagerDashboard({ userId, userName, userRole, locationId }: Man
   }, [])
 
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        let url = `/api/dashboard?period=${period}`
+        if (period === 'custom' && customStartDate && customEndDate) {
+          url += `&startDate=${customStartDate}&endDate=${customEndDate}`
+        }
+        if (selectedTrainers.length > 0) {
+          url += `&trainerIds=${selectedTrainers.join(',')}`
+        }
+        
+        const response = await fetch(url)
+        const data = await response.json()
+        setData(data)
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
     fetchDashboardData()
   }, [period, selectedTrainers, customStartDate, customEndDate])
-
-  const fetchDashboardData = async () => {
-    try {
-      let url = `/api/dashboard?period=${period}`
-      if (period === 'custom' && customStartDate && customEndDate) {
-        url += `&startDate=${customStartDate}&endDate=${customEndDate}`
-      }
-      if (selectedTrainers.length > 0) {
-        url += `&trainerIds=${selectedTrainers.join(',')}`
-      }
-      
-      const response = await fetch(url)
-      const data = await response.json()
-      setData(data)
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const toggleTrainer = (trainerId: string) => {
     setSelectedTrainers(prev => {
