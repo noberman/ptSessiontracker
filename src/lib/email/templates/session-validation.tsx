@@ -48,23 +48,23 @@ export const SessionValidationEmail: React.FC<SessionValidationEmailData> = ({
       <Section style={sessionBox}>
         <Row style={sessionRow}>
           <Column style={sessionLabel}>📅 Date:</Column>
-          <Column style={sessionValue}>{formattedDate}</Column>
+          <Column style={sessionValueStyle}>{formattedDate}</Column>
         </Row>
         <Row style={sessionRow}>
           <Column style={sessionLabel}>⏰ Time:</Column>
-          <Column style={sessionValue}>{formattedTime}</Column>
+          <Column style={sessionValueStyle}>{formattedTime}</Column>
         </Row>
         <Row style={sessionRow}>
           <Column style={sessionLabel}>👤 Trainer:</Column>
-          <Column style={sessionValue}>{trainerName}</Column>
+          <Column style={sessionValueStyle}>{trainerName}</Column>
         </Row>
         <Row style={sessionRow}>
           <Column style={sessionLabel}>📍 Location:</Column>
-          <Column style={sessionValue}>{location}</Column>
+          <Column style={sessionValueStyle}>{location}</Column>
         </Row>
         <Row style={sessionRow}>
           <Column style={sessionLabel}>💰 Session Value:</Column>
-          <Column style={sessionValue}>${sessionValue.toFixed(2)}</Column>
+          <Column style={sessionValueStyle}>${sessionValue.toFixed(2)}</Column>
         </Row>
       </Section>
 
@@ -94,7 +94,7 @@ export const SessionValidationEmail: React.FC<SessionValidationEmailData> = ({
 // Styles
 const heading: CSSProperties = {
   fontSize: '24px',
-  fontWeight: '600',
+  fontWeight: 600,
   color: '#1a1a1a',
   margin: '0 0 20px',
 }
@@ -121,13 +121,13 @@ const sessionLabel: CSSProperties = {
   fontSize: '14px',
   color: '#697386',
   width: '120px',
-  fontWeight: '500',
+  fontWeight: 500,
 }
 
-const sessionValue: CSSProperties = {
+const sessionValueStyle: CSSProperties = {
   fontSize: '14px',
   color: '#1a1a1a',
-  fontWeight: '600',
+  fontWeight: 600,
 }
 
 const buttonContainer: CSSProperties = {
@@ -140,7 +140,7 @@ const button: CSSProperties = {
   borderRadius: '8px',
   color: '#fff',
   fontSize: '16px',
-  fontWeight: '600',
+  fontWeight: 600,
   textDecoration: 'none',
   textAlign: 'center' as const,
   display: 'inline-block',
