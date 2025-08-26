@@ -8,7 +8,7 @@ import crypto from 'crypto'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
 
@@ -17,7 +17,7 @@ export async function POST(
   }
 
   try {
-    const { id } = params
+    const { id } = await params
 
     // Get the session details
     const sessionData = await prisma.session.findUnique({

@@ -4,10 +4,10 @@ import { prisma } from '@/lib/prisma'
 // GET - Check validation token status
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params
+    const { token } = await params
 
     if (!token) {
       return NextResponse.json(
@@ -117,10 +117,10 @@ export async function GET(
 // POST - Validate the session
 export async function POST(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params
+    const { token } = await params
 
     if (!token) {
       return NextResponse.json(
