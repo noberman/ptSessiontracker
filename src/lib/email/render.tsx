@@ -1,6 +1,5 @@
 import { render } from '@react-email/components'
 import React from 'react'
-import SessionValidationEmail from './templates/session-validation'
 import type { SessionValidationEmailData } from './types'
 
 /**
@@ -9,6 +8,8 @@ import type { SessionValidationEmailData } from './types'
 export async function renderSessionValidationEmail(
   data: SessionValidationEmailData
 ): Promise<{ html: string; text: string }> {
+  // Dynamic import to prevent Next.js static analysis
+  const SessionValidationEmail = (await import('./templates/session-validation')).default
   const html = await render(<SessionValidationEmail {...data} />)
   
   // Simple text version
