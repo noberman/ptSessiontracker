@@ -54,12 +54,17 @@ export class EmailService {
       // Send email via Resend
       const response = await resend.emails.send(emailData)
 
+      // Check if response has data property (new Resend API structure)
+      const messageId = 'data' in response && response.data 
+        ? (response.data as any).id 
+        : (response as any).id || 'unknown'
+
       // Update log with success
       await this.updateEmailLog(emailLog.id, {
         status: 'success',
         sentAt: new Date(),
         responseTime: Date.now() - startTime,
-        messageId: response.id,
+        messageId: messageId,
       })
 
       return { success: true, data: response }
