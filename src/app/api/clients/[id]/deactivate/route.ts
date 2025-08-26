@@ -113,8 +113,8 @@ export async function POST(
       success: true,
       message: 'Client deactivated successfully',
       warnings: {
-        hadActivePackages,
-        hadPendingSessions,
+        hadActivePackages: hasActivePackages,
+        hadPendingSessions: hasPendingSessions,
         packagesDeactivated: hasActivePackages ? client.packages.length : 0
       }
     })
