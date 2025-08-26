@@ -44,7 +44,7 @@ export function UserMenu({ isCollapsed = false }: UserMenuProps) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="w-full">
+          <Button variant="ghost" size="sm" className="w-full h-10 p-2">
             <User className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>

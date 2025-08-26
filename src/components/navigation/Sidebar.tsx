@@ -114,16 +114,16 @@ export function Sidebar({ isCollapsed = false, onCollapsedChange }: SidebarProps
         </Link>
         <Button
           variant="ghost"
-          size="icon"
-          className="hidden lg:flex"
+          size="sm"
+          className="hidden lg:flex h-8 w-8 p-0"
           onClick={() => onCollapsedChange?.(!isCollapsed)}
         >
           <ChevronLeft className={cn("h-4 w-4 transition-transform", isCollapsed && "rotate-180")} />
         </Button>
         <Button
           variant="ghost"
-          size="icon"
-          className="lg:hidden"
+          size="sm"
+          className="lg:hidden h-8 w-8 p-0"
           onClick={() => setIsMobileOpen(false)}
         >
           <X className="h-4 w-4" />
@@ -174,8 +174,8 @@ export function Sidebar({ isCollapsed = false, onCollapsedChange }: SidebarProps
       {/* Mobile Menu Button */}
       <Button
         variant="ghost"
-        size="icon"
-        className="fixed left-4 top-4 z-40 lg:hidden"
+        size="sm"
+        className="fixed left-4 top-4 z-40 lg:hidden h-10 w-10 p-0"
         onClick={() => setIsMobileOpen(true)}
       >
         <Menu className="h-5 w-5" />
