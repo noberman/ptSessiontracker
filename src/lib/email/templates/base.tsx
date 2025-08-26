@@ -3,9 +3,7 @@ import {
   Body,
   Container,
   Head,
-  Html,
-  Img,
-  Link,
+  Html as EmailHtml,
   Preview,
   Section,
   Text,
@@ -23,7 +21,7 @@ export const BaseEmailTemplate: React.FC<BaseEmailTemplateProps> = ({
   footerText = 'PT Session Tracker',
 }) => {
   return (
-    <Html>
+    <EmailHtml>
       <Head />
       <Preview>{preview}</Preview>
       <Body style={main}>
@@ -46,7 +44,7 @@ export const BaseEmailTemplate: React.FC<BaseEmailTemplateProps> = ({
           </Section>
         </Container>
       </Body>
-    </Html>
+    </EmailHtml>
   )
 }
 
