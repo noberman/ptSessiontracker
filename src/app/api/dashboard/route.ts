@@ -339,6 +339,9 @@ export async function GET(request: Request) {
         userRole: session.user.role
       })
     }
+    
+    // Default return (should not reach here)
+    return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
   } catch (error) {
     console.error('Error fetching dashboard data:', error)
     return NextResponse.json(
