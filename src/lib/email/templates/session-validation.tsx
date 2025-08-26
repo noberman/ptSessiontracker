@@ -10,6 +10,7 @@ import {
 } from '@react-email/components'
 import { BaseEmailTemplate } from './base'
 import type { SessionValidationEmailData } from '../types'
+import type { CSSProperties } from 'react'
 
 export const SessionValidationEmail: React.FC<SessionValidationEmailData> = ({
   clientName,
@@ -91,50 +92,50 @@ export const SessionValidationEmail: React.FC<SessionValidationEmailData> = ({
 }
 
 // Styles
-const heading = {
+const heading: CSSProperties = {
   fontSize: '24px',
   fontWeight: '600',
   color: '#1a1a1a',
   margin: '0 0 20px',
 }
 
-const paragraph = {
+const paragraph: CSSProperties = {
   fontSize: '16px',
   lineHeight: '26px',
   color: '#333',
   margin: '0 0 20px',
 }
 
-const sessionBox = {
+const sessionBox: CSSProperties = {
   backgroundColor: '#f8f9fa',
   borderRadius: '8px',
   padding: '20px',
   margin: '20px 0',
 }
 
-const sessionRow = {
+const sessionRow: CSSProperties = {
   marginBottom: '12px',
 }
 
-const sessionLabel = {
+const sessionLabel: CSSProperties = {
   fontSize: '14px',
   color: '#697386',
   width: '120px',
   fontWeight: '500',
 }
 
-const sessionValue = {
+const sessionValue: CSSProperties = {
   fontSize: '14px',
   color: '#1a1a1a',
   fontWeight: '600',
 }
 
-const buttonContainer = {
+const buttonContainer: CSSProperties = {
   textAlign: 'center' as const,
   margin: '32px 0',
 }
 
-const button = {
+const button: CSSProperties = {
   backgroundColor: '#5469d4',
   borderRadius: '8px',
   color: '#fff',
@@ -146,19 +147,19 @@ const button = {
   padding: '12px 32px',
 }
 
-const expiry = {
+const expiry: CSSProperties = {
   fontSize: '14px',
   color: '#ff9800',
   textAlign: 'center' as const,
   margin: '20px 0',
 }
 
-const hr = {
+const hr: CSSProperties = {
   borderColor: '#e6ebf1',
   margin: '24px 0',
 }
 
-const footer = {
+const footer: CSSProperties = {
   fontSize: '14px',
   color: '#697386',
   lineHeight: '24px',
