@@ -124,12 +124,12 @@ async function main() {
 
   console.log('✅ Created 6 clients')
 
-  // Create packages for some clients (12 session package at $1200)
+  // Create packages for some clients with varied pricing
   const packagesData = [
-    { clientId: clients[0].id, name: '12 Session Package', totalValue: 1200, totalSessions: 12 },
-    { clientId: clients[1].id, name: '12 Session Package', totalValue: 1200, totalSessions: 12 },
-    { clientId: clients[2].id, name: '12 Session Package', totalValue: 1200, totalSessions: 12 },
-    { clientId: clients[3].id, name: '12 Session Package', totalValue: 1200, totalSessions: 12 }
+    { clientId: clients[0].id, packageType: 'Standard', name: '12 Session Package', totalValue: 1200, totalSessions: 12, remainingSessions: 10 },
+    { clientId: clients[1].id, packageType: 'Premium', name: '20 Session Package', totalValue: 2400, totalSessions: 20, remainingSessions: 18 },
+    { clientId: clients[2].id, packageType: 'Starter', name: '5 Session Package', totalValue: 400, totalSessions: 5, remainingSessions: 3 },
+    { clientId: clients[3].id, packageType: 'Elite', name: '30 Session Package', totalValue: 4500, totalSessions: 30, remainingSessions: 28 }
   ]
 
   const packages = await Promise.all(
@@ -137,159 +137,58 @@ async function main() {
       prisma.package.create({
         data: {
           ...pkg,
-          sessionValue: pkg.totalValue / pkg.totalSessions, // $100 per session
+          sessionValue: pkg.totalValue / pkg.totalSessions,
           active: true
         }
       })
     )
   )
 
-  console.log('✅ Created 4 packages')
+  console.log('✅ Created 4 packages with varied pricing')
 
-  // Create sample sessions (2 per client with package)
-  // Generate sessions for the past 3 months
-  const sessionsData = []
-  const today = new Date()
-  const threeMonthsAgo = new Date()
-  threeMonthsAgo.setMonth(today.getMonth() - 3)
-  
-  // Helper to generate random time between 9 AM and 7 PM
-  const randomHour = () => Math.floor(Math.random() * 10) + 9
-  
-  // Helper to determine if session should be validated (90% chance)
-  const shouldValidate = () => Math.random() < 0.9
-  
-  // Generate sessions for each trainer-client combination
-  for (let weekOffset = 0; weekOffset < 12; weekOffset++) {
-    const weekStart = new Date(threeMonthsAgo)
-    weekStart.setDate(weekStart.getDate() + (weekOffset * 7))
-    
-    // John Smith (trainer 0) with client 0 - 3 sessions per week
-    for (let dayOffset of [1, 3, 5]) { // Mon, Wed, Fri
-      const sessionDate = new Date(weekStart)
-      sessionDate.setDate(sessionDate.getDate() + dayOffset)
-      sessionDate.setHours(randomHour(), 0, 0, 0)
-      
-      if (sessionDate <= today) {
-        const isValidated = shouldValidate()
-        sessionsData.push({
-          trainerId: trainers[0].id,
-          clientId: clients[0].id,
-          packageId: packages[0].id,
-          locationId: woodSquare.id,
-          sessionDate,
-          sessionValue: 100,
-          validatedAt: isValidated ? new Date(sessionDate.getTime() + 4 * 60 * 60 * 1000) : null
-        })
-      }
+  // Create sample sessions
+  const sessionsData = [
+    {
+      trainerId: trainers[0].id,
+      clientId: clients[0].id,
+      packageId: packages[0].id,
+      locationId: woodSquare.id,
+      sessionDate: new Date('2024-01-15T10:00:00Z'),
+      sessionValue: packagesData[0].totalValue / packagesData[0].totalSessions,
+      validated: true,
+      validatedAt: new Date('2024-01-15T14:00:00Z')
+    },
+    {
+      trainerId: trainers[0].id,
+      clientId: clients[0].id,
+      packageId: packages[0].id,
+      locationId: woodSquare.id,
+      sessionDate: new Date('2024-01-17T10:00:00Z'),
+      sessionValue: packagesData[0].totalValue / packagesData[0].totalSessions,
+      validated: false,
+      validatedAt: null // Pending validation
+    },
+    {
+      trainerId: trainers[1].id,
+      clientId: clients[1].id,
+      packageId: packages[1].id,
+      locationId: woodSquare.id,
+      sessionDate: new Date('2024-01-16T14:00:00Z'),
+      sessionValue: packagesData[1].totalValue / packagesData[1].totalSessions,
+      validated: true,
+      validatedAt: new Date('2024-01-16T18:00:00Z')
+    },
+    {
+      trainerId: trainers[2].id,
+      clientId: clients[2].id,
+      packageId: packages[2].id,
+      locationId: plaza888.id,
+      sessionDate: new Date('2024-01-18T09:00:00Z'),
+      sessionValue: packagesData[2].totalValue / packagesData[2].totalSessions,
+      validated: true,
+      validatedAt: new Date('2024-01-18T12:00:00Z')
     }
-    
-    // Jane Doe (trainer 1) with client 1 - 2 sessions per week
-    for (let dayOffset of [2, 4]) { // Tue, Thu
-      const sessionDate = new Date(weekStart)
-      sessionDate.setDate(sessionDate.getDate() + dayOffset)
-      sessionDate.setHours(randomHour(), 0, 0, 0)
-      
-      if (sessionDate <= today) {
-        const isValidated = shouldValidate()
-        sessionsData.push({
-          trainerId: trainers[1].id,
-          clientId: clients[1].id,
-          packageId: packages[1].id,
-          locationId: woodSquare.id,
-          sessionDate,
-          sessionValue: 100,
-          validatedAt: isValidated ? new Date(sessionDate.getTime() + 3 * 60 * 60 * 1000) : null
-        })
-      }
-    }
-    
-    // Mike Johnson (trainer 2) with client 2 - 2 sessions per week
-    for (let dayOffset of [1, 4]) { // Mon, Thu
-      const sessionDate = new Date(weekStart)
-      sessionDate.setDate(sessionDate.getDate() + dayOffset)
-      sessionDate.setHours(randomHour(), 0, 0, 0)
-      
-      if (sessionDate <= today) {
-        const isValidated = shouldValidate()
-        sessionsData.push({
-          trainerId: trainers[2].id,
-          clientId: clients[2].id,
-          packageId: packages[2].id,
-          locationId: plaza888.id,
-          sessionDate,
-          sessionValue: 100,
-          validatedAt: isValidated ? new Date(sessionDate.getTime() + 5 * 60 * 60 * 1000) : null
-        })
-      }
-    }
-    
-    // Add some sessions for other trainers with varying patterns
-    // Sarah Wilson (trainer 3) with client 3
-    if (weekOffset % 2 === 0) { // Every other week
-      for (let dayOffset of [0, 2, 4]) { // Sun, Tue, Thu
-        const sessionDate = new Date(weekStart)
-        sessionDate.setDate(sessionDate.getDate() + dayOffset)
-        sessionDate.setHours(randomHour(), 0, 0, 0)
-        
-        if (sessionDate <= today && clients[3] && trainers[3]) {
-          const isValidated = shouldValidate()
-          sessionsData.push({
-            trainerId: trainers[3].id,
-            clientId: clients[3].id,
-            packageId: packages[3]?.id || packages[0].id,
-            locationId: plaza888.id,
-            sessionDate,
-            sessionValue: 100,
-            validatedAt: isValidated ? new Date(sessionDate.getTime() + 2 * 60 * 60 * 1000) : null
-          })
-        }
-      }
-    }
-    
-    // Tom Chen (trainer 4) with multiple clients
-    if (trainers[4]) {
-      // With client 0 - 1 session per week
-      const sessionDate1 = new Date(weekStart)
-      sessionDate1.setDate(sessionDate1.getDate() + 3) // Wednesday
-      sessionDate1.setHours(15, 0, 0, 0)
-      
-      if (sessionDate1 <= today) {
-        const isValidated = shouldValidate()
-        sessionsData.push({
-          trainerId: trainers[4].id,
-          clientId: clients[0].id,
-          packageId: packages[0].id,
-          locationId: uptownFitness.id,
-          sessionDate: sessionDate1,
-          sessionValue: 100,
-          validatedAt: isValidated ? new Date(sessionDate1.getTime() + 6 * 60 * 60 * 1000) : null
-        })
-      }
-      
-      // With client 4 if exists
-      if (clients[4]) {
-        const sessionDate2 = new Date(weekStart)
-        sessionDate2.setDate(sessionDate2.getDate() + 5) // Friday
-        sessionDate2.setHours(18, 0, 0, 0)
-        
-        if (sessionDate2 <= today) {
-          const isValidated = shouldValidate()
-          sessionsData.push({
-            trainerId: trainers[4].id,
-            clientId: clients[4].id,
-            packageId: packages[4]?.id || packages[0].id,
-            locationId: uptownFitness.id,
-            sessionDate: sessionDate2,
-            sessionValue: 100,
-            validatedAt: isValidated ? new Date(sessionDate2.getTime() + 1 * 60 * 60 * 1000) : null
-          })
-        }
-      }
-    }
-  }
-  
-  console.log(`📊 Generated ${sessionsData.length} sessions over the past 3 months`)
+  ]
 
   await Promise.all(
     sessionsData.map(session =>

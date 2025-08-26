@@ -51,12 +51,11 @@ async function main() {
         const pkg = await prisma.package.create({
           data: {
             name: `${packageType.name} - ${trainer.name?.split(' ')[0]}-${client.name.split(' ')[0]}`,
-            trainerId: trainer.id,
             clientId: client.id,
-            locationId: trainer.locationId || locations[0].id,
             totalSessions: packageType.sessions,
             remainingSessions: packageType.sessions,
             sessionValue: sessionValue,
+            totalValue: sessionValue * packageType.sessions,
             active: true
           }
         })
@@ -98,11 +97,14 @@ async function main() {
       
       if (sessionDate <= today) {
         const isValidated = shouldValidate()
+        // Get a trainer for this session
+        const trainer = trainers[Math.floor(Math.random() * Math.min(4, trainers.length))]
+        
         sessionsData.push({
-          trainerId: pkg.trainerId,
+          trainerId: trainer.id,
           clientId: pkg.clientId,
           packageId: pkg.id,
-          locationId: pkg.locationId,
+          locationId: trainer.locationId || locations[0].id,
           sessionDate,
           sessionValue: pkg.sessionValue, // Use the package's session value
           validated: isValidated,
