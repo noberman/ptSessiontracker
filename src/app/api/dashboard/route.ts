@@ -38,6 +38,7 @@ export async function GET(request: Request) {
     }
 
     // Build where clause based on user role
+    // eslint-disable-next-line prefer-const
     let sessionsWhere: any = {
       sessionDate: {
         gte: dateFrom,
@@ -45,7 +46,9 @@ export async function GET(request: Request) {
       }
     }
 
+    // eslint-disable-next-line prefer-const
     let clientsWhere: any = { active: true }
+    // eslint-disable-next-line prefer-const
     let trainersWhere: any = { role: 'TRAINER', active: true }
 
     // Role-specific filtering
@@ -301,7 +304,7 @@ export async function GET(request: Request) {
       })
       
       // Get trainer details for those with sessions
-      const trainerIds = [...new Set(trainerStats.map(stat => stat.trainerId))]
+      // const trainerIds = [...new Set(trainerStats.map(stat => stat.trainerId))]
 
       // Combine trainer stats with trainer info
       const trainerStatsWithInfo = trainerStats.map(stat => {
