@@ -6,14 +6,20 @@ import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { PackageFilters } from '@/components/packages/PackageFilters'
 
 export default async function PackagesPage({
   searchParams,
 }: {
   searchParams: Promise<{ 
     page?: string
-    clientId?: string
-    active?: string 
+    clientIds?: string  // comma-separated IDs
+    locationIds?: string  // comma-separated IDs
+    packageTypes?: string  // comma-separated types
+    activeStatuses?: string  // comma-separated values
+    expirationStatus?: string
+    startDate?: string
+    endDate?: string
   }>
 }) {
   const params = await searchParams
@@ -25,21 +31,84 @@ export default async function PackagesPage({
 
   const page = parseInt(params.page || '1')
   const limit = 10
-  const clientId = params.clientId || ''
-  const active = params.active !== 'false'
-  
   const skip = (page - 1) * limit
 
   const where: any = {}
 
-  if (params.active !== undefined) {
-    where.active = active
+  // Filter by clients (multi-select)
+  if (params.clientIds) {
+    const clientIds = params.clientIds.split(',').filter(Boolean)
+    if (clientIds.length > 0) {
+      where.clientId = { in: clientIds }
+    }
+  }
+
+  // Filter by locations (multi-select)
+  if (params.locationIds) {
+    const locationIds = params.locationIds.split(',').filter(Boolean)
+    if (locationIds.length > 0) {
+      where.client = {
+        ...where.client,
+        locationId: { in: locationIds }
+      }
+    }
+  }
+
+  // Filter by package types (multi-select)
+  if (params.packageTypes) {
+    const packageTypes = params.packageTypes.split(',').filter(Boolean)
+    if (packageTypes.length > 0) {
+      where.packageType = { in: packageTypes }
+    }
+  }
+
+  // Filter by active status (multi-select)
+  if (params.activeStatuses) {
+    const statuses = params.activeStatuses.split(',').filter(Boolean)
+    if (statuses.length === 1) {
+      where.active = statuses[0] === 'true'
+    } else if (statuses.length > 1) {
+      // If both are selected, show all (no filter needed)
+      // This is effectively the same as no filter
+    }
   } else {
+    // Default to showing only active packages
     where.active = true
   }
 
-  if (clientId) {
-    where.clientId = clientId
+  // Filter by expiration status
+  if (params.expirationStatus) {
+    const now = new Date()
+    const thirtyDaysFromNow = new Date()
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
+
+    switch (params.expirationStatus) {
+      case 'expired':
+        where.expiresAt = { lt: now }
+        break
+      case 'expiring_soon':
+        where.expiresAt = { gte: now, lte: thirtyDaysFromNow }
+        break
+      case 'not_expired':
+        where.expiresAt = { gt: now }
+        break
+      case 'no_expiry':
+        where.expiresAt = null
+        break
+    }
+  }
+
+  // Date range filter
+  if (params.startDate || params.endDate) {
+    where.createdAt = {}
+    if (params.startDate) {
+      where.createdAt.gte = new Date(params.startDate)
+    }
+    if (params.endDate) {
+      const endDateTime = new Date(params.endDate)
+      endDateTime.setHours(23, 59, 59, 999)
+      where.createdAt.lte = endDateTime
+    }
   }
 
   // Restrict based on user role
@@ -51,6 +120,60 @@ export default async function PackagesPage({
     where.client = {
       locationId: session.user.locationId,
     }
+  }
+
+  // Get available clients for filter
+  let availableClients: any[] = []
+  let availableLocations: any[] = []
+  
+  if (session.user.role === 'TRAINER') {
+    availableClients = await prisma.client.findMany({
+      where: {
+        primaryTrainerId: session.user.id,
+        active: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      orderBy: { name: 'asc' },
+    })
+  } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
+    availableClients = await prisma.client.findMany({
+      where: {
+        locationId: session.user.locationId,
+        active: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      orderBy: { name: 'asc' },
+    })
+  } else {
+    // Admin and PT Manager can see all
+    availableClients = await prisma.client.findMany({
+      where: {
+        active: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      orderBy: { name: 'asc' },
+    })
+    
+    // Also get locations for admins/PT managers
+    availableLocations = await prisma.location.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { name: 'asc' },
+    })
   }
 
   const [packages, total] = await Promise.all([
@@ -118,6 +241,12 @@ export default async function PackagesPage({
             </Link>
           )}
         </div>
+
+        <PackageFilters
+          clients={availableClients}
+          locations={availableLocations}
+          currentUserRole={session.user.role}
+        />
 
         <Card padding="none">
           <div className="overflow-x-auto">
@@ -263,20 +392,40 @@ export default async function PackagesPage({
               {pagination.total} results
             </div>
             <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pagination.page === 1}
+              <Link 
+                href={{
+                  pathname: '/packages',
+                  query: {
+                    ...Object.fromEntries(new URLSearchParams(params as any)),
+                    page: (page - 1).toString()
+                  }
+                }}
               >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pagination.page === pagination.totalPages}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === 1}
+                >
+                  Previous
+                </Button>
+              </Link>
+              <Link 
+                href={{
+                  pathname: '/packages',
+                  query: {
+                    ...Object.fromEntries(new URLSearchParams(params as any)),
+                    page: (page + 1).toString()
+                  }
+                }}
               >
-                Next
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === pagination.totalPages}
+                >
+                  Next
+                </Button>
+              </Link>
             </div>
           </div>
         </Card>

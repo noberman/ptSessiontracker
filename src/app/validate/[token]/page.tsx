@@ -44,6 +44,13 @@ export default function ValidateSessionPage() {
     checkValidationStatus()
   }, [token])
 
+  // Auto-validate if session is pending
+  useEffect(() => {
+    if (state.status === 'pending' && !validating) {
+      handleValidate()
+    }
+  }, [state.status])
+
   const checkValidationStatus = async () => {
     try {
       const response = await fetch(`/api/sessions/validate/${token}`)
@@ -196,19 +203,15 @@ export default function ValidateSessionPage() {
 
                 {state.status === 'pending' && (
                   <>
-                    <p className="text-sm text-text-secondary">
-                      Please confirm that you attended this training session with {state.session.trainer.name}.
-                    </p>
-                    <Button
-                      onClick={handleValidate}
-                      disabled={validating}
-                      className="w-full"
-                    >
-                      {validating ? 'Validating...' : 'Confirm Session'}
-                    </Button>
-                    <p className="text-xs text-text-secondary text-center">
-                      If you did not attend this session, please contact your trainer or gym management.
-                    </p>
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                      <p className="text-sm text-text-secondary mb-4">
+                        Confirming your training session with {state.session.trainer.name}...
+                      </p>
+                      <p className="text-xs text-text-secondary">
+                        Please wait while we validate your session.
+                      </p>
+                    </div>
                   </>
                 )}
 

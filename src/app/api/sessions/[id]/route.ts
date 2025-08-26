@@ -151,7 +151,8 @@ export async function PUT(
     if (notes !== undefined) {
       updateData.notes = notes
     }
-    if (validated !== undefined && (session.user.role === 'PT_MANAGER' || session.user.role === 'ADMIN')) {
+    // Only admins can manually change validation status
+    if (validated !== undefined && session.user.role === 'ADMIN') {
       updateData.validated = validated
       if (validated) {
         updateData.validatedAt = new Date()
@@ -194,16 +195,7 @@ export async function PUT(
         }
       })
 
-      // Create audit log
-      await tx.auditLog.create({
-        data: {
-          userId: session.user.id,
-          action: 'UPDATE',
-          entityType: 'SESSION',
-          entityId: id,
-          newValue: updateData
-        }
-      })
+      // TODO: Add audit logging when AuditLog model is created
 
       return updated
     })
@@ -270,21 +262,7 @@ export async function DELETE(
         })
       }
 
-      // Create audit log
-      await tx.auditLog.create({
-        data: {
-          userId: session.user.id,
-          action: 'DELETE',
-          entityType: 'SESSION',
-          entityId: id,
-          oldValue: {
-            clientId: existingSession.clientId,
-            trainerId: existingSession.trainerId,
-            sessionDate: existingSession.sessionDate,
-            validated: existingSession.validated
-          }
-        }
-      })
+      // TODO: Add audit logging when AuditLog model is created
     })
 
     return NextResponse.json({ success: true })

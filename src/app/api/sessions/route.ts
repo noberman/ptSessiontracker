@@ -155,6 +155,7 @@ export async function POST(request: Request) {
       trainerId,
       packageId,
       sessionDate,
+      sessionTime,
       notes
     } = body
 
@@ -266,6 +267,13 @@ export async function POST(request: Request) {
     const validationExpiry = new Date()
     validationExpiry.setDate(validationExpiry.getDate() + 30) // 30 days from now
 
+    // Combine date and time if provided
+    let sessionDateTime = new Date(sessionDate)
+    if (sessionTime) {
+      const [hours, minutes] = sessionTime.split(':')
+      sessionDateTime.setHours(parseInt(hours), parseInt(minutes))
+    }
+
     // Create the session in a transaction
     const newSession = await prisma.$transaction(async (tx) => {
       // Create the session
@@ -275,7 +283,7 @@ export async function POST(request: Request) {
           trainerId: actualTrainerId,
           packageId,
           locationId: client.locationId,
-          sessionDate: new Date(sessionDate),
+          sessionDate: sessionDateTime,
           sessionValue: pkg.sessionValue,
           notes: notes || null,
           validated: false,
@@ -323,20 +331,7 @@ export async function POST(request: Request) {
         })
       }
 
-      // Create audit log
-      await tx.auditLog.create({
-        data: {
-          userId: session.user.id,
-          action: 'CREATE',
-          entityType: 'SESSION',
-          entityId: createdSession.id,
-          newValue: {
-            clientId,
-            packageId,
-            sessionValue: pkg.sessionValue
-          }
-        }
-      })
+      // TODO: Add audit logging when AuditLog model is created
 
       return createdSession
     })

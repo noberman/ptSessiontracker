@@ -57,6 +57,7 @@ export function SessionForm({
     trainerId: currentUserId, // Default to current user for trainers
     packageId: '',
     sessionDate: new Date().toISOString().split('T')[0],
+    sessionTime: new Date().toTimeString().slice(0, 5), // Default to current time (HH:MM)
     notes: ''
   })
 
@@ -119,12 +120,17 @@ export function SessionForm({
       return
     }
 
-    // Check if session date is in the future
-    const sessionDate = new Date(formData.sessionDate)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    if (sessionDate > today) {
-      setError('Cannot create sessions for future dates')
+    if (!formData.sessionTime) {
+      setError('Please select a session time')
+      setLoading(false)
+      return
+    }
+
+    // Combine date and time for validation
+    const sessionDateTime = new Date(`${formData.sessionDate}T${formData.sessionTime}`)
+    const now = new Date()
+    if (sessionDateTime > now) {
+      setError('Cannot create sessions for future dates/times')
       setLoading(false)
       return
     }
@@ -327,19 +333,33 @@ export function SessionForm({
             </div>
           )}
 
-          {/* Date */}
-          <div>
-            <label htmlFor="sessionDate" className="block text-sm font-medium text-text-primary mb-1">
-              Session Date *
-            </label>
-            <Input
-              id="sessionDate"
-              type="date"
-              required
-              value={formData.sessionDate}
-              onChange={(e) => setFormData({ ...formData, sessionDate: e.target.value })}
-              max={new Date().toISOString().split('T')[0]}
-            />
+          {/* Date and Time */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="sessionDate" className="block text-sm font-medium text-text-primary mb-1">
+                Session Date *
+              </label>
+              <Input
+                id="sessionDate"
+                type="date"
+                required
+                value={formData.sessionDate}
+                onChange={(e) => setFormData({ ...formData, sessionDate: e.target.value })}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div>
+              <label htmlFor="sessionTime" className="block text-sm font-medium text-text-primary mb-1">
+                Session Time *
+              </label>
+              <Input
+                id="sessionTime"
+                type="time"
+                required
+                value={formData.sessionTime}
+                onChange={(e) => setFormData({ ...formData, sessionTime: e.target.value })}
+              />
+            </div>
           </div>
 
           {/* Location Display */}
