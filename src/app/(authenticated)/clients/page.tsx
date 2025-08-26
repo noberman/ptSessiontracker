@@ -203,8 +203,7 @@ export default async function ClientsPage({
   const canCreate = session.user.role !== 'TRAINER'
 
   return (
-    <div className="min-h-screen bg-background-secondary">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div>
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Clients</h1>
@@ -240,7 +239,6 @@ export default async function ClientsPage({
           canEdit={canEdit}
           canDelete={canDelete}
         />
-      </div>
     </div>
   )
 }

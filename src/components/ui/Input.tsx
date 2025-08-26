@@ -1,6 +1,6 @@
 import { InputHTMLAttributes, forwardRef } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { cn } from '@/lib/utils/cn'
+import { cn } from '@/lib/utils'
 
 const inputVariants = cva(
   'block w-full border rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0',

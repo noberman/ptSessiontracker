@@ -83,7 +83,7 @@ export const SessionValidationEmail: React.FC<SessionValidationEmailData> = ({
       <Hr style={hr} />
 
       <Text style={footer}>
-        If you didn't attend this session or have any questions, 
+        If you didn&apos;t attend this session or have any questions, 
         please contact your trainer or gym management.
       </Text>
     </BaseEmailTemplate>

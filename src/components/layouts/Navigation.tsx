@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { cn } from '@/lib/utils/cn'
+import { cn } from '@/lib/utils'
 
 export function Navigation() {
   const { data: session, status } = useSession()

@@ -1,0 +1,213 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { cn } from '@/lib/utils'
+import {
+  LayoutDashboard,
+  Calendar,
+  Users,
+  Package,
+  UserPlus,
+  FileText,
+  Settings,
+  Wrench,
+  Menu,
+  X,
+  ChevronLeft,
+} from 'lucide-react'
+import { useState } from 'react'
+import { Button } from '@/components/ui/Button'
+import { UserMenu } from './UserMenu'
+
+interface NavItem {
+  title: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  roles?: string[]
+  badge?: string
+}
+
+interface SidebarProps {
+  isCollapsed?: boolean
+  onCollapsedChange?: (collapsed: boolean) => void
+}
+
+const navItems: NavItem[] = [
+  {
+    title: 'Dashboard',
+    href: '/dashboard',
+    icon: LayoutDashboard,
+  },
+  {
+    title: 'Sessions',
+    href: '/sessions',
+    icon: Calendar,
+  },
+  {
+    title: 'Clients',
+    href: '/clients',
+    icon: Users,
+  },
+  {
+    title: 'Packages',
+    href: '/packages',
+    icon: Package,
+  },
+  {
+    title: 'Log Session',
+    href: '/sessions/new',
+    icon: UserPlus,
+    roles: ['PERSONAL_TRAINER'],
+  },
+  {
+    title: 'Users',
+    href: '/users',
+    icon: Users,
+    roles: ['PT_MANAGER', 'ADMIN', 'CLUB_MANAGER'],
+  },
+  {
+    title: 'Reports',
+    href: '/reports',
+    icon: FileText,
+    roles: ['PT_MANAGER', 'ADMIN', 'CLUB_MANAGER'],
+  },
+  {
+    title: 'Settings',
+    href: '/settings',
+    icon: Settings,
+    roles: ['PT_MANAGER', 'ADMIN', 'CLUB_MANAGER'],
+  },
+  {
+    title: 'Admin Tools',
+    href: '/admin/email-test',
+    icon: Wrench,
+    roles: ['ADMIN'],
+  },
+]
+
+export function Sidebar({ isCollapsed = false, onCollapsedChange }: SidebarProps) {
+  const pathname = usePathname()
+  const { data: session } = useSession()
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
+
+  const userRole = session?.user?.role
+
+  const filteredNavItems = navItems.filter((item) => {
+    if (!item.roles) return true
+    return item.roles.includes(userRole as string)
+  })
+
+  const NavContent = () => (
+    <>
+      <div className="flex h-16 items-center justify-between border-b px-4">
+        <Link
+          href="/dashboard"
+          className={cn(
+            "flex items-center gap-2 font-semibold",
+            isCollapsed && "justify-center"
+          )}
+        >
+          <Calendar className="h-6 w-6" />
+          {!isCollapsed && <span>PT Tracker</span>}
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden lg:flex"
+          onClick={() => onCollapsedChange?.(!isCollapsed)}
+        >
+          <ChevronLeft className={cn("h-4 w-4 transition-transform", isCollapsed && "rotate-180")} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+        {filteredNavItems.map((item) => {
+          const Icon = item.icon
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setIsMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                isCollapsed && "justify-center px-2"
+              )}
+              title={isCollapsed ? item.title : undefined}
+            >
+              <Icon className="h-4 w-4 flex-shrink-0" />
+              {!isCollapsed && (
+                <span className="flex-1">{item.title}</span>
+              )}
+              {!isCollapsed && item.badge && (
+                <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-xs">
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          )
+        })}
+      </nav>
+
+      <div className="border-t p-4">
+        <UserMenu isCollapsed={isCollapsed} />
+      </div>
+    </>
+  )
+
+  return (
+    <>
+      {/* Mobile Menu Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed left-4 top-4 z-40 lg:hidden"
+        onClick={() => setIsMobileOpen(true)}
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r bg-background transition-transform lg:hidden",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <NavContent />
+      </aside>
+
+      {/* Desktop Sidebar - Fixed position */}
+      <aside
+        className={cn(
+          "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:border-r lg:bg-background transition-all duration-300",
+          isCollapsed ? "lg:w-16" : "lg:w-64"
+        )}
+      >
+        <NavContent />
+      </aside>
+    </>
+  )
+}
