@@ -1,4 +1,5 @@
 import { render } from '@react-email/components'
+import React from 'react'
 import SessionValidationEmail from './templates/session-validation'
 import type { SessionValidationEmailData } from './types'
 
@@ -8,7 +9,7 @@ import type { SessionValidationEmailData } from './types'
 export async function renderSessionValidationEmail(
   data: SessionValidationEmailData
 ): Promise<{ html: string; text: string }> {
-  const html = await render(SessionValidationEmail(data))
+  const html = await render(<SessionValidationEmail {...data} />)
   
   // Simple text version
   const text = `
