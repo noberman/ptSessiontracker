@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { User, LogOut, MapPin, Settings } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 interface UserMenuProps {
   isCollapsed?: boolean

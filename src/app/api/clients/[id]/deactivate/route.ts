@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 // POST - Deactivate (soft delete) a client
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
 
@@ -23,7 +23,7 @@ export async function POST(
   }
 
   try {
-    const { id } = params
+    const { id } = await params
 
     // Get the client first to check if it exists
     const client = await prisma.client.findUnique({
@@ -71,7 +71,7 @@ export async function POST(
     const hasPendingSessions = client.sessions.length > 0
 
     // Deactivate the client
-    const updatedClient = await prisma.client.update({
+    await prisma.client.update({
       where: { id },
       data: {
         active: false,
@@ -130,7 +130,7 @@ export async function POST(
 // PUT - Reactivate a client
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
 
@@ -147,7 +147,7 @@ export async function PUT(
   }
 
   try {
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     const { reactivatePackages = false } = body
 
@@ -183,7 +183,7 @@ export async function PUT(
     }
 
     // Reactivate the client
-    const updatedClient = await prisma.client.update({
+    await prisma.client.update({
       where: { id },
       data: {
         active: true,
