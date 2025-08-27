@@ -17,6 +17,8 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts'
+import { TrainerPerformanceTable } from './TrainerPerformanceTable'
+import { SessionDetailsPanel } from './SessionDetailsPanel'
 
 interface ManagerDashboardProps {
   userId: string
@@ -74,6 +76,12 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  // State for session details panel
+  const [detailsPanelOpen, setDetailsPanelOpen] = useState(false)
+  const [selectedTrainerName, setSelectedTrainerName] = useState('')
+  const [selectedSessionValue, setSelectedSessionValue] = useState(0)
+  const [selectedSessions, setSelectedSessions] = useState<any[]>([])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -170,6 +178,43 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
     
     a.click()
     window.URL.revokeObjectURL(url)
+  }
+
+  // Handler for fetching trainer session details
+  const handleFetchTrainerDetails = async (trainerId: string) => {
+    try {
+      let url = `/api/trainers/${trainerId}/sessions`
+      if (period === 'custom' && customStartDate && customEndDate) {
+        url += `?startDate=${customStartDate}&endDate=${customEndDate}`
+      } else if (period === 'month') {
+        const start = new Date()
+        start.setDate(1)
+        start.setHours(0, 0, 0, 0)
+        url += `?startDate=${start.toISOString()}`
+      } else if (period === 'week') {
+        const start = new Date()
+        start.setDate(start.getDate() - 7)
+        start.setHours(0, 0, 0, 0)
+        url += `?startDate=${start.toISOString()}`
+      }
+      
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Failed to fetch trainer details')
+      
+      return await response.json()
+    } catch (error) {
+      console.error('Error fetching trainer details:', error)
+      return []
+    }
+  }
+
+  // Handler for opening session details panel
+  const handleViewDetails = (trainerId: string, sessionValue: number, sessions: any[]) => {
+    const trainer = data?.trainerStats.find(t => t.trainer?.id === trainerId)
+    setSelectedTrainerName(trainer?.trainer?.name || 'Unknown')
+    setSelectedSessionValue(sessionValue)
+    setSelectedSessions(sessions)
+    setDetailsPanelOpen(true)
   }
 
   if (loading) {
@@ -513,68 +558,22 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
           <CardTitle>Trainer Performance</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border">
-              <thead>
-                <tr className="bg-background-secondary">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Trainer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Sessions
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Total Value
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Avg per Session
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {data.trainerStats.map((stat, idx) => (
-                  <tr key={stat.trainer?.id || idx} className="hover:bg-background-secondary">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <p className="text-sm font-medium text-text-primary">
-                          {stat.trainer?.name || 'Unknown'}
-                        </p>
-                        <p className="text-xs text-text-secondary">
-                          {stat.trainer?.email}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-text-primary">
-                        {stat.sessionCount}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-text-primary">
-                        ${stat.totalValue.toFixed(2)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-text-secondary">
-                        ${stat.sessionCount > 0 
-                          ? (stat.totalValue / stat.sessionCount).toFixed(2)
-                          : '0.00'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {data.trainerStats.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-text-secondary">
-                      No trainer data available for this period
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <TrainerPerformanceTable
+            trainers={data.trainerStats}
+            onViewDetails={handleViewDetails}
+            onFetchTrainerDetails={handleFetchTrainerDetails}
+          />
         </CardContent>
       </Card>
+      
+      {/* Session Details Panel */}
+      <SessionDetailsPanel
+        isOpen={detailsPanelOpen}
+        onClose={() => setDetailsPanelOpen(false)}
+        trainerName={selectedTrainerName}
+        sessionValue={selectedSessionValue}
+        sessions={selectedSessions}
+      />
     </div>
   )
 }

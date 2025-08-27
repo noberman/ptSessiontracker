@@ -132,20 +132,51 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">Welcome back, {userName}!</h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Here&apos;s your performance for {period === 'month' ? 'this month' : period === 'week' ? 'this week' : 'today'}
-          </p>
+      {/* Period Filter - Consistent with other pages */}
+      <div className="bg-surface rounded-lg p-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-text-secondary">Period:</span>
+            <div className="flex space-x-2">
+              <Button
+                variant={period === 'day' ? 'primary' : 'outline'}
+                size="sm"
+                onClick={() => setPeriod('day')}
+              >
+                Today
+              </Button>
+              <Button
+                variant={period === 'week' ? 'primary' : 'outline'}
+                size="sm"
+                onClick={() => setPeriod('week')}
+              >
+                This Week
+              </Button>
+              <Button
+                variant={period === 'month' ? 'primary' : 'outline'}
+                size="sm"
+                onClick={() => setPeriod('month')}
+              >
+                This Month
+              </Button>
+            </div>
+          </div>
+          {/* Desktop Add Session button */}
+          <Link href="/sessions/new" className="hidden md:block">
+            <Button className="flex items-center">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Session
+            </Button>
+          </Link>
         </div>
-        <Link href="/sessions/new">
-          <Button className="flex items-center">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Session
-          </Button>
-        </Link>
+      </div>
+
+      {/* Welcome Header */}
+      <div>
+        <h1 className="text-xl md:text-2xl font-bold text-text-primary">Welcome back, {userName}!</h1>
+        <p className="text-sm text-text-secondary mt-1">
+          Here&apos;s your performance for {period === 'month' ? 'this month' : period === 'week' ? 'this week' : 'today'}
+        </p>
       </div>
 
       {/* Quick Stats */}
@@ -330,30 +361,15 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
         </CardContent>
       </Card>
 
-      {/* Period Selector */}
-      <div className="flex justify-center space-x-2">
-        <Button
-          variant={period === 'day' ? 'primary' : 'outline'}
-          size="sm"
-          onClick={() => setPeriod('day')}
+      {/* Mobile Floating Action Button */}
+      <Link href="/sessions/new" className="md:hidden">
+        <Button 
+          className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg w-14 h-14 p-0 flex items-center justify-center"
+          size="lg"
         >
-          Today
+          <Plus className="w-6 h-6" />
         </Button>
-        <Button
-          variant={period === 'week' ? 'primary' : 'outline'}
-          size="sm"
-          onClick={() => setPeriod('week')}
-        >
-          This Week
-        </Button>
-        <Button
-          variant={period === 'month' ? 'primary' : 'outline'}
-          size="sm"
-          onClick={() => setPeriod('month')}
-        >
-          This Month
-        </Button>
-      </div>
+      </Link>
     </div>
   )
 }

@@ -64,6 +64,9 @@ export function NavigationLayout({
         )}
       >
         <div className={cn("mx-auto px-4 sm:px-6 lg:px-8 py-8", maxWidthClass)}>
+          {/* Mobile spacing for hamburger menu */}
+          <div className="lg:hidden h-12 mb-4"></div>
+          
           {showBreadcrumbs && pathname !== '/dashboard' && (
             <div className="mb-6">
               <Breadcrumbs />
