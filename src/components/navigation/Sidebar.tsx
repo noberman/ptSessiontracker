@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   ChevronLeft,
+  MapPin,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
@@ -54,6 +55,11 @@ const navItems: NavItem[] = [
     title: 'Packages',
     href: '/packages',
     icon: Package,
+  },
+  {
+    title: 'Locations',
+    href: '/locations',
+    icon: MapPin,
   },
   {
     title: 'Log Session',
