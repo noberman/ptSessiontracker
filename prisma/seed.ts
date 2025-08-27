@@ -12,7 +12,7 @@ async function main() {
     update: {},
     create: {
       name: 'Wood Square',
-      address: '123 Wood Square Ave'
+      active: true
     }
   })
 
@@ -21,7 +21,7 @@ async function main() {
     update: {},
     create: {
       name: '888 Plaza',
-      address: '888 Plaza Street'
+      active: true
     }
   })
 
@@ -30,7 +30,7 @@ async function main() {
     update: {},
     create: {
       name: 'Woodlands Health',
-      address: '456 Woodlands Road'
+      active: true
     }
   })
 
