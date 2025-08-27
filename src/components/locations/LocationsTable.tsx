@@ -9,11 +9,7 @@ import {
   MapPin, 
   Users, 
   UserCheck, 
-  Activity,
-  Edit,
-  ToggleLeft,
-  ToggleRight,
-  ChevronRight
+  Activity
 } from 'lucide-react'
 
 interface Location {
@@ -63,27 +59,6 @@ export function LocationsTable({ userRole, canEdit }: LocationsTableProps) {
     }
   }
 
-  const toggleLocationStatus = async (id: string, active: boolean) => {
-    try {
-      const response = await fetch(`/api/locations/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ active: !active }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to update location')
-      }
-
-      // Refresh locations
-      fetchLocations()
-    } catch (err: any) {
-      alert(err.message || 'Failed to update location status')
-    }
-  }
 
   if (loading) {
     return (
@@ -241,32 +216,19 @@ export function LocationsTable({ userRole, canEdit }: LocationsTableProps) {
                       {location.sessionsThisMonth}
                     </span>
                   </td>
-                  <td className="p-4">
-                    <div className="flex items-center justify-end space-x-2">
+                  <td className="p-4 text-right">
+                    <div className="flex justify-end space-x-2">
                       <Link href={`/locations/${location.id}`}>
                         <Button variant="ghost" size="sm">
-                          <ChevronRight className="h-4 w-4" />
+                          View
                         </Button>
                       </Link>
                       {canEdit && (
-                        <>
-                          <Link href={`/locations/${location.id}/edit`}>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleLocationStatus(location.id, location.active)}
-                          >
-                            {location.active ? (
-                              <ToggleRight className="h-4 w-4 text-success-600" />
-                            ) : (
-                              <ToggleLeft className="h-4 w-4 text-text-secondary" />
-                            )}
+                        <Link href={`/locations/${location.id}/edit`}>
+                          <Button variant="outline" size="sm">
+                            Edit
                           </Button>
-                        </>
+                        </Link>
                       )}
                     </div>
                   </td>
