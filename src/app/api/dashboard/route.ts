@@ -15,6 +15,7 @@ export async function GET(request: Request) {
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
   const filterTrainerIds = searchParams.get('trainerIds')?.split(',').filter(Boolean)
+  const filterLocationId = searchParams.get('locationId')
 
   try {
     // Calculate date range based on period
@@ -185,8 +186,20 @@ export async function GET(request: Request) {
       
     } else if (session.user.role === 'PT_MANAGER') {
       // PT Manager sees all locations (no filter needed)
+      // But can filter by location if specified
+      if (filterLocationId) {
+        sessionsWhere.locationId = filterLocationId
+        clientsWhere.locationId = filterLocationId
+        trainersWhere.locationId = filterLocationId
+      }
     }
     // Admin sees everything (no additional filters)
+    // But can filter by location if specified
+    if (session.user.role === 'ADMIN' && filterLocationId) {
+      sessionsWhere.locationId = filterLocationId
+      clientsWhere.locationId = filterLocationId
+      trainersWhere.locationId = filterLocationId
+    }
     
     // Apply trainer filter if specified (for all manager/admin roles)
     if (filterTrainerIds && filterTrainerIds.length > 0 && session.user.role !== 'TRAINER') {
@@ -292,25 +305,43 @@ export async function GET(request: Request) {
         prisma.client.count({ where: clientsWhere })
       ])
 
-      // Get ALL trainers (not just those with sessions)
+      // Get ALL trainers (not just those with sessions) with their locations
       const allTrainers = await prisma.user.findMany({
         where: trainersWhere,
         select: {
           id: true,
           name: true,
-          email: true
+          email: true,
+          locationId: true
         },
         orderBy: { name: 'asc' }
       })
       
+      // Get all locations for PT Managers and Admins
+      let allLocations = null
+      if (session.user.role === 'PT_MANAGER' || session.user.role === 'ADMIN') {
+        allLocations = await prisma.location.findMany({
+          select: {
+            id: true,
+            name: true
+          },
+          orderBy: { name: 'asc' }
+        })
+      }
+      
       // Get trainer details for those with sessions
       // const trainerIds = [...new Set(trainerStats.map(stat => stat.trainerId))]
 
-      // Combine trainer stats with trainer info
+      // Combine trainer stats with trainer info (including locationId)
       const trainerStatsWithInfo = trainerStats.map(stat => {
         const trainer = allTrainers.find(t => t.id === stat.trainerId)
         return {
-          trainer,
+          trainer: trainer ? {
+            id: trainer.id,
+            name: trainer.name,
+            email: trainer.email,
+            locationId: trainer.locationId
+          } : null,
           sessionCount: stat._count.id,
           totalValue: stat._sum.sessionValue || 0
         }
@@ -335,6 +366,7 @@ export async function GET(request: Request) {
         },
         trainerStats: trainerStatsWithInfo,
         allTrainers, // Include all trainers for filtering
+        allLocations, // Include all locations for filtering (PT_MANAGER and ADMIN only)
         dailyStats,
         userRole: session.user.role
       })

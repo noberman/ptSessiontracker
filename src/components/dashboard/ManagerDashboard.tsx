@@ -45,6 +45,7 @@ interface DashboardData {
       id: string
       name: string
       email: string
+      locationId?: string
     }
     sessionCount: number
     totalValue: number
@@ -53,6 +54,11 @@ interface DashboardData {
     id: string
     name: string
     email: string
+    locationId?: string
+  }>
+  allLocations?: Array<{
+    id: string
+    name: string
   }>
   dailyStats: Array<{
     date: string
@@ -72,6 +78,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
   const [period, setPeriod] = useState('month')
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
+  const [selectedLocation, setSelectedLocation] = useState<string>('')
   const [selectedTrainers, setSelectedTrainers] = useState<string[]>([])
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
@@ -104,6 +111,9 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
         if (period === 'custom' && customStartDate && customEndDate) {
           url += `&startDate=${customStartDate}&endDate=${customEndDate}`
         }
+        if (selectedLocation) {
+          url += `&locationId=${selectedLocation}`
+        }
         if (selectedTrainers.length > 0) {
           url += `&trainerIds=${selectedTrainers.join(',')}`
         }
@@ -119,9 +129,34 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
     }
     
     fetchDashboardData()
-  }, [period, selectedTrainers, customStartDate, customEndDate])
+  }, [period, selectedTrainers, selectedLocation, customStartDate, customEndDate])
+
+  const handleLocationChange = (locationId: string) => {
+    if (locationId === selectedLocation) {
+      // Deselecting current location
+      setSelectedLocation('')
+      setSelectedTrainers([])
+    } else {
+      // Selecting new location - auto-select all trainers from that location
+      setSelectedLocation(locationId)
+      if (data?.allTrainers) {
+        const locationTrainers = data.allTrainers
+          .filter(t => t.locationId === locationId)
+          .map(t => t.id)
+        setSelectedTrainers(locationTrainers)
+      }
+    }
+  }
 
   const toggleTrainer = (trainerId: string) => {
+    // Only allow toggling trainers from the selected location (or all if no location selected)
+    if (selectedLocation && data?.allTrainers) {
+      const trainer = data.allTrainers.find(t => t.id === trainerId)
+      if (trainer?.locationId !== selectedLocation) {
+        return // Don't allow selecting trainers from other locations
+      }
+    }
+    
     setSelectedTrainers(prev => {
       if (prev.includes(trainerId)) {
         return prev.filter(id => id !== trainerId)
@@ -132,6 +167,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
   }
 
   const clearFilters = () => {
+    setSelectedLocation('')
     setSelectedTrainers([])
     setPeriod('month')
     setCustomStartDate('')
@@ -139,6 +175,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
   }
 
   const activeFilterCount = 
+    (selectedLocation ? 1 : 0) +
     selectedTrainers.length + 
     (period === 'custom' ? 2 : 0)
 
@@ -390,6 +427,27 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
                 </>
               )}
 
+              {/* Location Filter - Single select */}
+              {data?.allLocations && data.allLocations.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">
+                    Location
+                  </label>
+                  <select
+                    value={selectedLocation}
+                    onChange={(e) => handleLocationChange(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  >
+                    <option value="">All Locations</option>
+                    {data.allLocations.map(location => (
+                      <option key={location.id} value={location.id}>
+                        {location.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Trainer Filter - Multi-select Dropdown */}
               {data?.allTrainers && data.allTrainers.length > 0 && (
                 <div className="relative">
@@ -414,20 +472,25 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
                     {openDropdown === 'trainers' && (
                       <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
                         <div className="max-h-60 overflow-y-auto p-2">
-                          {data.allTrainers.map((trainer) => (
-                            <label
-                              key={trainer.id}
-                              className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedTrainers.includes(trainer.id)}
-                                onChange={() => toggleTrainer(trainer.id)}
-                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                              />
-                              <span className="text-sm text-text-primary">{trainer.name}</span>
-                            </label>
-                          ))}
+                          {data.allTrainers
+                            .filter(trainer => !selectedLocation || trainer.locationId === selectedLocation)
+                            .map((trainer) => (
+                              <label
+                                key={trainer.id}
+                                className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedTrainers.includes(trainer.id)}
+                                  onChange={() => toggleTrainer(trainer.id)}
+                                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                                />
+                                <span className="text-sm text-text-primary">{trainer.name}</span>
+                              </label>
+                            ))}
+                          {selectedLocation && data.allTrainers.filter(t => t.locationId === selectedLocation).length === 0 && (
+                            <p className="text-sm text-text-secondary p-2">No trainers in this location</p>
+                          )}
                         </div>
                       </div>
                     )}
