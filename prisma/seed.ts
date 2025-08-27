@@ -6,23 +6,29 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Starting seed...')
 
-  // Create locations
-  const woodSquare = await prisma.location.create({
-    data: {
+  // Create or find locations (prevent duplicates)
+  const woodSquare = await prisma.location.upsert({
+    where: { name: 'Wood Square' },
+    update: {},
+    create: {
       name: 'Wood Square',
       address: '123 Wood Square Ave'
     }
   })
 
-  const plaza888 = await prisma.location.create({
-    data: {
+  const plaza888 = await prisma.location.upsert({
+    where: { name: '888 Plaza' },
+    update: {},
+    create: {
       name: '888 Plaza',
       address: '888 Plaza Street'
     }
   })
 
-  const woodlandsHealth = await prisma.location.create({
-    data: {
+  const woodlandsHealth = await prisma.location.upsert({
+    where: { name: 'Woodlands Health' },
+    update: {},
+    create: {
       name: 'Woodlands Health',
       address: '456 Woodlands Road'
     }

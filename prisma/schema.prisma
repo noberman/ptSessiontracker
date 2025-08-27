@@ -21,7 +21,7 @@ enum Role {
 // Location/Club model
 model Location {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @unique
   address   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
