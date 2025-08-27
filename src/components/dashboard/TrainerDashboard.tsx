@@ -71,19 +71,19 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
   const [resendingIds, setResendingIds] = useState<Set<string>>(new Set())
   const [period, setPeriod] = useState('month')
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`/api/dashboard?period=${period}`)
-        const data = await response.json()
-        setData(data)
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error)
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = async () => {
+    try {
+      const response = await fetch(`/api/dashboard?period=${period}`)
+      const data = await response.json()
+      setData(data)
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error)
+    } finally {
+      setLoading(false)
     }
-    
+  }
+
+  useEffect(() => {
     fetchData()
   }, [period])
 
@@ -98,7 +98,7 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
       
       if (response.ok) {
         alert('Validation email sent successfully!')
-        fetchDashboardData() // Refresh data
+        fetchData() // Refresh data
       } else {
         const data = await response.json()
         alert(`Error: ${data.error}`)
