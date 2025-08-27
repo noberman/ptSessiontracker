@@ -168,7 +168,7 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-text-secondary">Session Value</p>
+                <p className="text-sm text-text-secondary">Total Earnings</p>
                 <p className="text-2xl font-bold text-text-primary mt-1">
                   ${data.stats.totalSessionValue.toFixed(2)}
                 </p>
