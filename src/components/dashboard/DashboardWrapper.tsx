@@ -99,7 +99,7 @@ export function DashboardWrapper({ userId, userName, actualRole, locationId }: D
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">Trainer</span>
                         {viewRole === 'TRAINER' && (
-                          <Badge variant="primary" size="xs">Current</Badge>
+                          <Badge variant="default" size="xs">Current</Badge>
                         )}
                       </div>
                       <p className="text-xs text-text-secondary mt-1">
@@ -119,7 +119,7 @@ export function DashboardWrapper({ userId, userName, actualRole, locationId }: D
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">Club Manager</span>
                         {viewRole === 'CLUB_MANAGER' && (
-                          <Badge variant="primary" size="xs">Current</Badge>
+                          <Badge variant="default" size="xs">Current</Badge>
                         )}
                       </div>
                       <p className="text-xs text-text-secondary mt-1">
@@ -139,7 +139,7 @@ export function DashboardWrapper({ userId, userName, actualRole, locationId }: D
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">PT Manager</span>
                         {viewRole === 'PT_MANAGER' && (
-                          <Badge variant="primary" size="xs">Current</Badge>
+                          <Badge variant="default" size="xs">Current</Badge>
                         )}
                       </div>
                       <p className="text-xs text-text-secondary mt-1">
@@ -159,7 +159,7 @@ export function DashboardWrapper({ userId, userName, actualRole, locationId }: D
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">Admin</span>
                         {viewRole === 'ADMIN' && (
-                          <Badge variant="primary" size="xs">Current</Badge>
+                          <Badge variant="default" size="xs">Current</Badge>
                         )}
                       </div>
                       <p className="text-xs text-text-secondary mt-1">
