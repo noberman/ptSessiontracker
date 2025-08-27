@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   return (
     <DashboardWrapper 
       userId={session.user.id}
-      userName={session.user.name}
+      userName={session.user.name || ''}
       actualRole={session.user.role}
       locationId={session.user.locationId}
     />
