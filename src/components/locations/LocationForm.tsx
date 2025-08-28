@@ -118,7 +118,7 @@ export function LocationForm({ location, isEdit = false }: LocationFormProps) {
                 </label>
               </div>
               <p className="text-xs text-text-secondary mt-1">
-                Inactive locations won't be available for new sessions
+                Inactive locations won&apos;t be available for new sessions
               </p>
             </div>
           )}
