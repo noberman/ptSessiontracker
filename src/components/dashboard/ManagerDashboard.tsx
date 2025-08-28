@@ -393,6 +393,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
                 >
                   <option value="day">Today</option>
                   <option value="week">This Week</option>
+                  <option value="lastMonth">Last Month</option>
                   <option value="month">This Month</option>
                   <option value="custom">Custom Range</option>
                 </select>

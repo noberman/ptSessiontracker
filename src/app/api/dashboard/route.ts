@@ -32,6 +32,16 @@ export async function GET(request: Request) {
       dateFrom = new Date()
       dateFrom.setDate(dateFrom.getDate() - 7)
       dateFrom.setHours(0, 0, 0, 0)
+    } else if (period === 'lastMonth') {
+      // Last month - from first day to last day of previous month
+      dateFrom = new Date()
+      dateFrom.setMonth(dateFrom.getMonth() - 1)
+      dateFrom.setDate(1)
+      dateFrom.setHours(0, 0, 0, 0)
+      
+      dateTo = new Date()
+      dateTo.setDate(0) // Sets to last day of previous month
+      dateTo.setHours(23, 59, 59, 999)
     } else { // month (default)
       dateFrom = new Date()
       dateFrom.setDate(1)

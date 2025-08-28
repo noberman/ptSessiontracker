@@ -153,6 +153,13 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
                 This Week
               </Button>
               <Button
+                variant={period === 'lastMonth' ? 'primary' : 'outline'}
+                size="sm"
+                onClick={() => setPeriod('lastMonth')}
+              >
+                Last Month
+              </Button>
+              <Button
                 variant={period === 'month' ? 'primary' : 'outline'}
                 size="sm"
                 onClick={() => setPeriod('month')}
@@ -175,7 +182,7 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-text-primary">Welcome back, {userName}!</h1>
         <p className="text-sm text-text-secondary mt-1">
-          Here&apos;s your performance for {period === 'month' ? 'this month' : period === 'week' ? 'this week' : 'today'}
+          Here&apos;s your performance for {period === 'month' ? 'this month' : period === 'lastMonth' ? 'last month' : period === 'week' ? 'this week' : 'today'}
         </p>
       </div>
 
