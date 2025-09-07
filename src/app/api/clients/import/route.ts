@@ -64,6 +64,12 @@ export async function POST(request: Request) {
     const trainerAssignments = formData.get('trainerAssignments') 
       ? JSON.parse(formData.get('trainerAssignments') as string) 
       : {}
+    const locationAssignments = formData.get('locationAssignments')
+      ? JSON.parse(formData.get('locationAssignments') as string)
+      : {}
+    const packageAssignments = formData.get('packageAssignments')
+      ? JSON.parse(formData.get('packageAssignments') as string)
+      : {}
 
     if (!file) {
       return NextResponse.json(
@@ -216,9 +222,16 @@ export async function POST(request: Request) {
         warnings.push(`Email appears ${emailCounts[row.email]} times in CSV`)
       }
 
-      // Location validation
-      const location = locationMap[row.location?.toLowerCase()]
-      if (row.location && !location) {
+      // Location validation - check manual assignment first
+      let location = undefined
+      const assignedLocationId = locationAssignments[row.email]
+      if (assignedLocationId) {
+        location = locations.find(l => l.id === assignedLocationId)
+      } else {
+        location = locationMap[row.location?.toLowerCase()]
+      }
+      
+      if (!location && row.location) {
         // Provide more helpful error message for club managers
         if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
           const userLocation = locations[0]?.name || 'your location'
@@ -228,9 +241,16 @@ export async function POST(request: Request) {
         }
       }
 
-      // Package template validation
-      const packageTemplate = templateMap[row.packageTemplate?.toLowerCase()]
-      if (row.packageTemplate && !packageTemplate) {
+      // Package template validation - check manual assignment first
+      let packageTemplate = undefined
+      const assignedPackageId = packageAssignments[row.email]
+      if (assignedPackageId) {
+        packageTemplate = packageTemplates.find(t => t.id === assignedPackageId)
+      } else {
+        packageTemplate = templateMap[row.packageTemplate?.toLowerCase()]
+      }
+      
+      if (!packageTemplate && row.packageTemplate) {
         errors.push(`Package template '${row.packageTemplate}' not found. Available templates: ${packageTemplates.map(t => t.displayName).join(', ')}`)
       }
 

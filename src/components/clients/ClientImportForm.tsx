@@ -80,7 +80,10 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
   const [summary, setSummary] = useState<ImportSummary | null>(null)
   const [locations, setLocations] = useState<Array<{ id: string; name: string }>>([])
   const [trainers, setTrainers] = useState<Array<{ id: string; name: string; email: string; locationId?: string }>>([])
+  const [packageTemplates, setPackageTemplates] = useState<Array<{ id: string; displayName: string; sessions: number; price: number }>>([])
   const [trainerAssignments, setTrainerAssignments] = useState<Record<string, string>>({})
+  const [locationAssignments, setLocationAssignments] = useState<Record<string, string>>({})
+  const [packageAssignments, setPackageAssignments] = useState<Record<string, string>>({})
   const [showResults, setShowResults] = useState(false)
   const [importResults, setImportResults] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'valid' | 'invalid' | 'warnings'>('valid')
@@ -177,6 +180,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
       setSummary(data.summary)
       setLocations(data.locations || [])
       setTrainers(data.trainers || [])
+      setPackageTemplates(data.packageTemplates || [])
     } catch (error: any) {
       alert(error.message || 'Failed to validate file')
     } finally {
@@ -202,6 +206,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
     formData.append('file', file)
     formData.append('action', 'import')
     formData.append('trainerAssignments', JSON.stringify(trainerAssignments))
+    formData.append('locationAssignments', JSON.stringify(locationAssignments))
+    formData.append('packageAssignments', JSON.stringify(packageAssignments))
 
     try {
       const response = await fetch('/api/clients/import', {
@@ -228,6 +234,20 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
     setTrainerAssignments(prev => ({
       ...prev,
       [clientEmail]: trainerId
+    }))
+  }
+
+  const assignLocation = (clientEmail: string, locationId: string) => {
+    setLocationAssignments(prev => ({
+      ...prev,
+      [clientEmail]: locationId
+    }))
+  }
+
+  const assignPackage = (clientEmail: string, packageTemplateId: string) => {
+    setPackageAssignments(prev => ({
+      ...prev,
+      [clientEmail]: packageTemplateId
     }))
   }
 
@@ -531,17 +551,50 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                           )}
                         </td>
                         <td className="p-2 text-sm text-text-secondary">{result.row.email}</td>
-                        <td className="p-2 text-sm">{result.row.location}</td>
                         <td className="p-2 text-sm">
-                          {result.packageTemplate ? (
+                          {!result.location ? (
+                            <select
+                              className="text-sm border border-error-300 rounded px-2 py-1 w-full"
+                              value={locationAssignments[result.row.email] || ''}
+                              onChange={(e) => assignLocation(result.row.email, e.target.value)}
+                            >
+                              <option value="">Select Location</option>
+                              {locations.map(location => (
+                                <option key={location.id} value={location.id}>
+                                  {location.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            result.location.name
+                          )}
+                        </td>
+                        <td className="p-2 text-sm">
+                          {!result.packageTemplate ? (
+                            <div>
+                              <select
+                                className="text-sm border border-error-300 rounded px-2 py-1 w-full"
+                                value={packageAssignments[result.row.email] || ''}
+                                onChange={(e) => assignPackage(result.row.email, e.target.value)}
+                              >
+                                <option value="">Select Package</option>
+                                {packageTemplates.map(template => (
+                                  <option key={template.id} value={template.id}>
+                                    {template.displayName} ({template.sessions} sessions)
+                                  </option>
+                                ))}
+                              </select>
+                              <span className="text-xs text-text-secondary">
+                                Remaining: {result.row.remainingSessions}
+                              </span>
+                            </div>
+                          ) : (
                             <>
                               {result.packageTemplate.displayName}
                               <span className="text-text-secondary ml-1">
                                 ({result.row.remainingSessions}/{result.packageTemplate.sessions})
                               </span>
                             </>
-                          ) : (
-                            <span className="text-error-600">{result.row.packageTemplate || 'Missing'}</span>
                           )}
                         </td>
                         <td className="p-2">
@@ -552,13 +605,14 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                               onChange={(e) => assignTrainer(result.row.email, e.target.value)}
                             >
                               <option value="">Select Trainer</option>
-                              {trainers
-                                .filter(t => !result.location?.id || t.locationId === result.location.id)
-                                .map(trainer => (
-                                  <option key={trainer.id} value={trainer.id}>
-                                    {trainer.name}
-                                  </option>
-                                ))}
+                              {trainers.map(trainer => (
+                                <option key={trainer.id} value={trainer.id}>
+                                  {trainer.name}
+                                  {trainer.locationId && locations.find(l => l.id === trainer.locationId) && 
+                                    ` (${locations.find(l => l.id === trainer.locationId)?.name})`
+                                  }
+                                </option>
+                              ))}
                             </select>
                           ) : (
                             <span className="text-sm">
