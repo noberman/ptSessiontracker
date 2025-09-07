@@ -19,6 +19,24 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // First, try to reset the database (be careful!)
+    // This will drop all tables and recreate them
+    const resetDatabase = request.nextUrl.searchParams.get('reset') === 'true'
+    
+    if (resetDatabase) {
+      try {
+        const { stdout: resetOut } = await execAsync('npx prisma migrate reset --force --skip-seed')
+        return NextResponse.json({
+          success: true,
+          message: 'Database reset and migrations applied',
+          output: resetOut
+        })
+      } catch (resetError: any) {
+        // If reset fails, continue with normal migration
+        console.log('Reset failed, trying normal migration:', resetError.message)
+      }
+    }
+    
     // Run Prisma migrations
     const { stdout, stderr } = await execAsync('npx prisma migrate deploy')
     
