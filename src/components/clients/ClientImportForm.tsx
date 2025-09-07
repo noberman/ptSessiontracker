@@ -29,9 +29,8 @@ interface ValidationResult {
     email: string
     location: string
     trainerEmail?: string
+    packageTemplate: string
     remainingSessions: number
-    packageSize: number
-    packageTotalValue: number
   }
   existingClient?: {
     id: string
@@ -47,8 +46,14 @@ interface ValidationResult {
     name: string
     email: string
   }
-  calculatedSessionValue: number
-  packageName: string
+  packageTemplate?: {
+    id: string
+    displayName: string
+    sessions: number
+    price: number
+    sessionValue: number
+    category: string
+  }
 }
 
 interface ImportSummary {
@@ -528,10 +533,16 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                         <td className="p-2 text-sm text-text-secondary">{result.row.email}</td>
                         <td className="p-2 text-sm">{result.row.location}</td>
                         <td className="p-2 text-sm">
-                          {result.row.remainingSessions}/{result.row.packageSize}
-                          <span className="text-text-secondary ml-1">
-                            (${result.calculatedSessionValue.toFixed(2)}/session)
-                          </span>
+                          {result.packageTemplate ? (
+                            <>
+                              {result.packageTemplate.displayName}
+                              <span className="text-text-secondary ml-1">
+                                ({result.row.remainingSessions}/{result.packageTemplate.sessions})
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-error-600">{result.row.packageTemplate || 'Missing'}</span>
+                          )}
                         </td>
                         <td className="p-2">
                           {result.valid && !result.trainer ? (
