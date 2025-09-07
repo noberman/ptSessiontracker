@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     // Build where clause based on user role
     // eslint-disable-next-line prefer-const
     let sessionsWhere: any = {
-      date: {
+      sessionDate: {
         gte: dateFrom,
         lte: dateTo
       }
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
         totalSessions,
         validatedSessions,
         pendingValidations,
-        totalSessionCount,
+        totalSessionValue,
         myClients,
         todaysSessions,
         recentSessions
@@ -83,21 +83,22 @@ export async function GET(request: Request) {
         
         // Validated sessions
         prisma.session.count({ 
-          where: { ...sessionsWhere, validatedAt: { not: null } } 
+          where: { ...sessionsWhere, validated: true } 
         }),
         
         // Pending validations
         prisma.session.count({ 
           where: { 
             ...sessionsWhere, 
-            validatedAt: null,
-            validationToken: { not: null }
+            validated: false,
+            validationExpiry: { gte: new Date() }
           } 
         }),
         
-        // Total session count
-        prisma.session.count({
-          where: sessionsWhere
+        // Total session value
+        prisma.session.aggregate({
+          where: sessionsWhere,
+          _sum: { sessionValue: true }
         }),
         
         // My clients
@@ -124,7 +125,7 @@ export async function GET(request: Request) {
         prisma.session.findMany({
           where: {
             trainerId: session.user.id,
-            date: {
+            sessionDate: {
               gte: new Date(new Date().setHours(0, 0, 0, 0)),
               lte: new Date(new Date().setHours(23, 59, 59, 999))
             }
@@ -142,15 +143,15 @@ export async function GET(request: Request) {
               }
             }
           },
-          orderBy: { date: 'desc' }
+          orderBy: { sessionDate: 'desc' }
         }),
         
         // Recent sessions with pending validation
         prisma.session.findMany({
           where: {
             trainerId: session.user.id,
-            validatedAt: null,
-            validationToken: { not: null }
+            validated: false,
+            validationExpiry: { gte: new Date() }
           },
           include: {
             client: {
@@ -160,7 +161,7 @@ export async function GET(request: Request) {
               }
             }
           },
-          orderBy: { date: 'desc' },
+          orderBy: { sessionDate: 'desc' },
           take: 5
         })
       ])
@@ -174,7 +175,7 @@ export async function GET(request: Request) {
           totalSessions,
           validatedSessions,
           pendingValidations,
-          totalSessionValue: totalSessionCount * 75, // Default value per session
+          totalSessionValue: totalSessionValue._sum.sessionValue || 0,
           validationRate,
           period: {
             from: dateFrom,
@@ -221,7 +222,7 @@ export async function GET(request: Request) {
       const [
         totalSessions,
         validatedSessions,
-        totalSessionCount,
+        totalSessionValue,
         trainerStats,
         dailyStats,
         activeTrainers,
@@ -232,27 +233,30 @@ export async function GET(request: Request) {
         
         // Validated sessions
         prisma.session.count({ 
-          where: { ...sessionsWhere, validatedAt: { not: null } } 
+          where: { ...sessionsWhere, validated: true } 
         }),
         
-        // Total session count for value calculation
-        prisma.session.count({
-          where: sessionsWhere
+        // Total session value
+        prisma.session.aggregate({
+          where: sessionsWhere,
+          _sum: { sessionValue: true }
         }),
         
         // Stats by trainer (already filtered by sessionsWhere which includes trainer filter)
         prisma.session.groupBy({
           by: ['trainerId'],
           where: sessionsWhere,
-          _count: { id: true }
+          _count: { id: true },
+          _sum: { sessionValue: true }
         }),
         
         // Daily stats for chart (including trainer breakdown)
         prisma.session.findMany({
           where: sessionsWhere,
           select: {
-            date: true,
-            validatedAt: true,
+            sessionDate: true,
+            sessionValue: true,
+            validated: true,
             trainerId: true
           }
         }).then(sessions => {
@@ -274,7 +278,7 @@ export async function GET(request: Request) {
           
           // Now populate with actual session data
           sessions.forEach(session => {
-            const dateKey = session.date.toISOString().split('T')[0]
+            const dateKey = session.sessionDate.toISOString().split('T')[0]
             const existing = dailyMap.get(dateKey) || { count: 0, value: 0, validated_count: 0, trainerSessions: new Map() }
             
             // Track sessions by trainer for this date
@@ -284,8 +288,8 @@ export async function GET(request: Request) {
             
             dailyMap.set(dateKey, {
               count: existing.count + 1,
-              value: existing.value + 75, // Default value per session
-              validated_count: existing.validated_count + (session.validatedAt ? 1 : 0),
+              value: existing.value + (session.sessionValue || 0),
+              validated_count: existing.validated_count + (session.validated ? 1 : 0),
               trainerSessions
             })
           })
@@ -349,7 +353,7 @@ export async function GET(request: Request) {
             locationId: trainer.locationId
           } : null,
           sessionCount: stat._count.id,
-          totalValue: stat._count.id * 75 // Default value per session
+          totalValue: stat._sum.sessionValue || 0
         }
       }).sort((a, b) => b.totalValue - a.totalValue)
 
@@ -361,7 +365,7 @@ export async function GET(request: Request) {
         stats: {
           totalSessions,
           validatedSessions,
-          totalSessionValue: totalSessionCount * 75, // Default value per session
+          totalSessionValue: totalSessionValue._sum.sessionValue || 0,
           validationRate,
           activeTrainers,
           activeClients,
