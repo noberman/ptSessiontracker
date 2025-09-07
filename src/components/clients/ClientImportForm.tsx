@@ -80,7 +80,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
   const [summary, setSummary] = useState<ImportSummary | null>(null)
   const [locations, setLocations] = useState<Array<{ id: string; name: string }>>([])
   const [trainers, setTrainers] = useState<Array<{ id: string; name: string; email: string; locationId?: string }>>([])
-  const [packageTemplates, setPackageTemplates] = useState<Array<{ id: string; displayName: string; sessions: number; price: number }>>([])
+  const [packageTemplates, setPackageTemplates] = useState<Array<{ id: string; displayName: string; sessions: number; price: number; sessionValue: number; category: string }>>([])
   const [trainerAssignments, setTrainerAssignments] = useState<Record<string, string>>({})
   const [locationAssignments, setLocationAssignments] = useState<Record<string, string>>({})
   const [packageAssignments, setPackageAssignments] = useState<Record<string, string>>({})
