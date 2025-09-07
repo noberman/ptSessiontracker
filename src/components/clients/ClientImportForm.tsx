@@ -573,7 +573,11 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                         </td>
                         <td className="p-2">
                           <select
-                            className="text-sm border rounded px-2 py-1 w-full"
+                            className={`text-sm border rounded px-2 py-1 w-full ${
+                              !result.trainer && !trainerAssignments[result.row.email] 
+                                ? 'border-error-300' 
+                                : ''
+                            }`}
                             value={trainerAssignments[result.row.email] || result.trainer?.id || ''}
                             onChange={(e) => assignTrainer(result.row.email, e.target.value)}
                           >

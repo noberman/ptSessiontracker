@@ -254,27 +254,23 @@ export async function POST(request: Request) {
         errors.push(`Package template '${row.packageTemplate}' not found. Available templates: ${packageTemplates.map(t => t.displayName).join(', ')}`)
       }
 
-      // Trainer validation (optional)
+      // Trainer validation (REQUIRED)
       let trainer = undefined
-      if (row.trainerEmail) {
-        // Check manual assignments first
-        const assignedTrainerId = trainerAssignments[row.email]
-        if (assignedTrainerId) {
-          trainer = trainers.find(t => t.id === assignedTrainerId)
-        } else {
-          trainer = trainerMap[row.trainerEmail]
-          if (!trainer) {
-            warnings.push(`Trainer '${row.trainerEmail}' not found - assign manually`)
-          }
+      
+      // Check manual assignments first
+      const assignedTrainerId = trainerAssignments[row.email]
+      if (assignedTrainerId) {
+        trainer = trainers.find(t => t.id === assignedTrainerId)
+      } else if (row.trainerEmail) {
+        trainer = trainerMap[row.trainerEmail]
+        if (!trainer) {
+          errors.push(`Trainer '${row.trainerEmail}' not found - please select a trainer`)
         }
-      } else {
-        // Check if manually assigned
-        const assignedTrainerId = trainerAssignments[row.email]
-        if (assignedTrainerId) {
-          trainer = trainers.find(t => t.id === assignedTrainerId)
-        } else {
-          warnings.push('No trainer assigned')
-        }
+      }
+      
+      // If still no trainer, it's an error (trainer is required)
+      if (!trainer) {
+        errors.push('Trainer is required - please assign a trainer')
       }
 
       // Numeric validation
