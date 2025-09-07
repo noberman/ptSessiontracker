@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   MapPin,
 } from 'lucide-react'
+import Image from 'next/image'
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { UserMenu } from './UserMenu'
@@ -107,8 +108,14 @@ export function Sidebar({ isCollapsed = false, onCollapsedChange }: SidebarProps
             isCollapsed && "justify-center"
           )}
         >
-          <Calendar className="h-6 w-6" />
-          {!isCollapsed && <span>PT Tracker</span>}
+          <Image 
+            src="/Icon.svg" 
+            alt="FitSync" 
+            width={32} 
+            height={32}
+            className="h-8 w-8"
+          />
+          {!isCollapsed && <span className="text-primary-700 font-bold text-lg">FitSync</span>}
         </Link>
         <Button
           variant="ghost"

@@ -1,71 +1,90 @@
 {
+  "brand": {
+    "name": "FitSync",
+    "tagline": "Personal Training Session Tracker",
+    "domain": "fitsync.io"
+  },
   "colors": {
     "primary": {
-      "50": "#EFF6FF",
-      "100": "#DBEAFE",
-      "200": "#BFDBFE",
-      "300": "#93C5FD",
-      "400": "#60A5FA",
-      "500": "#3B82F6",
-      "600": "#2563EB",
-      "700": "#1D4ED8",
-      "800": "#1E40AF",
-      "900": "#1E3A8A",
-      "950": "#172554",
-      "DEFAULT": "#2563EB"
+      "50": "#E6F4F1",
+      "100": "#C0E4DC",
+      "200": "#96D2C6",
+      "300": "#6CC0AF",
+      "400": "#4DB29E",
+      "500": "#2EA48C",
+      "600": "#29917D",
+      "700": "#237D6C",
+      "800": "#1D6A5B",
+      "900": "#14473D",
+      "950": "#0A2420",
+      "DEFAULT": "#237D6C"
     },
     "secondary": {
-      "50": "#F0FDFA",
-      "100": "#CCFBF1",
-      "200": "#99F6E4",
-      "300": "#5EEAD4",
-      "400": "#2DD4BF",
-      "500": "#14B8A6",
-      "600": "#0D9488",
-      "700": "#0F766E",
-      "800": "#115E59",
-      "900": "#134E4A",
-      "950": "#042F2E",
-      "DEFAULT": "#0EA5E9"
+      "50": "#FDF6F0",
+      "100": "#FAE8D8",
+      "200": "#F5D0B1",
+      "300": "#EFB88A",
+      "400": "#E9A063",
+      "500": "#E3883C",
+      "600": "#D67120",
+      "700": "#B35A1A",
+      "800": "#904815",
+      "900": "#6D3610",
+      "950": "#4A240A",
+      "DEFAULT": "#E3883C"
+    },
+    "accent": {
+      "50": "#FDF8F3",
+      "100": "#FAEEDD",
+      "200": "#F5DABB",
+      "300": "#F0C699",
+      "400": "#EBB277",
+      "500": "#E69E55",
+      "600": "#D98A3F",
+      "700": "#B67235",
+      "800": "#935A2B",
+      "900": "#704221",
+      "950": "#4D2A17",
+      "DEFAULT": "#F5DABB"
     },
     "gray": {
-      "50": "#F9FAFB",
-      "100": "#F3F4F6",
-      "200": "#E5E7EB",
-      "300": "#D1D5DB",
-      "400": "#9CA3AF",
-      "500": "#6B7280",
-      "600": "#4B5563",
-      "700": "#374151",
-      "800": "#1F2937",
-      "900": "#111827",
-      "950": "#030712"
+      "50": "#F9FAF9",
+      "100": "#F3F4F3",
+      "200": "#E5E7E5",
+      "300": "#D1D5D1",
+      "400": "#9CA39C",
+      "500": "#6B726B",
+      "600": "#4B554B",
+      "700": "#374137",
+      "800": "#1F2D1F",
+      "900": "#111811",
+      "950": "#030703"
     },
     "success": {
-      "50": "#F0FDF4",
-      "100": "#DCFCE7",
-      "200": "#BBF7D0",
-      "300": "#86EFAC",
-      "400": "#4ADE80",
-      "500": "#22C55E",
-      "600": "#16A34A",
-      "700": "#15803D",
-      "800": "#166534",
-      "900": "#14532D",
-      "DEFAULT": "#22C55E"
+      "50": "#E6F7F2",
+      "100": "#C0EBDD",
+      "200": "#96DEC6",
+      "300": "#6CD1AF",
+      "400": "#4DC79C",
+      "500": "#2EBD89",
+      "600": "#29A87A",
+      "700": "#239368",
+      "800": "#1D7E57",
+      "900": "#145440",
+      "DEFAULT": "#2EBD89"
     },
     "warning": {
-      "50": "#FFFBEB",
-      "100": "#FEF3C7",
-      "200": "#FDE68A",
-      "300": "#FCD34D",
-      "400": "#FBBF24",
-      "500": "#F59E0B",
-      "600": "#D97706",
-      "700": "#B45309",
-      "800": "#92400E",
-      "900": "#78350F",
-      "DEFAULT": "#F59E0B"
+      "50": "#FFF9EB",
+      "100": "#FEF0C7",
+      "200": "#FDE18A",
+      "300": "#FCD04D",
+      "400": "#FBBD24",
+      "500": "#F5A20B",
+      "600": "#D98306",
+      "700": "#B46509",
+      "800": "#92500E",
+      "900": "#78420F",
+      "DEFAULT": "#F5A20B"
     },
     "error": {
       "50": "#FEF2F2",
@@ -78,33 +97,36 @@
       "700": "#B91C1C",
       "800": "#991B1B",
       "900": "#7F1D1D",
-      "DEFAULT": "#EF4444"
+      "DEFAULT": "#DC2626"
     },
     "background": {
       "DEFAULT": "#FFFFFF",
-      "secondary": "#F9FAFB",
-      "tertiary": "#F3F4F6"
+      "secondary": "#FDFAF7",
+      "tertiary": "#FAF5F0",
+      "accent": "#F5DABB"
     },
     "surface": {
       "DEFAULT": "#FFFFFF",
-      "hover": "#F9FAFB",
-      "active": "#F3F4F6"
+      "hover": "#FDFAF7",
+      "active": "#FAF5F0"
     },
     "border": {
-      "DEFAULT": "#E5E7EB",
-      "light": "#F3F4F6",
-      "dark": "#D1D5DB"
+      "DEFAULT": "#E5E7E5",
+      "light": "#F3F4F3",
+      "dark": "#D1D5D1"
     },
     "text": {
-      "primary": "#111827",
-      "secondary": "#6B7280",
-      "tertiary": "#9CA3AF",
-      "inverse": "#FFFFFF"
+      "primary": "#1F2D1F",
+      "secondary": "#4B554B",
+      "tertiary": "#6B726B",
+      "inverse": "#FFFFFF",
+      "brand": "#237D6C"
     }
   },
   "typography": {
     "fontFamily": {
-      "sans": "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+      "sans": "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+      "display": "'Outfit', 'Inter', system-ui, sans-serif",
       "mono": "'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace"
     },
     "fontSize": {
@@ -184,22 +206,22 @@
   "borderRadius": {
     "none": "0",
     "sm": "0.125rem",
-    "DEFAULT": "0.25rem",
-    "md": "0.375rem",
-    "lg": "0.5rem",
-    "xl": "0.75rem",
-    "2xl": "1rem",
-    "3xl": "1.5rem",
+    "DEFAULT": "0.375rem",
+    "md": "0.5rem",
+    "lg": "0.75rem",
+    "xl": "1rem",
+    "2xl": "1.5rem",
+    "3xl": "2rem",
     "full": "9999px"
   },
   "boxShadow": {
-    "sm": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-    "DEFAULT": "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-    "md": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-    "lg": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-    "xl": "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-    "2xl": "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-    "inner": "inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)",
+    "sm": "0 1px 2px 0 rgba(31, 45, 31, 0.05)",
+    "DEFAULT": "0 1px 3px 0 rgba(31, 45, 31, 0.1), 0 1px 2px 0 rgba(31, 45, 31, 0.06)",
+    "md": "0 4px 6px -1px rgba(31, 45, 31, 0.1), 0 2px 4px -1px rgba(31, 45, 31, 0.06)",
+    "lg": "0 10px 15px -3px rgba(31, 45, 31, 0.1), 0 4px 6px -2px rgba(31, 45, 31, 0.05)",
+    "xl": "0 20px 25px -5px rgba(31, 45, 31, 0.1), 0 10px 10px -5px rgba(31, 45, 31, 0.04)",
+    "2xl": "0 25px 50px -12px rgba(31, 45, 31, 0.25)",
+    "inner": "inset 0 2px 4px 0 rgba(31, 45, 31, 0.06)",
     "none": "none"
   },
   "breakpoints": {
@@ -225,51 +247,52 @@
   },
   "components": {
     "button": {
-      "base": "inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
+      "base": "inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
       "sizes": {
-        "sm": "h-8 px-3 text-sm",
-        "md": "h-10 px-4 text-sm",
-        "lg": "h-12 px-6 text-base",
-        "xl": "h-14 px-8 text-lg"
+        "sm": "h-8 px-3 text-sm rounded-md",
+        "md": "h-10 px-4 text-sm rounded-lg",
+        "lg": "h-12 px-6 text-base rounded-lg",
+        "xl": "h-14 px-8 text-lg rounded-xl"
       },
       "variants": {
-        "primary": "bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500",
-        "secondary": "bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500",
-        "outline": "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-primary-500",
-        "ghost": "text-gray-700 hover:bg-gray-100 focus:ring-primary-500",
-        "danger": "bg-error-600 text-white hover:bg-error-700 focus:ring-error-500",
-        "success": "bg-success-600 text-white hover:bg-success-700 focus:ring-success-500"
+        "primary": "bg-primary-700 text-white hover:bg-primary-800 focus:ring-primary-500 shadow-sm hover:shadow-md",
+        "secondary": "bg-secondary-500 text-white hover:bg-secondary-600 focus:ring-secondary-400 shadow-sm hover:shadow-md",
+        "outline": "border-2 border-primary-700 bg-transparent text-primary-700 hover:bg-primary-50 focus:ring-primary-500",
+        "ghost": "text-text-secondary hover:bg-background-secondary hover:text-text-primary focus:ring-primary-500",
+        "danger": "bg-error text-white hover:bg-error-700 focus:ring-error-500 shadow-sm hover:shadow-md",
+        "success": "bg-success-500 text-white hover:bg-success-600 focus:ring-success-400 shadow-sm hover:shadow-md"
       },
       "rounded": {
         "none": "rounded-none",
         "sm": "rounded-sm",
         "md": "rounded-md",
         "lg": "rounded-lg",
+        "xl": "rounded-xl",
         "full": "rounded-full"
       }
     },
     "input": {
-      "base": "block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500",
+      "base": "block w-full border-2 border-border-DEFAULT bg-white rounded-lg shadow-sm transition-all duration-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder:text-text-tertiary",
       "sizes": {
         "sm": "text-sm py-1.5 px-2.5",
         "md": "text-sm py-2 px-3",
         "lg": "text-base py-2.5 px-3.5"
       },
       "states": {
-        "error": "border-error-300 text-error-900 placeholder-error-400 focus:ring-error-500 focus:border-error-500",
-        "success": "border-success-300 focus:ring-success-500 focus:border-success-500",
-        "disabled": "bg-gray-50 text-gray-500 cursor-not-allowed"
+        "error": "border-error-400 text-error-900 placeholder-error-400 focus:ring-error-500 focus:border-error-500",
+        "success": "border-success-400 focus:ring-success-500 focus:border-success-500",
+        "disabled": "bg-background-secondary text-text-tertiary cursor-not-allowed opacity-60"
       }
     },
     "card": {
-      "base": "bg-white rounded-lg shadow-sm border border-gray-200",
+      "base": "bg-white rounded-xl shadow-sm border border-border-light transition-all duration-200",
       "padding": {
         "sm": "p-3",
         "md": "p-4",
         "lg": "p-6",
         "xl": "p-8"
       },
-      "hover": "hover:shadow-md transition-shadow duration-200"
+      "hover": "hover:shadow-md hover:border-border-DEFAULT"
     },
     "badge": {
       "base": "inline-flex items-center font-medium rounded-full",
@@ -281,25 +304,26 @@
       },
       "variants": {
         "gray": "bg-gray-100 text-gray-700",
-        "primary": "bg-primary-100 text-primary-700",
-        "success": "bg-success-100 text-success-700",
-        "warning": "bg-warning-100 text-warning-700",
-        "error": "bg-error-100 text-error-700"
+        "primary": "bg-primary-100 text-primary-800",
+        "success": "bg-success-100 text-success-800",
+        "warning": "bg-warning-100 text-warning-800",
+        "error": "bg-error-100 text-error-800",
+        "accent": "bg-accent-200 text-primary-900"
       }
     },
     "table": {
-      "container": "overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg",
-      "table": "min-w-full divide-y divide-gray-300",
-      "thead": "bg-gray-50",
-      "th": "px-3 py-3.5 text-left text-sm font-semibold text-gray-900",
-      "tbody": "divide-y divide-gray-200 bg-white",
-      "td": "whitespace-nowrap px-3 py-4 text-sm text-gray-500",
-      "hover": "hover:bg-gray-50"
+      "container": "overflow-hidden shadow-sm ring-1 ring-border-light rounded-xl",
+      "table": "min-w-full divide-y divide-border-DEFAULT",
+      "thead": "bg-background-secondary",
+      "th": "px-3 py-3.5 text-left text-sm font-semibold text-text-primary",
+      "tbody": "divide-y divide-border-light bg-white",
+      "td": "whitespace-nowrap px-3 py-4 text-sm text-text-secondary",
+      "hover": "hover:bg-background-secondary transition-colors duration-150"
     },
     "modal": {
-      "overlay": "fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity",
+      "overlay": "fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity",
       "container": "fixed inset-0 z-10 overflow-y-auto",
-      "panel": "relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all",
+      "panel": "relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all",
       "sizes": {
         "sm": "max-w-sm",
         "md": "max-w-md",
@@ -311,17 +335,17 @@
     },
     "nav": {
       "item": {
-        "base": "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-        "inactive": "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
-        "active": "bg-primary-50 text-primary-700"
+        "base": "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200",
+        "inactive": "text-text-secondary hover:bg-background-secondary hover:text-text-primary",
+        "active": "bg-primary-50 text-primary-700 border-l-4 border-primary-700"
       },
       "mobile": {
-        "button": "inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+        "button": "inline-flex items-center justify-center p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-background-secondary"
       }
     },
     "form": {
-      "label": "block text-sm font-medium text-gray-700 mb-1",
-      "helper": "mt-1 text-sm text-gray-500",
+      "label": "block text-sm font-medium text-text-primary mb-1",
+      "helper": "mt-1 text-sm text-text-tertiary",
       "error": "mt-1 text-sm text-error-600",
       "required": "text-error-500",
       "group": "mb-4"

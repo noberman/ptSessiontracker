@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -43,11 +44,21 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background-secondary">
       <Card className="w-full max-w-md space-y-8" padding="xl">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-text-primary">
-            PT Session Tracker
-          </h2>
+          <div className="flex justify-center mb-4">
+            <Image 
+              src="/Logo-Icon.svg" 
+              alt="FitSync" 
+              width={200} 
+              height={60}
+              className="h-16 w-auto"
+              priority
+            />
+          </div>
           <p className="mt-2 text-sm text-text-secondary">
-            Sign in to your account
+            Personal Training Session Tracker
+          </p>
+          <p className="mt-1 text-xs text-text-tertiary">
+            Sign in to manage your fitness business
           </p>
         </div>
 

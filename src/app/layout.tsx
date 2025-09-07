@@ -14,8 +14,43 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PT Session Tracker",
-  description: "Personal Training Session Management System",
+  title: "FitSync - Personal Training Session Tracker",
+  description: "Track, manage, and optimize your personal training business with FitSync",
+  keywords: "personal training, fitness, session tracking, client management, FitSync",
+  authors: [{ name: "FitSync" }],
+  creator: "FitSync",
+  publisher: "FitSync",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL("https://fitsync.io"),
+  openGraph: {
+    title: "FitSync - Personal Training Session Tracker",
+    description: "Track, manage, and optimize your personal training business",
+    url: "https://fitsync.io",
+    siteName: "FitSync",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FitSync - Personal Training Session Tracker",
+    description: "Track, manage, and optimize your personal training business",
+    creator: "@fitsync",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  icons: {
+    icon: [
+      { url: "/Icon.svg", type: "image/svg+xml" },
+      { url: "/favicon-logo.png", type: "image/png", sizes: "32x32" }
+    ],
+    apple: "/favicon-logo.png",
+  },
 };
 
 export default function RootLayout({
