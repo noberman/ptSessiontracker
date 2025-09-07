@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// TEMPORARY: Reset and properly set up staging database
+// TEMPORARY: Safely reset staging database without DROP SCHEMA
 export async function GET(request: NextRequest) {
   // Only allow in staging environment
   const isStaging = process.env.NEXTAUTH_URL?.includes('staging') || 
@@ -16,16 +16,31 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Drop all tables to start fresh
-    await prisma.$executeRaw`DROP SCHEMA public CASCADE`
-    await prisma.$executeRaw`CREATE SCHEMA public`
+    // Drop tables in correct order (respecting foreign keys)
+    const dropTables = [
+      'DROP TABLE IF EXISTS "email_logs" CASCADE',
+      'DROP TABLE IF EXISTS "sessions" CASCADE',
+      'DROP TABLE IF EXISTS "packages" CASCADE',
+      'DROP TABLE IF EXISTS "clients" CASCADE',
+      'DROP TABLE IF EXISTS "users" CASCADE',
+      'DROP TABLE IF EXISTS "package_templates" CASCADE',
+      'DROP TABLE IF EXISTS "locations" CASCADE',
+      'DROP TABLE IF EXISTS "_prisma_migrations"',
+      'DROP TYPE IF EXISTS "Role" CASCADE'
+    ]
 
-    // Recreate all tables with exact schema from Prisma
-    // This matches your local database exactly
-    
+    // Drop each table
+    for (const dropQuery of dropTables) {
+      try {
+        await prisma.$executeRawUnsafe(dropQuery)
+      } catch (e: any) {
+        console.log(`Could not drop: ${e.message}`)
+      }
+    }
+
     // Create enums
     await prisma.$executeRaw`
-      CREATE TYPE "Role" AS ENUM ('TRAINER', 'CLUB_MANAGER', 'PT_MANAGER', 'ADMIN');
+      CREATE TYPE "Role" AS ENUM ('TRAINER', 'CLUB_MANAGER', 'PT_MANAGER', 'ADMIN')
     `
 
     // Create locations table
@@ -37,9 +52,9 @@ export async function GET(request: NextRequest) {
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "locations_pkey" PRIMARY KEY ("id")
-      );
-      CREATE UNIQUE INDEX "locations_name_key" ON "locations"("name");
+      )
     `
+    await prisma.$executeRaw`CREATE UNIQUE INDEX "locations_name_key" ON "locations"("name")`
 
     // Create users table
     await prisma.$executeRaw`
@@ -53,12 +68,11 @@ export async function GET(request: NextRequest) {
         "active" BOOLEAN NOT NULL DEFAULT true,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "users_pkey" PRIMARY KEY ("id")
-      );
-      CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
-      ALTER TABLE "users" ADD CONSTRAINT "users_locationId_fkey" 
-        FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+        CONSTRAINT "users_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "users_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      )
     `
+    await prisma.$executeRaw`CREATE UNIQUE INDEX "users_email_key" ON "users"("email")`
 
     // Create clients table
     await prisma.$executeRaw`
@@ -71,14 +85,12 @@ export async function GET(request: NextRequest) {
         "active" BOOLEAN NOT NULL DEFAULT true,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "clients_pkey" PRIMARY KEY ("id")
-      );
-      CREATE UNIQUE INDEX "clients_email_key" ON "clients"("email");
-      ALTER TABLE "clients" ADD CONSTRAINT "clients_locationId_fkey" 
-        FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-      ALTER TABLE "clients" ADD CONSTRAINT "clients_primaryTrainerId_fkey" 
-        FOREIGN KEY ("primaryTrainerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+        CONSTRAINT "clients_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "clients_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+        CONSTRAINT "clients_primaryTrainerId_fkey" FOREIGN KEY ("primaryTrainerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+      )
     `
+    await prisma.$executeRaw`CREATE UNIQUE INDEX "clients_email_key" ON "clients"("email")`
 
     // Create package_templates table
     await prisma.$executeRaw`
@@ -95,9 +107,9 @@ export async function GET(request: NextRequest) {
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "package_templates_pkey" PRIMARY KEY ("id")
-      );
-      CREATE UNIQUE INDEX "package_templates_name_key" ON "package_templates"("name");
+      )
     `
+    await prisma.$executeRaw`CREATE UNIQUE INDEX "package_templates_name_key" ON "package_templates"("name")`
 
     // Create packages table
     await prisma.$executeRaw`
@@ -114,12 +126,10 @@ export async function GET(request: NextRequest) {
         "active" BOOLEAN NOT NULL DEFAULT true,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "packages_pkey" PRIMARY KEY ("id")
-      );
-      ALTER TABLE "packages" ADD CONSTRAINT "packages_clientId_fkey" 
-        FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-      ALTER TABLE "packages" ADD CONSTRAINT "packages_templateId_fkey" 
-        FOREIGN KEY ("templateId") REFERENCES "package_templates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+        CONSTRAINT "packages_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "packages_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "packages_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "package_templates"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      )
     `
 
     // Create sessions table
@@ -141,18 +151,14 @@ export async function GET(request: NextRequest) {
         "validatedBy" TEXT,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
-      );
-      CREATE UNIQUE INDEX "sessions_validationToken_key" ON "sessions"("validationToken");
-      ALTER TABLE "sessions" ADD CONSTRAINT "sessions_clientId_fkey" 
-        FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-      ALTER TABLE "sessions" ADD CONSTRAINT "sessions_trainerId_fkey" 
-        FOREIGN KEY ("trainerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-      ALTER TABLE "sessions" ADD CONSTRAINT "sessions_packageId_fkey" 
-        FOREIGN KEY ("packageId") REFERENCES "packages"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-      ALTER TABLE "sessions" ADD CONSTRAINT "sessions_locationId_fkey" 
-        FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+        CONSTRAINT "sessions_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "sessions_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "sessions_trainerId_fkey" FOREIGN KEY ("trainerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+        CONSTRAINT "sessions_packageId_fkey" FOREIGN KEY ("packageId") REFERENCES "packages"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+        CONSTRAINT "sessions_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+      )
     `
+    await prisma.$executeRaw`CREATE UNIQUE INDEX "sessions_validationToken_key" ON "sessions"("validationToken")`
 
     // Create email_logs table
     await prisma.$executeRaw`
@@ -167,15 +173,14 @@ export async function GET(request: NextRequest) {
         "sentAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "email_logs_pkey" PRIMARY KEY ("id")
-      );
-      ALTER TABLE "email_logs" ADD CONSTRAINT "email_logs_sessionId_fkey" 
-        FOREIGN KEY ("sessionId") REFERENCES "sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+        CONSTRAINT "email_logs_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "email_logs_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
     `
 
-    // Create _prisma_migrations table to track migrations
+    // Create _prisma_migrations table
     await prisma.$executeRaw`
-      CREATE TABLE "_prisma_migrations" (
+      CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
         "id" VARCHAR(36) NOT NULL,
         "checksum" VARCHAR(64) NOT NULL,
         "finished_at" TIMESTAMPTZ,
@@ -185,18 +190,71 @@ export async function GET(request: NextRequest) {
         "started_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
         "applied_steps_count" INTEGER NOT NULL DEFAULT 0,
         CONSTRAINT "_prisma_migrations_pkey" PRIMARY KEY ("id")
-      );
+      )
     `
 
-    // Mark migrations as applied
+    // Clear and re-add migration records
+    await prisma.$executeRaw`DELETE FROM "_prisma_migrations"`
     await prisma.$executeRaw`
       INSERT INTO "_prisma_migrations" (id, checksum, migration_name, finished_at, applied_steps_count)
       VALUES 
         ('20250822031543', 'dummy', '20250822031543_initial_schema', NOW(), 1),
         ('20250822060819', 'dummy', '20250822060819_add_package_fields', NOW(), 1),
         ('20250824084619', 'dummy', '20250824084619_add_email_log', NOW(), 1),
-        ('20250824134620', 'dummy', '20250824134620_remove_session_type', NOW(), 1);
+        ('20250824134620', 'dummy', '20250824134620_remove_session_type', NOW(), 1)
     `
+
+    // Add default package templates
+    await prisma.packageTemplate.createMany({
+      data: [
+        {
+          name: 'single-session',
+          displayName: 'Single Session',
+          category: 'Individual',
+          sessions: 1,
+          price: 80,
+          sessionValue: 80,
+          sortOrder: 1
+        },
+        {
+          name: '5-pack',
+          displayName: '5 Session Package',
+          category: 'Package',
+          sessions: 5,
+          price: 375,
+          sessionValue: 75,
+          sortOrder: 2
+        },
+        {
+          name: '10-pack',
+          displayName: '10 Session Package',
+          category: 'Package',
+          sessions: 10,
+          price: 700,
+          sessionValue: 70,
+          sortOrder: 3
+        },
+        {
+          name: '20-pack',
+          displayName: '20 Session Package',
+          category: 'Package',
+          sessions: 20,
+          price: 1300,
+          sessionValue: 65,
+          sortOrder: 4
+        },
+        {
+          name: 'monthly-unlimited',
+          displayName: 'Monthly Unlimited',
+          category: 'Membership',
+          sessions: 999,
+          price: 500,
+          sessionValue: 50,
+          sortOrder: 5
+        }
+      ],
+      skipDuplicates: true
+    })
 
     // Get list of created tables
     const tables = await prisma.$queryRaw`
@@ -207,11 +265,14 @@ export async function GET(request: NextRequest) {
       ORDER BY table_name
     ` as any[]
 
+    const templateCount = await prisma.packageTemplate.count()
+
     return NextResponse.json({
       success: true,
-      message: 'Database completely reset and recreated with proper schema',
+      message: 'Database safely reset with all tables',
       tables: tables.map((t: any) => t.table_name),
-      note: 'Database is now identical to local. Run /api/seed-staging to add test data.'
+      packageTemplatesCreated: templateCount,
+      note: 'Database ready. Run /api/seed-staging to add test accounts.'
     })
   } catch (error: any) {
     console.error('Reset database error:', error)
@@ -219,7 +280,7 @@ export async function GET(request: NextRequest) {
       { 
         error: 'Failed to reset database',
         details: error.message || 'Unknown error',
-        hint: 'Check if database user has CREATE/DROP permissions'
+        code: error.code
       },
       { status: 500 }
     )
