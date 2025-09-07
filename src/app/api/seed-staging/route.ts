@@ -81,10 +81,14 @@ export async function GET(request: NextRequest) {
         'john@woodsquare.com / trainer123'
       ]
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Seed error:', error)
     return NextResponse.json(
-      { error: 'Failed to seed database' },
+      { 
+        error: 'Failed to seed database',
+        details: error.message || 'Unknown error',
+        code: error.code
+      },
       { status: 500 }
     )
   }
