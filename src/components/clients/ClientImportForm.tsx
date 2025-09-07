@@ -258,8 +258,84 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
 
   const getFilteredResults = () => {
     if (!validationResults) return []
-    // Return all results, no filtering
-    return validationResults
+    // Apply live validation updates based on manual assignments
+    return validationResults.map(result => recalculateValidation(result))
+  }
+
+  // Recalculate validation status based on manual assignments
+  const recalculateValidation = (result: ValidationResult): ValidationResult => {
+    const updatedResult = { ...result }
+    const errors = [...result.errors]
+    const warnings = [...result.warnings]
+    
+    // Check if location has been manually assigned
+    const assignedLocationId = locationAssignments[result.row.email]
+    if (assignedLocationId) {
+      const location = locations.find(l => l.id === assignedLocationId)
+      if (location) {
+        // Remove location-related errors
+        const locationErrorIndex = errors.findIndex(e => 
+          e.includes('Location') || e.includes('not found') || e.includes('not available')
+        )
+        if (locationErrorIndex > -1) {
+          errors.splice(locationErrorIndex, 1)
+        }
+        updatedResult.location = location
+      }
+    }
+    
+    // Check if package has been manually assigned
+    const assignedPackageId = packageAssignments[result.row.email]
+    if (assignedPackageId) {
+      const packageTemplate = packageTemplates.find(t => t.id === assignedPackageId)
+      if (packageTemplate) {
+        // Remove package-related errors
+        const packageErrorIndex = errors.findIndex(e => 
+          e.includes('Package template') || e.includes('not found')
+        )
+        if (packageErrorIndex > -1) {
+          errors.splice(packageErrorIndex, 1)
+        }
+        
+        // Check if remaining sessions is valid for new package
+        if (result.row.remainingSessions > packageTemplate.sessions) {
+          if (!errors.find(e => e.includes('Remaining sessions'))) {
+            errors.push(`Remaining sessions (${result.row.remainingSessions}) cannot exceed package size (${packageTemplate.sessions})`)
+          }
+        } else {
+          // Remove any remaining sessions errors if they're now valid
+          const sessionErrorIndex = errors.findIndex(e => e.includes('Remaining sessions'))
+          if (sessionErrorIndex > -1) {
+            errors.splice(sessionErrorIndex, 1)
+          }
+        }
+        
+        updatedResult.packageTemplate = packageTemplate
+      }
+    }
+    
+    // Check if trainer has been manually assigned
+    const assignedTrainerId = trainerAssignments[result.row.email]
+    if (assignedTrainerId) {
+      const trainer = trainers.find(t => t.id === assignedTrainerId)
+      if (trainer) {
+        // Remove trainer-related errors
+        const trainerErrorIndex = errors.findIndex(e => 
+          e.includes('Trainer') || e.includes('trainer')
+        )
+        if (trainerErrorIndex > -1) {
+          errors.splice(trainerErrorIndex, 1)
+        }
+        updatedResult.trainer = trainer
+      }
+    }
+    
+    // Update valid status based on whether there are still errors
+    updatedResult.errors = errors
+    updatedResult.warnings = warnings
+    updatedResult.valid = errors.length === 0
+    
+    return updatedResult
   }
 
   if (showResults && importResults) {
@@ -445,7 +521,18 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
       </Card>
 
       {/* Validation Results */}
-      {validationResults && summary && (
+      {validationResults && summary && (() => {
+        // Calculate live summary based on current validation state
+        const liveResults = getFilteredResults()
+        const liveSummary = {
+          ...summary,
+          validRows: liveResults.filter(r => r.valid).length,
+          invalidRows: liveResults.filter(r => !r.valid).length,
+          warningRows: liveResults.filter(r => r.warnings.length > 0).length,
+          needsTrainer: liveResults.filter(r => r.valid && !r.trainer).length
+        }
+        
+        return (
         <>
           {/* Summary Card */}
           <Card>
@@ -460,15 +547,15 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary">Valid</p>
-                  <p className="text-2xl font-bold text-success-600">{summary.validRows}</p>
+                  <p className="text-2xl font-bold text-success-600">{liveSummary.validRows}</p>
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary">Invalid</p>
-                  <p className="text-2xl font-bold text-error-600">{summary.invalidRows}</p>
+                  <p className="text-2xl font-bold text-error-600">{liveSummary.invalidRows}</p>
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary">Warnings</p>
-                  <p className="text-2xl font-bold text-warning-600">{summary.warningRows}</p>
+                  <p className="text-2xl font-bold text-warning-600">{liveSummary.warningRows}</p>
                 </div>
               </div>
 
@@ -483,7 +570,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary">Need Trainer</p>
-                  <p className="text-xl font-semibold text-warning-600">{summary.needsTrainer}</p>
+                  <p className="text-xl font-semibold text-warning-600">{liveSummary.needsTrainer}</p>
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary">Total Value</p>
@@ -641,7 +728,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
               </div>
 
               {/* Import Actions */}
-              {summary.validRows > 0 && (
+              {liveSummary.validRows > 0 && (
                 <div className="mt-6 flex space-x-3">
                   <Button
                     variant="outline"
@@ -650,6 +737,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                       setValidationResults(null)
                       setSummary(null)
                       setTrainerAssignments({})
+                      setLocationAssignments({})
+                      setPackageAssignments({})
                       if (fileInputRef.current) {
                         fileInputRef.current.value = ''
                       }
@@ -671,7 +760,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                     ) : (
                       <>
                         <Upload className="h-4 w-4 mr-2" />
-                        Import {summary.validRows} Valid Rows
+                        Import {liveSummary.validRows} Valid Rows
                       </>
                     )}
                   </Button>
@@ -680,7 +769,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
             </CardContent>
           </Card>
         </>
-      )}
+      )
+      })()}
     </div>
   )
 }
