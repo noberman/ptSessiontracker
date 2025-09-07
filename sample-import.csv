@@ -1,11 +1,11 @@
-Name,Email,Location,Trainer Email,Remaining Sessions,Package Size,Package Total Value
-John Smith,john.smith@example.com,Wood Square,emily.trainer@gymfitness.com,12,20,1800
-Sarah Johnson,sarah.j@email.com,888 Plaza,,8,10,900
-Mike Wilson,mike.wilson@gmail.com,Woodlands Health,james.trainer@gymfitness.com,15,30,2700
-Emma Davis,emma.d@yahoo.com,Century Park,,5,10,900
-Chris Brown,chris.b@hotmail.com,Wood Square,emily.trainer@gymfitness.com,20,30,2700
-Lisa Anderson,lisa.a@gmail.com,888 Plaza,alice.trainer@gymfitness.com,3,10,900
-David Miller,david.m@outlook.com,Woodlands Health,,10,20,1800
-Jessica Taylor,jessica.t@email.com,Century Park,james.trainer@gymfitness.com,18,20,1800
-Robert Thomas,robert.t@gmail.com,Wood Square,,7,10,900
-Maria Garcia,maria.g@yahoo.com,888 Plaza,emily.trainer@gymfitness.com,25,30,2700
+Name,Email,Location,Trainer Email,Package Template,Remaining Sessions
+John Smith,john.smith@realclient.com,Wood Square,emily.trainer@gymfitness.com,24 Prime PT Sessions,12
+Sarah Johnson,sarah.johnson@realclient.com,888 Plaza,,12 Elite PT Sessions,8
+Mike Wilson,mike.wilson@realclient.com,Woodlands Health,james.trainer@gymfitness.com,36 Prime PT Sessions,30
+Emma Davis,emma.davis@realclient.com,Century Park,,3 Session Intro Pack,2
+Chris Brown,chris.brown@realclient.com,Wood Square,emily.trainer@gymfitness.com,Transformation Challenge - 24 Credits,20
+Lisa Anderson,lisa.anderson@realclient.com,888 Plaza,alice.trainer@gymfitness.com,12 Prime PT Sessions,3
+David Miller,david.miller@realclient.com,Woodlands Health,,24 Elite PT Sessions,10
+Jessica Taylor,jessica.taylor@realclient.com,Century Park,james.trainer@gymfitness.com,Transformation Challenge - 12 Credits,8
+Robert Thomas,robert.thomas@realclient.com,Wood Square,,12 Prime PT Sessions,7
+Maria Garcia,maria.garcia@realclient.com,888 Plaza,emily.trainer@gymfitness.com,36 Elite PT Sessions,25

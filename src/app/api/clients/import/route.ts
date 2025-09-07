@@ -9,9 +9,8 @@ interface ImportRow {
   email: string
   location: string
   trainerEmail?: string
+  packageTemplate: string
   remainingSessions: number
-  packageSize: number
-  packageTotalValue: number
 }
 
 interface ValidationResult {
@@ -33,8 +32,14 @@ interface ValidationResult {
     name: string
     email: string
   }
-  calculatedSessionValue: number
-  packageName: string
+  packageTemplate?: {
+    id: string
+    displayName: string
+    sessions: number
+    price: number
+    sessionValue: number
+    category: string
+  }
 }
 
 export async function POST(request: Request) {
@@ -93,8 +98,7 @@ export async function POST(request: Request) {
 
     // Validate column headers
     const requiredColumns = [
-      'Name', 'Email', 'Location', 
-      'Remaining Sessions', 'Package Size', 'Package Total Value'
+      'Name', 'Email', 'Location', 'Package Template', 'Remaining Sessions'
     ]
     const optionalColumns = ['Trainer Email']
     
@@ -120,9 +124,8 @@ export async function POST(request: Request) {
         else if (lowerKey === 'email') normalized.email = (value as string).toLowerCase().trim()
         else if (lowerKey === 'location') normalized.location = value
         else if (lowerKey === 'trainer email') normalized.trainerEmail = (value as string)?.toLowerCase().trim()
+        else if (lowerKey === 'package template') normalized.packageTemplate = value
         else if (lowerKey === 'remaining sessions') normalized.remainingSessions = parseInt(value as string)
-        else if (lowerKey === 'package size') normalized.packageSize = parseInt(value as string)
-        else if (lowerKey === 'package total value') normalized.packageTotalValue = parseFloat(value as string)
       })
       
       return normalized as ImportRow & { rowNumber: number }
@@ -134,7 +137,7 @@ export async function POST(request: Request) {
       ? { id: session.user.locationId, active: true }
       : { active: true }
 
-    const [locations, trainers, existingClients] = await Promise.all([
+    const [locations, trainers, existingClients, packageTemplates] = await Promise.all([
       prisma.location.findMany({ where: locationFilter }),
       prisma.user.findMany({ 
         where: { 
@@ -148,6 +151,9 @@ export async function POST(request: Request) {
       }),
       prisma.client.findMany({
         select: { id: true, name: true, email: true }
+      }),
+      prisma.packageTemplate.findMany({
+        where: { active: true }
       })
     ])
 
@@ -159,6 +165,9 @@ export async function POST(request: Request) {
     )
     const clientMap = Object.fromEntries(
       existingClients.map(c => [c.email.toLowerCase(), c])
+    )
+    const templateMap = Object.fromEntries(
+      packageTemplates.map(t => [t.displayName.toLowerCase(), t])
     )
 
     // Check for duplicate emails within CSV
@@ -176,6 +185,7 @@ export async function POST(request: Request) {
       if (!row.name) errors.push('Name is required')
       if (!row.email) errors.push('Email is required')
       if (!row.location) errors.push('Location is required')
+      if (!row.packageTemplate) errors.push('Package Template is required')
       
       // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -198,6 +208,12 @@ export async function POST(request: Request) {
         } else {
           errors.push(`Location '${row.location}' not found`)
         }
+      }
+
+      // Package template validation
+      const packageTemplate = templateMap[row.packageTemplate?.toLowerCase()]
+      if (row.packageTemplate && !packageTemplate) {
+        errors.push(`Package template '${row.packageTemplate}' not found. Available templates: ${packageTemplates.map(t => t.displayName).join(', ')}`)
       }
 
       // Trainer validation (optional)
@@ -227,21 +243,11 @@ export async function POST(request: Request) {
       if (isNaN(row.remainingSessions) || row.remainingSessions < 0) {
         errors.push('Remaining sessions must be a positive number')
       }
-      if (isNaN(row.packageSize) || row.packageSize <= 0) {
-        errors.push('Package size must be greater than 0')
-      }
-      if (isNaN(row.packageTotalValue) || row.packageTotalValue <= 0) {
-        errors.push('Package total value must be greater than 0')
-      }
 
-      // Logical validation
-      if (row.remainingSessions > row.packageSize) {
-        errors.push('Remaining sessions cannot exceed package size')
+      // Logical validation - remaining sessions cannot exceed package template sessions
+      if (packageTemplate && row.remainingSessions > packageTemplate.sessions) {
+        errors.push(`Remaining sessions (${row.remainingSessions}) cannot exceed package size (${packageTemplate.sessions})`)
       }
-
-      // Calculate session value
-      const calculatedSessionValue = row.packageTotalValue / row.packageSize
-      const packageName = `Migrated ${row.packageSize}-Pack`
 
       // Check if client exists
       const existingClient = clientMap[row.email?.toLowerCase()]
@@ -257,8 +263,7 @@ export async function POST(request: Request) {
         existingClient,
         location,
         trainer,
-        calculatedSessionValue,
-        packageName
+        packageTemplate
       }
     })
 
@@ -273,8 +278,8 @@ export async function POST(request: Request) {
         newClients: validationResults.filter(r => r.valid && !r.existingClient).length,
         needsTrainer: validationResults.filter(r => r.valid && !r.trainer).length,
         totalPackageValue: validationResults
-          .filter(r => r.valid)
-          .reduce((sum, r) => sum + r.row.packageTotalValue, 0)
+          .filter(r => r.valid && r.packageTemplate)
+          .reduce((sum, r) => sum + r.packageTemplate!.price, 0)
       }
 
       return NextResponse.json({
@@ -287,6 +292,12 @@ export async function POST(request: Request) {
           name: t.name, 
           email: t.email,
           locationId: t.locationId 
+        })),
+        packageTemplates: packageTemplates.map(t => ({
+          id: t.id,
+          displayName: t.displayName,
+          sessions: t.sessions,
+          price: t.price
         }))
       })
     }
@@ -342,16 +353,16 @@ export async function POST(request: Request) {
               importResults.created.clients++
             }
 
-            // Create package
+            // Create package using template data
             const pkg = await tx.package.create({
               data: {
                 clientId: client.id,
-                name: result.packageName,
-                packageType: 'Migrated',
-                totalSessions: result.row.packageSize,
+                name: result.packageTemplate!.displayName,
+                packageType: result.packageTemplate!.category,
+                totalSessions: result.packageTemplate!.sessions,
                 remainingSessions: result.row.remainingSessions,
-                totalValue: result.row.packageTotalValue,
-                sessionValue: result.calculatedSessionValue,
+                totalValue: result.packageTemplate!.price,
+                sessionValue: result.packageTemplate!.sessionValue,
                 active: true,
                 startDate: new Date(),
               }
@@ -411,10 +422,10 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const template = `Name,Email,Location,Trainer Email,Remaining Sessions,Package Size,Package Total Value
-John Doe,john.doe@email.com,Wood Square,trainer@gym.com,15,30,3000
-Jane Smith,jane.smith@email.com,888 Plaza,,8,20,1800
-Bob Wilson,bob@email.com,Woodlands Health,,5,10,800`
+  const template = `Name,Email,Location,Trainer Email,Package Template,Remaining Sessions
+John Doe,john.doe@email.com,Wood Square,trainer@gym.com,24 Prime PT Sessions,15
+Jane Smith,jane.smith@email.com,888 Plaza,,12 Elite PT Sessions,8
+Bob Wilson,bob@email.com,Woodlands Health,,3 Session Intro Pack,2`
 
   return new Response(template, {
     headers: {

@@ -306,7 +306,9 @@ export function PackageForm({
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter package name"
+              placeholder={formData.packageType === 'Custom' ? "Enter package name" : "Name set by template"}
+              readOnly={formData.packageType !== 'Custom'}
+              className={formData.packageType !== 'Custom' ? 'bg-gray-50 cursor-not-allowed' : ''}
             />
           </div>
 
