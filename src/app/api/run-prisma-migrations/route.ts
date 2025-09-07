@@ -28,7 +28,20 @@ export async function GET(request: NextRequest) {
     console.log('Running Prisma migrations...')
     const { stdout, stderr } = await execAsync('npx prisma migrate deploy')
     
-    // Step 2.5: Add package_templates table (not in migrations but needed)
+    // Step 2.5: Add missing columns and tables not in migrations
+    console.log('Adding missing columns...')
+    
+    // Add active column to locations (in schema but not in migrations)
+    await prisma.$executeRaw`
+      ALTER TABLE "public"."locations" 
+      ADD COLUMN IF NOT EXISTS "active" BOOLEAN NOT NULL DEFAULT true
+    `
+    
+    // Add unique index for location name (in schema but not in migrations)  
+    await prisma.$executeRaw`
+      CREATE UNIQUE INDEX IF NOT EXISTS "locations_name_key" ON "public"."locations"("name")
+    `
+    
     console.log('Adding package_templates table...')
     await prisma.$executeRaw`
       CREATE TABLE "public"."package_templates" (
