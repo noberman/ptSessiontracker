@@ -319,12 +319,12 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
     if (assignedTrainerId) {
       const trainer = trainers.find(t => t.id === assignedTrainerId)
       if (trainer) {
-        // Remove trainer-related errors
-        const trainerErrorIndex = errors.findIndex(e => 
-          e.includes('Trainer') || e.includes('trainer')
-        )
-        if (trainerErrorIndex > -1) {
-          errors.splice(trainerErrorIndex, 1)
+        // Remove ALL trainer-related errors (there might be multiple)
+        let i = errors.length
+        while (i--) {
+          if (errors[i].includes('Trainer') || errors[i].includes('trainer')) {
+            errors.splice(i, 1)
+          }
         }
         updatedResult.trainer = trainer
       }
@@ -613,50 +613,42 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                         </td>
                         <td className="p-2 text-sm text-text-secondary">{result.row.email}</td>
                         <td className="p-2 text-sm">
-                          {!result.location ? (
+                          <select
+                            className={`text-sm border rounded px-2 py-1 w-full ${
+                              !result.location ? 'border-error-300' : ''
+                            }`}
+                            value={locationAssignments[result.row.email] || result.location?.id || ''}
+                            onChange={(e) => assignLocation(result.row.email, e.target.value)}
+                          >
+                            <option value="">Select Location</option>
+                            {locations.map(location => (
+                              <option key={location.id} value={location.id}>
+                                {location.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="p-2 text-sm">
+                          <div>
                             <select
-                              className="text-sm border border-error-300 rounded px-2 py-1 w-full"
-                              value={locationAssignments[result.row.email] || ''}
-                              onChange={(e) => assignLocation(result.row.email, e.target.value)}
+                              className={`text-sm border rounded px-2 py-1 w-full ${
+                                !result.packageTemplate ? 'border-error-300' : ''
+                              }`}
+                              value={packageAssignments[result.row.email] || result.packageTemplate?.id || ''}
+                              onChange={(e) => assignPackage(result.row.email, e.target.value)}
                             >
-                              <option value="">Select Location</option>
-                              {locations.map(location => (
-                                <option key={location.id} value={location.id}>
-                                  {location.name}
+                              <option value="">Select Package</option>
+                              {packageTemplates.map(template => (
+                                <option key={template.id} value={template.id}>
+                                  {template.displayName} ({template.sessions} sessions)
                                 </option>
                               ))}
                             </select>
-                          ) : (
-                            result.location.name
-                          )}
-                        </td>
-                        <td className="p-2 text-sm">
-                          {!result.packageTemplate ? (
-                            <div>
-                              <select
-                                className="text-sm border border-error-300 rounded px-2 py-1 w-full"
-                                value={packageAssignments[result.row.email] || ''}
-                                onChange={(e) => assignPackage(result.row.email, e.target.value)}
-                              >
-                                <option value="">Select Package</option>
-                                {packageTemplates.map(template => (
-                                  <option key={template.id} value={template.id}>
-                                    {template.displayName} ({template.sessions} sessions)
-                                  </option>
-                                ))}
-                              </select>
-                              <span className="text-xs text-text-secondary">
-                                Remaining: {result.row.remainingSessions}
-                              </span>
-                            </div>
-                          ) : (
-                            <>
-                              {result.packageTemplate.displayName}
-                              <span className="text-text-secondary ml-1">
-                                ({result.row.remainingSessions}/{result.packageTemplate.sessions})
-                              </span>
-                            </>
-                          )}
+                            <span className="text-xs text-text-secondary">
+                              Remaining: {result.row.remainingSessions}
+                              {result.packageTemplate && ` / ${result.packageTemplate.sessions} total`}
+                            </span>
+                          </div>
                         </td>
                         <td className="p-2">
                           <select
