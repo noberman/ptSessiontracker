@@ -137,25 +137,43 @@ export async function POST(request: Request) {
       ? { id: session.user.locationId, active: true }
       : { active: true }
 
-    const [locations, trainers, existingClients, packageTemplates] = await Promise.all([
-      prisma.location.findMany({ where: locationFilter }),
-      prisma.user.findMany({ 
-        where: { 
-          role: 'TRAINER',
-          active: true,
-          // If club manager, only show trainers from their location
-          ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId
-            ? { locationId: session.user.locationId }
-            : {})
-        } 
-      }),
-      prisma.client.findMany({
-        select: { id: true, name: true, email: true }
-      }),
-      prisma.packageTemplate.findMany({
-        where: { active: true }
-      })
-    ])
+    let locations, trainers, existingClients, packageTemplates
+    
+    try {
+      [locations, trainers, existingClients, packageTemplates] = await Promise.all([
+        prisma.location.findMany({ where: locationFilter }),
+        prisma.user.findMany({ 
+          where: { 
+            role: 'TRAINER',
+            active: true,
+            // If club manager, only show trainers from their location
+            ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId
+              ? { locationId: session.user.locationId }
+              : {})
+          } 
+        }),
+        prisma.client.findMany({
+          select: { id: true, name: true, email: true }
+        }),
+        prisma.packageTemplate.findMany({
+          where: { active: true }
+        })
+      ])
+    } catch (dbError: any) {
+      console.error('Database query error during import validation:', dbError)
+      return NextResponse.json(
+        { error: 'Failed to load required data. Please ensure package templates are configured.' },
+        { status: 500 }
+      )
+    }
+
+    // Check if we have package templates
+    if (!packageTemplates || packageTemplates.length === 0) {
+      return NextResponse.json(
+        { error: 'No package templates found. Please configure package templates before importing.' },
+        { status: 400 }
+      )
+    }
 
     const locationMap = Object.fromEntries(
       locations.map(l => [l.name.toLowerCase(), l])
