@@ -7,8 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions)
 
-  if (!session) {
+  if (!session || !session.user) {
     redirect('/login')
+  }
+
+  // Ensure we have the required fields
+  const user = {
+    id: session.user.id,
+    name: session.user.name || '',
+    email: session.user.email || '',
+    role: session.user.role
   }
 
   return (
@@ -25,7 +33,7 @@ export default async function ProfilePage() {
           <CardTitle>Personal Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <ProfileForm user={session.user} />
+          <ProfileForm user={user} />
         </CardContent>
       </Card>
     </div>
