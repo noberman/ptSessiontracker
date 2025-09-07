@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Step 5: Create admin user for production
-    const bcrypt = require('bcryptjs')
+    const bcrypt = await import('bcryptjs')
     const adminPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'ChangeMe123!', 10)
     
     // Create default location
