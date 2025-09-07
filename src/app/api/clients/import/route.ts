@@ -261,6 +261,10 @@ export async function POST(request: Request) {
       const assignedTrainerId = trainerAssignments[row.email]
       if (assignedTrainerId) {
         trainer = trainers.find(t => t.id === assignedTrainerId)
+        if (!trainer) {
+          console.error(`Assigned trainer ${assignedTrainerId} not found for ${row.email}`)
+          errors.push('Assigned trainer not found')
+        }
       } else if (row.trainerEmail) {
         trainer = trainerMap[row.trainerEmail]
         if (!trainer) {

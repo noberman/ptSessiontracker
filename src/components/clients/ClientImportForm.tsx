@@ -193,12 +193,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
       return
     }
 
-    if (summary?.invalidRows && summary.invalidRows > 0) {
-      const proceed = confirm(
-        `There are ${summary.invalidRows} invalid rows that will be skipped. Continue with import?`
-      )
-      if (!proceed) return
-    }
+    // Don't show warning if UI shows all rows as valid
+    // The server will validate with the manual assignments
 
     setLoading(true)
     const formData = new FormData()
