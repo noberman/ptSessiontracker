@@ -242,6 +242,12 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
       ...prev,
       [clientEmail]: locationId
     }))
+    // Clear trainer assignment when location changes since trainers are location-specific
+    setTrainerAssignments(prev => {
+      const updated = { ...prev }
+      delete updated[clientEmail]
+      return updated
+    })
   }
 
   const assignPackage = (clientEmail: string, packageTemplateId: string) => {
@@ -598,27 +604,36 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                           )}
                         </td>
                         <td className="p-2">
-                          {result.valid && !result.trainer ? (
-                            <select
-                              className="text-sm border rounded px-2 py-1"
-                              value={trainerAssignments[result.row.email] || ''}
-                              onChange={(e) => assignTrainer(result.row.email, e.target.value)}
-                            >
-                              <option value="">Select Trainer</option>
-                              {trainers.map(trainer => (
+                          <select
+                            className="text-sm border rounded px-2 py-1 w-full"
+                            value={trainerAssignments[result.row.email] || result.trainer?.id || ''}
+                            onChange={(e) => assignTrainer(result.row.email, e.target.value)}
+                          >
+                            <option value="">No Trainer</option>
+                            {(() => {
+                              // Get the effective location (manual assignment or original)
+                              const effectiveLocationId = locationAssignments[result.row.email] || result.location?.id
+                              
+                              // Filter trainers by the effective location
+                              const filteredTrainers = effectiveLocationId 
+                                ? trainers.filter(t => t.locationId === effectiveLocationId)
+                                : []
+                              
+                              if (filteredTrainers.length === 0 && effectiveLocationId) {
+                                return [
+                                  <option key="no-trainers" disabled>
+                                    No trainers at this location
+                                  </option>
+                                ]
+                              }
+                              
+                              return filteredTrainers.map(trainer => (
                                 <option key={trainer.id} value={trainer.id}>
                                   {trainer.name}
-                                  {trainer.locationId && locations.find(l => l.id === trainer.locationId) && 
-                                    ` (${locations.find(l => l.id === trainer.locationId)?.name})`
-                                  }
                                 </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className="text-sm">
-                              {result.trainer?.name || '-'}
-                            </span>
-                          )}
+                              ))
+                            })()}
+                          </select>
                         </td>
                         <td className="p-2">
                           {result.valid ? (
