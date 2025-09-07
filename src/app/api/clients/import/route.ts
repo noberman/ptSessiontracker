@@ -335,7 +335,9 @@ export async function POST(request: Request) {
           id: t.id,
           displayName: t.displayName,
           sessions: t.sessions,
-          price: t.price
+          price: t.price,
+          sessionValue: t.sessionValue,
+          category: t.category
         }))
       })
     }
