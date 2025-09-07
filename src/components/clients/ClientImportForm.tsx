@@ -79,18 +79,51 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
   const [showResults, setShowResults] = useState(false)
   const [importResults, setImportResults] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'valid' | 'invalid' | 'warnings'>('valid')
+  const [isDragging, setIsDragging] = useState(false)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
-      if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
-        alert('Please select a CSV file')
-        return
-      }
-      setFile(selectedFile)
-      setValidationResults(null)
-      setSummary(null)
-      setImportResults(null)
+      processFile(selectedFile)
+    }
+  }
+
+  const processFile = (selectedFile: File) => {
+    if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
+      alert('Please select a CSV file')
+      return
+    }
+    setFile(selectedFile)
+    setValidationResults(null)
+    setSummary(null)
+    setImportResults(null)
+  }
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    const files = e.dataTransfer.files
+    if (files && files.length > 0) {
+      processFile(files[0])
     }
   }
 
@@ -313,8 +346,20 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <Upload className="h-12 w-12 text-text-secondary mx-auto mb-4" />
+            <div 
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                isDragging 
+                  ? 'border-primary-500 bg-primary-50' 
+                  : 'border-border hover:border-primary-300'
+              }`}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              <Upload className={`h-12 w-12 mx-auto mb-4 ${
+                isDragging ? 'text-primary-600' : 'text-text-secondary'
+              }`} />
               
               <input
                 ref={fileInputRef}
