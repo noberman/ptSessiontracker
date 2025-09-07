@@ -1,0 +1,16 @@
+#!/bin/sh
+# Prevent direct commits to main branch
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if [ "$branch" = "main" ]; then
+  echo "⚠️  WARNING: You're trying to commit directly to main branch!"
+  echo "This branch is for production only."
+  echo ""
+  echo "Please switch to staging branch:"
+  echo "  git checkout staging"
+  echo ""
+  echo "If you really need to commit to main (not recommended), use:"
+  echo "  git commit --no-verify"
+  exit 1
+fi
