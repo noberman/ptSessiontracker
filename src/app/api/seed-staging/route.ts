@@ -4,10 +4,14 @@ import bcrypt from 'bcryptjs'
 
 // TEMPORARY: Remove this file after seeding staging
 export async function GET(request: NextRequest) {
-  // Only allow in staging environment
-  if (process.env.NODE_ENV === 'production') {
+  // Only allow in staging environment (check for staging-specific URL)
+  const isStaging = process.env.NEXTAUTH_URL?.includes('staging') || 
+                     process.env.APP_URL?.includes('staging') ||
+                     process.env.RAILWAY_ENVIRONMENT === 'staging'
+  
+  if (!isStaging) {
     return NextResponse.json(
-      { error: 'Not allowed in production' },
+      { error: 'Only allowed in staging environment' },
       { status: 403 }
     )
   }
