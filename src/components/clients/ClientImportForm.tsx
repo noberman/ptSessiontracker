@@ -86,7 +86,6 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
   const [packageAssignments, setPackageAssignments] = useState<Record<string, string>>({})
   const [showResults, setShowResults] = useState(false)
   const [importResults, setImportResults] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'valid' | 'invalid' | 'warnings'>('valid')
   const [isDragging, setIsDragging] = useState(false)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,14 +258,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
 
   const getFilteredResults = () => {
     if (!validationResults) return []
-    
-    if (activeTab === 'valid') {
-      return validationResults.filter(r => r.valid)
-    } else if (activeTab === 'invalid') {
-      return validationResults.filter(r => !r.valid)
-    } else {
-      return validationResults.filter(r => r.warnings.length > 0)
-    }
+    // Return all results, no filtering
+    return validationResults
   }
 
   if (showResults && importResults) {
@@ -505,45 +498,20 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
           {/* Detailed Results */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Import Details</CardTitle>
-                <div className="flex space-x-2">
-                  <Button
-                    variant={activeTab === 'valid' ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => setActiveTab('valid')}
-                  >
-                    Valid ({summary.validRows})
-                  </Button>
-                  <Button
-                    variant={activeTab === 'invalid' ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => setActiveTab('invalid')}
-                  >
-                    Invalid ({summary.invalidRows})
-                  </Button>
-                  <Button
-                    variant={activeTab === 'warnings' ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => setActiveTab('warnings')}
-                  >
-                    Warnings ({summary.warningRows})
-                  </Button>
-                </div>
-              </div>
+              <CardTitle>Import Details</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-surface-secondary border-b border-border">
                     <tr>
-                      <th className="text-left p-2 text-xs font-medium text-text-secondary">Row</th>
-                      <th className="text-left p-2 text-xs font-medium text-text-secondary">Name</th>
-                      <th className="text-left p-2 text-xs font-medium text-text-secondary">Email</th>
-                      <th className="text-left p-2 text-xs font-medium text-text-secondary">Location</th>
-                      <th className="text-left p-2 text-xs font-medium text-text-secondary">Package</th>
-                      <th className="text-left p-2 text-xs font-medium text-text-secondary">Trainer</th>
-                      <th className="text-left p-2 text-xs font-medium text-text-secondary">Status</th>
+                      <th className="text-left p-2 text-xs font-medium text-text-secondary w-12">Row</th>
+                      <th className="text-left p-2 text-xs font-medium text-text-secondary min-w-[120px]">Name</th>
+                      <th className="text-left p-2 text-xs font-medium text-text-secondary min-w-[180px]">Email</th>
+                      <th className="text-left p-2 text-xs font-medium text-text-secondary min-w-[140px]">Location</th>
+                      <th className="text-left p-2 text-xs font-medium text-text-secondary min-w-[180px]">Package</th>
+                      <th className="text-left p-2 text-xs font-medium text-text-secondary min-w-[150px]">Trainer</th>
+                      <th className="text-left p-2 text-xs font-medium text-text-secondary min-w-[100px]">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
