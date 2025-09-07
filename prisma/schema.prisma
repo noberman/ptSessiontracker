@@ -126,6 +126,25 @@ model Session {
   @@map("sessions")
 }
 
+// Package template configuration
+model PackageTemplate {
+  id            String   @id @default(cuid())
+  name          String   @unique // e.g., "Pre-Paid - 12 Prime PT Sessions"
+  displayName   String   // e.g., "12 Prime PT Sessions"
+  category      String   // e.g., "Prime", "Elite", "Transformation", "Intro"
+  sessions      Int      // Number of sessions in the package
+  price         Float    // Package price
+  sessionValue  Float    // Calculated: price / sessions
+  active        Boolean  @default(true)
+  sortOrder     Int      @default(0) // For display ordering
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([category])
+  @@index([active])
+  @@map("package_templates")
+}
+
 // Commission tier configuration
 model CommissionTier {
   id          String   @id @default(cuid())

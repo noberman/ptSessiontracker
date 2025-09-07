@@ -73,12 +73,12 @@ Implement comprehensive client management system including CRUD operations, trai
 - [x] Clear all filters option
 
 ## Acceptance Criteria
-- [ ] Clients can be created with all required fields
-- [ ] Email uniqueness is enforced
-- [ ] Primary trainer can be assigned/changed
+- [x] Clients can be created with all required fields
+- [x] Email uniqueness is enforced
+- [x] Primary trainer can be assigned/changed
 - [ ] Bulk import handles 100+ records
-- [ ] Search returns results instantly
-- [ ] Deactivated clients hidden by default
+- [x] Search returns results instantly
+- [x] Deactivated clients hidden by default
 
 ## Technical Notes
 - Index email field for uniqueness

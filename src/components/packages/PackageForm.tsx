@@ -6,14 +6,15 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 
-// Common package templates
-const PACKAGE_TEMPLATES = [
-  { type: 'Starter', sessions: 5, value: 500 },
-  { type: 'Standard', sessions: 12, value: 1200 },
-  { type: 'Premium', sessions: 24, value: 2160 },
-  { type: 'Elite', sessions: 50, value: 4000 },
-  { type: 'Custom', sessions: 0, value: 0 },
-]
+interface PackageTemplate {
+  id: string
+  name: string
+  displayName: string
+  category: string
+  sessions: number
+  price: number
+  sessionValue: number
+}
 
 interface PackageFormProps {
   packageData?: {
@@ -46,6 +47,8 @@ export function PackageForm({
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [templates, setTemplates] = useState<PackageTemplate[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(true)
   
   const isEdit = !!packageData
   
@@ -67,6 +70,24 @@ export function PackageForm({
 
   const [sessionValue, setSessionValue] = useState(0)
 
+  // Fetch package templates
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch('/api/package-templates')
+        if (response.ok) {
+          const data = await response.json()
+          setTemplates(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch templates:', error)
+      } finally {
+        setLoadingTemplates(false)
+      }
+    }
+    fetchTemplates()
+  }, [])
+
   // Calculate session value when total value or sessions change
   useEffect(() => {
     if (formData.totalValue > 0 && formData.totalSessions > 0) {
@@ -78,13 +99,27 @@ export function PackageForm({
 
   // Handle package template selection
   const handleTemplateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const template = PACKAGE_TEMPLATES.find(t => t.type === e.target.value)
+    const templateId = e.target.value
+    
+    if (templateId === 'custom') {
+      setFormData({
+        ...formData,
+        packageType: 'Custom',
+        name: '',
+        totalValue: 0,
+        totalSessions: 0,
+        remainingSessions: isEdit ? formData.remainingSessions : 0,
+      })
+      return
+    }
+    
+    const template = templates.find(t => t.id === templateId)
     if (template) {
       setFormData({
         ...formData,
-        packageType: template.type,
-        name: template.type === 'Custom' ? '' : `${template.type} Package - ${template.sessions} Sessions`,
-        totalValue: template.value,
+        packageType: template.category,
+        name: template.displayName,
+        totalValue: template.price,
         totalSessions: template.sessions,
         remainingSessions: isEdit ? formData.remainingSessions : template.sessions,
       })
@@ -215,15 +250,48 @@ export function PackageForm({
               </label>
               <select
                 id="template"
-                value={formData.packageType}
                 onChange={handleTemplateSelect}
                 className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                disabled={loadingTemplates}
               >
-                {PACKAGE_TEMPLATES.map((template) => (
-                  <option key={template.type} value={template.type}>
-                    {template.type} {template.sessions > 0 && `(${template.sessions} sessions for $${template.value})`}
-                  </option>
-                ))}
+                <option value="">Select a template</option>
+                <option value="custom">Custom Package</option>
+                {templates.length > 0 && (
+                  <optgroup label="Prime Packages">
+                    {templates.filter(t => t.category === 'Prime').map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.displayName} ({template.sessions} sessions - ${template.price})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {templates.length > 0 && (
+                  <optgroup label="Elite Packages">
+                    {templates.filter(t => t.category === 'Elite').map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.displayName} ({template.sessions} sessions - ${template.price})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {templates.length > 0 && (
+                  <optgroup label="Transformation Packages">
+                    {templates.filter(t => t.category === 'Transformation').map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.displayName} ({template.sessions} credits - ${template.price})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {templates.length > 0 && (
+                  <optgroup label="Intro Packages">
+                    {templates.filter(t => t.category === 'Intro').map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.displayName} ({template.sessions} sessions - ${template.price})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
           )}

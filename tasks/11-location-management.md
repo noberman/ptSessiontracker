@@ -17,66 +17,66 @@ Implement location (gym club) management system with CRUD operations and multi-l
 ## Implementation Checklist
 
 ### Location CRUD Operations
-- [ ] GET `/api/locations` - List all locations
-- [ ] GET `/api/locations/[id]` - Get location details
-- [ ] POST `/api/locations` - Create new location
-- [ ] PUT `/api/locations/[id]` - Update location
-- [ ] DELETE `/api/locations/[id]` - Soft delete
+- [x] GET `/api/locations` - List all locations
+- [x] GET `/api/locations/[id]` - Get location details
+- [x] POST `/api/locations` - Create new location
+- [x] PUT `/api/locations/[id]` - Update location
+- [x] DELETE `/api/locations/[id]` - Soft delete
 
 ### Location Management Page
-- [ ] List view of all locations
-- [ ] Add new location button
-- [ ] Edit location details
-- [ ] Active/inactive status
-- [ ] View assigned trainers
-- [ ] View client count
+- [x] List view of all locations
+- [x] Add new location button
+- [x] Edit location details
+- [x] Active/inactive status
+- [x] View assigned trainers
+- [x] View client count
 
 ### Location Form
-- [ ] Location name (required)
-- [ ] Address field
-- [ ] City, state, zip
-- [ ] Phone number
-- [ ] Email address
-- [ ] Manager assignment
-- [ ] Active status toggle
+- [x] Location name (required)
+- [ ] ~~Address field~~ (not needed per requirements)
+- [ ] ~~City, state, zip~~ (not needed per requirements)
+- [ ] ~~Phone number~~ (not needed per requirements)
+- [ ] ~~Email address~~ (not needed per requirements)
+- [ ] ~~Manager assignment~~ (not needed per requirements)
+- [x] Active status toggle
 
 ### Location Assignment
-- [ ] Assign trainers to location
-- [ ] Assign clients to location
+- [x] Assign trainers to location (via user management)
+- [x] Assign clients to location (via client creation)
 - [ ] Bulk reassignment tools
 - [ ] Transfer between locations
-- [ ] Assignment validation
+- [x] Assignment validation
 
 ### Access Control
-- [ ] Club managers see only their location
-- [ ] PT managers see multiple locations
-- [ ] Admins see all locations
-- [ ] Location-based data filtering
-- [ ] Cross-location restrictions
+- [x] Club managers see only their location
+- [x] PT managers see multiple locations
+- [x] Admins see all locations
+- [x] Location-based data filtering
+- [x] Cross-location restrictions
 
 ### Location Dashboard
-- [ ] Location statistics:
-  - [ ] Active trainers
-  - [ ] Total clients
-  - [ ] Sessions this month
-  - [ ] Revenue metrics
-- [ ] Trainer list for location
-- [ ] Recent activity
+- [x] Location statistics:
+  - [x] Active trainers
+  - [x] Total clients
+  - [x] Sessions this month
+  - [x] Revenue metrics
+- [x] Trainer list for location
+- [x] Recent activity (clients list)
 
 ### Location Switching
-- [ ] Location selector dropdown
+- [x] Location selector dropdown (in dashboards)
 - [ ] Remember last selected
-- [ ] Quick switch interface
-- [ ] Apply to all views
-- [ ] Permission-based options
+- [x] Quick switch interface
+- [x] Apply to all views
+- [x] Permission-based options
 
 ## Acceptance Criteria
-- [ ] Locations can be created and edited
-- [ ] Trainers properly assigned to locations
-- [ ] Location filtering works throughout app
-- [ ] Access control enforced properly
-- [ ] Soft delete preserves data integrity
-- [ ] Location statistics accurate
+- [x] Locations can be created and edited
+- [x] Trainers properly assigned to locations
+- [x] Location filtering works throughout app
+- [x] Access control enforced properly
+- [x] Soft delete preserves data integrity
+- [x] Location statistics accurate
 
 ## Technical Notes
 - Index foreign keys for performance

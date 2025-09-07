@@ -151,7 +151,6 @@ export default async function ClientsPage({
         },
         _count: {
           select: {
-            sessions: true,
             packages: true,
           },
         },

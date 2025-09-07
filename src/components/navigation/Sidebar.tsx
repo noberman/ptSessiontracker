@@ -57,6 +57,12 @@ const navItems: NavItem[] = [
     icon: Package,
   },
   {
+    title: 'Package Templates',
+    href: '/package-templates',
+    icon: Package,
+    roles: ['ADMIN'],
+  },
+  {
     title: 'Locations',
     href: '/locations',
     icon: MapPin,
