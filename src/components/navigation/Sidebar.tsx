@@ -10,8 +10,6 @@ import {
   Users,
   Package,
   UserPlus,
-  FileText,
-  Settings,
   Wrench,
   Menu,
   X,
@@ -77,18 +75,6 @@ const navItems: NavItem[] = [
     title: 'Users',
     href: '/users',
     icon: Users,
-    roles: ['PT_MANAGER', 'ADMIN', 'CLUB_MANAGER'],
-  },
-  {
-    title: 'Reports',
-    href: '/reports',
-    icon: FileText,
-    roles: ['PT_MANAGER', 'ADMIN', 'CLUB_MANAGER'],
-  },
-  {
-    title: 'Settings',
-    href: '/settings',
-    icon: Settings,
     roles: ['PT_MANAGER', 'ADMIN', 'CLUB_MANAGER'],
   },
   {
