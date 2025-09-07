@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest) {
         )
       }
 
-      const isValidPassword = await bcrypt.compare(currentPassword, user.hashedPassword)
+      const isValidPassword = await bcrypt.compare(currentPassword, user.password)
       if (!isValidPassword) {
         return NextResponse.json(
           { error: 'Current password is incorrect' },
@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest) {
 
     // Hash new password if provided
     if (newPassword) {
-      updateData.hashedPassword = await bcrypt.hash(newPassword, 10)
+      updateData.password = await bcrypt.hash(newPassword, 10)
     }
 
     // Update the user
