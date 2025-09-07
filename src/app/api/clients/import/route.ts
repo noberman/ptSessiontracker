@@ -422,12 +422,51 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const template = `Name,Email,Location,Trainer Email,Package Template,Remaining Sessions
-John Doe,john.doe@email.com,Wood Square,trainer@gym.com,24 Prime PT Sessions,15
-Jane Smith,jane.smith@email.com,888 Plaza,,12 Elite PT Sessions,8
-Bob Wilson,bob@email.com,Woodlands Health,,3 Session Intro Pack,2`
+  // Get all active package templates to create examples
+  const packageTemplates = await prisma.packageTemplate.findMany({
+    where: { active: true },
+    orderBy: [
+      { category: 'asc' },
+      { sortOrder: 'asc' }
+    ]
+  })
 
-  return new Response(template, {
+  // Get all active locations for examples
+  const locations = await prisma.location.findMany({
+    where: { active: true },
+    take: 4
+  })
+
+  // Sample trainer emails
+  const trainerEmails = [
+    'trainer1@gym.com',
+    'trainer2@gym.com',
+    '',  // Some without trainer
+    'trainer3@gym.com'
+  ]
+
+  // Sample client names
+  const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emma', 'Robert', 'Lisa', 'James', 'Maria']
+  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez']
+
+  // Build CSV with header
+  let csv = 'Name,Email,Location,Trainer Email,Package Template,Remaining Sessions\n'
+
+  // Add one row for each package template
+  packageTemplates.forEach((template, index) => {
+    const firstName = firstNames[index % firstNames.length]
+    const lastName = lastNames[index % lastNames.length]
+    const name = `${firstName} ${lastName}`
+    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`
+    const location = locations[index % locations.length]?.name || 'Wood Square'
+    const trainerEmail = trainerEmails[index % trainerEmails.length]
+    // Remaining sessions should be less than or equal to total sessions
+    const remainingSessions = Math.floor(Math.random() * template.sessions) + 1
+    
+    csv += `${name},${email},${location},${trainerEmail},${template.displayName},${remainingSessions}\n`
+  })
+
+  return new Response(csv, {
     headers: {
       'Content-Type': 'text/csv',
       'Content-Disposition': 'attachment; filename="client_import_template.csv"'
