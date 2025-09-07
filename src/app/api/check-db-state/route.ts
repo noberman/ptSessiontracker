@@ -38,6 +38,20 @@ export async function GET(request: NextRequest) {
       ` as any[]
     }
 
+    // Check locations table columns
+    let locationColumns: any[] = []
+    const hasLocationsTable = tables.some((t: any) => t.table_name === 'locations')
+    
+    if (hasLocationsTable) {
+      locationColumns = await prisma.$queryRaw`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'locations' 
+        AND table_schema = 'public'
+        ORDER BY ordinal_position
+      ` as any[]
+    }
+
     // Check what migrations Prisma thinks are applied
     let migrations: any[] = []
     const hasMigrationsTable = tables.some((t: any) => t.table_name === '_prisma_migrations')
@@ -53,6 +67,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       tables: tables.map((t: any) => t.table_name),
       sessionColumns: sessionColumns.map((c: any) => `${c.column_name} (${c.data_type})`),
+      locationColumns: locationColumns.map((c: any) => `${c.column_name} (${c.data_type})`),
       migrations: migrations.map((m: any) => ({
         name: m.migration_name,
         finished: m.finished_at,
@@ -61,7 +76,8 @@ export async function GET(request: NextRequest) {
       criticalCheck: {
         hasSessionsTable,
         hasCorrectColumns: sessionColumns.some((c: any) => c.column_name === 'sessionDate'),
-        columnNames: sessionColumns.map((c: any) => c.column_name)
+        columnNames: sessionColumns.map((c: any) => c.column_name),
+        locationHasActive: locationColumns.some((c: any) => c.column_name === 'active')
       }
     })
   } catch (error: any) {

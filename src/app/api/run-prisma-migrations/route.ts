@@ -28,40 +28,7 @@ export async function GET(request: NextRequest) {
     console.log('Running Prisma migrations...')
     const { stdout, stderr } = await execAsync('npx prisma migrate deploy')
     
-    // Step 2.5: Add missing columns and tables not in migrations
-    console.log('Adding missing columns...')
-    
-    // Add active column to locations (in schema but not in migrations)
-    await prisma.$executeRaw`
-      ALTER TABLE "public"."locations" 
-      ADD COLUMN IF NOT EXISTS "active" BOOLEAN NOT NULL DEFAULT true
-    `
-    
-    // Add unique index for location name (in schema but not in migrations)  
-    await prisma.$executeRaw`
-      CREATE UNIQUE INDEX IF NOT EXISTS "locations_name_key" ON "public"."locations"("name")
-    `
-    
-    console.log('Adding package_templates table...')
-    await prisma.$executeRaw`
-      CREATE TABLE "public"."package_templates" (
-        "id" TEXT NOT NULL,
-        "name" TEXT NOT NULL,
-        "displayName" TEXT NOT NULL,
-        "category" TEXT NOT NULL,
-        "sessions" INTEGER NOT NULL,
-        "price" DOUBLE PRECISION NOT NULL,
-        "sessionValue" DOUBLE PRECISION NOT NULL,
-        "active" BOOLEAN NOT NULL DEFAULT true,
-        "sortOrder" INTEGER NOT NULL DEFAULT 0,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL,
-        CONSTRAINT "package_templates_pkey" PRIMARY KEY ("id")
-      )
-    `
-    await prisma.$executeRaw`CREATE UNIQUE INDEX "package_templates_name_key" ON "package_templates"("name")`
-    await prisma.$executeRaw`CREATE INDEX "package_templates_category_idx" ON "package_templates"("category")`
-    await prisma.$executeRaw`CREATE INDEX "package_templates_active_idx" ON "package_templates"("active")`
+    // No need to add anything manually anymore - the new migration includes everything!
     
     // Step 3: Verify the schema is correct
     const sessionColumns = await prisma.$queryRaw`
