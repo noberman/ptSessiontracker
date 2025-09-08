@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -14,6 +14,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showTestCredentials, setShowTestCredentials] = useState(false)
+  
+  useEffect(() => {
+    // Only show test credentials if NOT in production
+    // Check if URL contains 'staging' or if we're on localhost
+    const isProduction = typeof window !== 'undefined' && 
+      !window.location.hostname.includes('staging') && 
+      !window.location.hostname.includes('localhost') &&
+      !window.location.hostname.includes('127.0.0.1')
+    
+    setShowTestCredentials(!isProduction)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -113,14 +125,16 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-6 rounded-lg bg-background-secondary border border-border-light p-4">
-          <p className="text-xs text-text-secondary mb-2 font-medium">Test Credentials:</p>
-          <div className="space-y-1 text-xs text-text-secondary">
-            <p><strong className="text-text-primary">Admin:</strong> admin@ptsession.com / admin123</p>
-            <p><strong className="text-text-primary">Manager:</strong> manager@woodsquare.com / manager123</p>
-            <p><strong className="text-text-primary">Trainer:</strong> john@woodsquare.com / trainer123</p>
+        {showTestCredentials && (
+          <div className="mt-6 rounded-lg bg-background-secondary border border-border-light p-4">
+            <p className="text-xs text-text-secondary mb-2 font-medium">Test Credentials:</p>
+            <div className="space-y-1 text-xs text-text-secondary">
+              <p><strong className="text-text-primary">Admin:</strong> admin@ptsession.com / admin123</p>
+              <p><strong className="text-text-primary">Manager:</strong> manager@woodsquare.com / manager123</p>
+              <p><strong className="text-text-primary">Trainer:</strong> john@woodsquare.com / trainer123</p>
+            </div>
           </div>
-        </div>
+        )}
       </Card>
     </div>
   )
