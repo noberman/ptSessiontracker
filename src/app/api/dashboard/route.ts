@@ -28,10 +28,18 @@ export async function GET(request: Request) {
     } else if (period === 'day') {
       dateFrom = new Date()
       dateFrom.setHours(0, 0, 0, 0)
+      
+      // Set dateTo to end of today
+      dateTo = new Date()
+      dateTo.setHours(23, 59, 59, 999)
     } else if (period === 'week') {
       dateFrom = new Date()
       dateFrom.setDate(dateFrom.getDate() - 7)
       dateFrom.setHours(0, 0, 0, 0)
+      
+      // Set dateTo to end of today
+      dateTo = new Date()
+      dateTo.setHours(23, 59, 59, 999)
     } else if (period === 'lastMonth') {
       // Last month - from first day to last day of previous month
       dateFrom = new Date()
@@ -42,10 +50,14 @@ export async function GET(request: Request) {
       dateTo = new Date()
       dateTo.setDate(0) // Sets to last day of previous month
       dateTo.setHours(23, 59, 59, 999)
-    } else { // month (default)
+    } else { // month (default - shows entire current month)
       dateFrom = new Date()
       dateFrom.setDate(1)
       dateFrom.setHours(0, 0, 0, 0)
+      
+      // Set dateTo to the last day of current month at 23:59:59
+      dateTo = new Date(dateFrom.getFullYear(), dateFrom.getMonth() + 1, 0)
+      dateTo.setHours(23, 59, 59, 999)
     }
 
     // Build where clause based on user role
