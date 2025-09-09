@@ -28,7 +28,15 @@ export function PackageTemplateForm({ template }: PackageTemplateFormProps) {
   
   const isEdit = !!template
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string
+    displayName: string
+    category: string
+    sessions: number | string
+    price: number | string
+    active: boolean
+    sortOrder: number | string
+  }>({
     name: template?.name || '',
     displayName: template?.displayName || '',
     category: template?.category || 'Prime',
@@ -38,8 +46,11 @@ export function PackageTemplateForm({ template }: PackageTemplateFormProps) {
     sortOrder: template?.sortOrder || 0,
   })
 
-  const sessionValue = formData.price && formData.sessions 
-    ? (formData.price / formData.sessions).toFixed(2)
+  const price = typeof formData.price === 'string' ? parseFloat(formData.price) || 0 : formData.price
+  const sessions = typeof formData.sessions === 'string' ? parseInt(formData.sessions) || 0 : formData.sessions
+  
+  const sessionValue = sessions > 0
+    ? (price / sessions).toFixed(2)
     : '0.00'
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,8 +65,18 @@ export function PackageTemplateForm({ template }: PackageTemplateFormProps) {
       return
     }
 
-    if (formData.sessions <= 0 || formData.price <= 0) {
-      setError('Sessions and price must be greater than 0')
+    const sessions = typeof formData.sessions === 'string' ? parseInt(formData.sessions) || 0 : formData.sessions
+    const price = typeof formData.price === 'string' ? parseFloat(formData.price) || 0 : formData.price
+    const sortOrder = typeof formData.sortOrder === 'string' ? parseInt(formData.sortOrder) || 0 : formData.sortOrder
+    
+    if (sessions <= 0) {
+      setError('Sessions must be greater than 0')
+      setLoading(false)
+      return
+    }
+
+    if (price < 0) {
+      setError('Price cannot be negative')
       setLoading(false)
       return
     }
@@ -72,7 +93,13 @@ export function PackageTemplateForm({ template }: PackageTemplateFormProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          sessions: sessions,
+          price: price,
+          sortOrder: sortOrder,
+          sessionValue: sessions > 0 ? price / sessions : 0
+        }),
       })
 
       const data = await response.json()
@@ -165,7 +192,7 @@ export function PackageTemplateForm({ template }: PackageTemplateFormProps) {
                 id="sortOrder"
                 type="number"
                 value={formData.sortOrder}
-                onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, sortOrder: e.target.value === '' ? '' : parseInt(e.target.value) })}
                 placeholder="0"
               />
               <p className="text-xs text-text-secondary mt-1">
@@ -185,7 +212,7 @@ export function PackageTemplateForm({ template }: PackageTemplateFormProps) {
                 required
                 min="1"
                 value={formData.sessions}
-                onChange={(e) => setFormData({ ...formData, sessions: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, sessions: e.target.value === '' ? '' : parseInt(e.target.value) })}
                 placeholder="12"
               />
             </div>
@@ -201,7 +228,7 @@ export function PackageTemplateForm({ template }: PackageTemplateFormProps) {
                 min="0"
                 step="0.01"
                 value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value === '' ? '' : parseFloat(e.target.value) })}
                 placeholder="1200.00"
               />
             </div>

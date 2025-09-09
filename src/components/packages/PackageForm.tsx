@@ -52,7 +52,17 @@ export function PackageForm({
   
   const isEdit = !!packageData
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    clientId: string
+    packageType: string
+    name: string
+    totalValue: number | string
+    totalSessions: number | string
+    remainingSessions: number | string
+    startDate: string
+    expiresAt: string
+    active: boolean
+  }>({
     clientId: packageData?.clientId || preselectedClientId || '',
     packageType: packageData?.packageType || 'Custom',
     name: packageData?.name || '',
@@ -90,8 +100,11 @@ export function PackageForm({
 
   // Calculate session value when total value or sessions change
   useEffect(() => {
-    if (formData.totalValue > 0 && formData.totalSessions > 0) {
-      setSessionValue(formData.totalValue / formData.totalSessions)
+    const totalValue = typeof formData.totalValue === 'string' ? parseFloat(formData.totalValue) || 0 : formData.totalValue
+    const totalSessions = typeof formData.totalSessions === 'string' ? parseInt(formData.totalSessions) || 0 : formData.totalSessions
+    
+    if (totalSessions > 0) {
+      setSessionValue(totalValue / totalSessions)
     } else {
       setSessionValue(0)
     }
@@ -144,8 +157,17 @@ export function PackageForm({
       return
     }
 
-    if (formData.totalValue <= 0 || formData.totalSessions <= 0) {
-      setError('Total value and sessions must be greater than 0')
+    const totalValue = typeof formData.totalValue === 'string' ? parseFloat(formData.totalValue) || 0 : formData.totalValue
+    const totalSessions = typeof formData.totalSessions === 'string' ? parseInt(formData.totalSessions) || 0 : formData.totalSessions
+    
+    if (totalValue < 0) {
+      setError('Total value cannot be negative')
+      setLoading(false)
+      return
+    }
+
+    if (totalSessions <= 0) {
+      setError('Total sessions must be greater than 0')
       setLoading(false)
       return
     }
@@ -167,8 +189,8 @@ export function PackageForm({
         clientId: formData.clientId,
         packageType: formData.packageType,
         name: formData.name,
-        totalValue: formData.totalValue,
-        totalSessions: formData.totalSessions,
+        totalValue: totalValue,
+        totalSessions: totalSessions,
         startDate: formData.startDate,
         expiresAt: formData.expiresAt || null,
       }
@@ -176,7 +198,8 @@ export function PackageForm({
       if (isEdit) {
         body.active = formData.active
         if (currentUserRole === 'ADMIN') {
-          body.remainingSessions = formData.remainingSessions
+          const remainingSessions = typeof formData.remainingSessions === 'string' ? parseInt(formData.remainingSessions) || 0 : formData.remainingSessions
+          body.remainingSessions = remainingSessions
         }
       }
 
@@ -324,7 +347,7 @@ export function PackageForm({
                 min="0"
                 step="0.01"
                 value={formData.totalValue}
-                onChange={(e) => setFormData({ ...formData, totalValue: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, totalValue: e.target.value === '' ? '' : parseFloat(e.target.value) })}
                 placeholder="0.00"
               />
             </div>
@@ -339,7 +362,7 @@ export function PackageForm({
                 required
                 min="1"
                 value={formData.totalSessions}
-                onChange={(e) => setFormData({ ...formData, totalSessions: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, totalSessions: e.target.value === '' ? '' : parseInt(e.target.value) })}
                 placeholder="0"
               />
             </div>
@@ -363,7 +386,7 @@ export function PackageForm({
                 type="number"
                 min="0"
                 value={formData.remainingSessions}
-                onChange={(e) => setFormData({ ...formData, remainingSessions: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, remainingSessions: e.target.value === '' ? '' : parseInt(e.target.value) })}
               />
               <p className="text-xs text-text-secondary mt-1">
                 Admin only: Manually adjust remaining sessions

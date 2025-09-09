@@ -142,7 +142,7 @@ export async function PUT(
       
       updateData.totalValue = newTotalValue
       updateData.totalSessions = newTotalSessions
-      updateData.sessionValue = newTotalValue / newTotalSessions
+      updateData.sessionValue = newTotalSessions > 0 ? newTotalValue / newTotalSessions : 0
     }
     
     // Only admins can manually adjust remaining sessions

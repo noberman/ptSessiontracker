@@ -133,9 +133,17 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate required fields
-    if (!clientId || !name || !totalValue || !totalSessions) {
+    if (!clientId || !name || totalValue === undefined || totalValue === null || !totalSessions) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
+
+    // Validate values are not negative
+    if (totalValue < 0 || totalSessions <= 0) {
+      return NextResponse.json(
+        { error: 'Total value cannot be negative and sessions must be greater than 0' },
         { status: 400 }
       )
     }
@@ -167,8 +175,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate session value
-    const sessionValue = totalValue / totalSessions
+    // Calculate session value (0 if package is free)
+    const sessionValue = totalSessions > 0 ? totalValue / totalSessions : 0
 
     // Create package
     const newPackage = await prisma.package.create({
