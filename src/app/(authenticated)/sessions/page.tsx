@@ -244,7 +244,14 @@ export default async function SessionsPage({
 
         <Card padding="none">
           <SessionTable 
-            sessions={sessions}
+            sessions={sessions.map(s => ({
+              ...s,
+              sessionDate: s.sessionDate.toISOString(),
+              validatedAt: s.validatedAt?.toISOString() || null,
+              validationExpiry: s.validationExpiry?.toISOString() || null,
+              createdAt: s.createdAt.toISOString(),
+              updatedAt: s.updatedAt.toISOString(),
+            }))}
             currentUserRole={session.user.role}
           />
           
