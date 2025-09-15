@@ -15,7 +15,6 @@ export default async function PackagesPage({
     page?: string
     clientIds?: string  // comma-separated IDs
     locationIds?: string  // comma-separated IDs
-    packageTypes?: string  // comma-separated types
     activeStatuses?: string  // comma-separated values
     expirationStatus?: string
     startDate?: string
@@ -54,13 +53,6 @@ export default async function PackagesPage({
     }
   }
 
-  // Filter by package types (multi-select)
-  if (params.packageTypes) {
-    const packageTypes = params.packageTypes.split(',').filter(Boolean)
-    if (packageTypes.length > 0) {
-      where.packageType = { in: packageTypes }
-    }
-  }
 
   // Filter by active status (multi-select)
   if (params.activeStatuses) {

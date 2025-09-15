@@ -30,7 +30,6 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
   const [filters, setFilters] = useState({
     clientIds: getArrayFromParam(searchParams.get('clientIds')),
     locationIds: getArrayFromParam(searchParams.get('locationIds')),
-    packageTypes: getArrayFromParam(searchParams.get('packageTypes')),
     activeStatuses: getArrayFromParam(searchParams.get('activeStatuses')),
     expirationStatus: searchParams.get('expirationStatus') || '',
     startDate: searchParams.get('startDate') || '',
@@ -65,9 +64,6 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     if (filters.locationIds.length > 0) {
       params.set('locationIds', filters.locationIds.join(','))
     }
-    if (filters.packageTypes.length > 0) {
-      params.set('packageTypes', filters.packageTypes.join(','))
-    }
     if (filters.activeStatuses.length > 0) {
       params.set('activeStatuses', filters.activeStatuses.join(','))
     }
@@ -85,7 +81,6 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     setFilters({
       clientIds: [],
       locationIds: [],
-      packageTypes: [],
       activeStatuses: [],
       expirationStatus: '',
       startDate: '',
@@ -97,7 +92,6 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
   const activeFilterCount = 
     filters.clientIds.length + 
     filters.locationIds.length + 
-    filters.packageTypes.length + 
     filters.activeStatuses.length + 
     (filters.expirationStatus ? 1 : 0) +
     (filters.startDate ? 1 : 0) + 
@@ -122,14 +116,6 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     }))
   }
   
-  const togglePackageType = (type: string) => {
-    setFilters(prev => ({
-      ...prev,
-      packageTypes: prev.packageTypes.includes(type)
-        ? prev.packageTypes.filter(t => t !== type)
-        : [...prev.packageTypes, type]
-    }))
-  }
   
   const toggleActiveStatus = (status: string) => {
     setFilters(prev => ({
@@ -140,12 +126,6 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     }))
   }
 
-  const packageTypes = [
-    { value: 'SESSIONS_5', label: '5 Sessions' },
-    { value: 'SESSIONS_10', label: '10 Sessions' },
-    { value: 'SESSIONS_20', label: '20 Sessions' },
-    { value: 'CUSTOM', label: 'Custom' },
-  ]
 
   return (
     <div className="mb-4">
@@ -294,48 +274,6 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
               </div>
             )}
 
-            {/* Package Type Filter - Multi-select Dropdown */}
-            <div className="relative">
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Package Types
-              </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpenDropdown(openDropdown === 'types' ? null : 'types')}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
-                >
-                  <span>
-                    {filters.packageTypes.length === 0 
-                      ? 'All Types' 
-                      : `${filters.packageTypes.length} selected`}
-                  </span>
-                  <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {openDropdown === 'types' && (
-                  <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
-                    <div className="max-h-60 overflow-y-auto p-2">
-                      {packageTypes.map((type) => (
-                        <label
-                          key={type.value}
-                          className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={filters.packageTypes.includes(type.value)}
-                            onChange={() => togglePackageType(type.value)}
-                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                          />
-                          <span className="text-sm text-text-primary">{type.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* Active Status Filter - Multi-select Dropdown */}
             <div className="relative">
