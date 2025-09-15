@@ -8,6 +8,13 @@ export default async function Home() {
   const headersList = await headers()
   const hostname = headersList.get('host') || ''
   
+  // Debug logging for staging
+  if (process.env.NODE_ENV === 'staging' || hostname.includes('staging') || hostname.includes('railway')) {
+    console.log('=== ROOT PAGE DEBUG (staging) ===')
+    console.log('Hostname:', hostname)
+    console.log('NODE_ENV:', process.env.NODE_ENV)
+  }
+  
   // Check if we're on the app subdomain
   const isAppDomain = hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1')
   

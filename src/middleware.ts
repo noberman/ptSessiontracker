@@ -48,6 +48,15 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const pathname = request.nextUrl.pathname
   
+  // Debug logging for staging
+  if (process.env.NODE_ENV === 'staging' || hostname.includes('staging') || hostname.includes('railway')) {
+    console.log('=== STAGING MIDDLEWARE DEBUG ===')
+    console.log('Hostname:', hostname)
+    console.log('Pathname:', pathname)
+    console.log('NODE_ENV:', process.env.NODE_ENV)
+    console.log('LANDING_DOMAIN:', process.env.LANDING_DOMAIN)
+    console.log('APP_DOMAIN:', process.env.APP_DOMAIN)
+  }
   
   // Determine if we're on app subdomain or landing domain
   const isAppDomain = hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1')
@@ -60,6 +69,11 @@ export function middleware(request: NextRequest) {
   
   // Redirect app routes to app subdomain if accessed from landing domain
   if (isLandingDomain && isAppRoute(pathname)) {
+    if (process.env.NODE_ENV === 'staging' || hostname.includes('staging') || hostname.includes('railway')) {
+      console.log('Redirecting from landing to app domain')
+      console.log('Is landing domain:', isLandingDomain)
+      console.log('Is app route:', isAppRoute(pathname))
+    }
     const appUrl = new URL(pathname, `https://${APP_DOMAIN}`)
     appUrl.search = request.nextUrl.search
     return NextResponse.redirect(appUrl)
@@ -67,6 +81,11 @@ export function middleware(request: NextRequest) {
   
   // For app domain, apply authentication middleware to protected routes
   if (isAppDomain) {
+    if (process.env.NODE_ENV === 'staging' || hostname.includes('staging') || hostname.includes('railway')) {
+      console.log('Processing app domain request')
+      console.log('Is app domain:', isAppDomain)
+      console.log('Is landing route:', isLandingRoute(pathname))
+    }
     
     // Allow landing page routes to pass through (for development)
     if (isLandingRoute(pathname) && pathname !== '/') {
@@ -80,6 +99,9 @@ export function middleware(request: NextRequest) {
     
     // Login page should be accessible without auth
     if (pathname === '/login') {
+      if (process.env.NODE_ENV === 'staging' || hostname.includes('staging') || hostname.includes('railway')) {
+        console.log('Login page accessed, allowing through')
+      }
       return NextResponse.next()
     }
     

@@ -17,6 +17,13 @@ export default function LoginPage() {
   const [showTestCredentials, setShowTestCredentials] = useState(false)
   
   useEffect(() => {
+    // Debug logging for staging
+    if (typeof window !== 'undefined' && 
+        (window.location.hostname.includes('staging') || window.location.hostname.includes('railway'))) {
+      console.log('=== LOGIN PAGE DEBUG (staging) ===')
+      console.log('Hostname:', window.location.hostname)
+      console.log('Full URL:', window.location.href)
+    }
     // Only show test credentials if NOT in production
     // Check if URL contains 'staging' or if we're on localhost
     const isProduction = typeof window !== 'undefined' && 
