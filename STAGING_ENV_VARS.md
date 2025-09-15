@@ -9,7 +9,7 @@ Set these in your Railway **staging** service:
 DATABASE_URL=[Your staging PostgreSQL URL]
 
 # NextAuth - Use staging URL
-NEXTAUTH_URL=https://ptsessiontracker-staging.up.railway.app
+NEXTAUTH_URL=https://fitsync-main-staging.up.railway.app
 NEXTAUTH_SECRET=[Same secret as production]
 
 # Email Service
@@ -18,13 +18,13 @@ RESEND_FROM_EMAIL=noreply@fitsync.io
 RESEND_FROM_NAME=FitSync (Staging)
 
 # Application Settings
-APP_URL=https://ptsessiontracker-staging.up.railway.app
+APP_URL=https://fitsync-main-staging.up.railway.app
 SESSION_VALIDATION_EXPIRY_DAYS=30
 
 # Domain Configuration for Staging
-LANDING_DOMAIN=ptsessiontracker-staging.up.railway.app
-APP_DOMAIN=ptsessiontracker-staging.up.railway.app
-NEXT_PUBLIC_APP_URL=https://ptsessiontracker-staging.up.railway.app
+LANDING_DOMAIN=fitsync-main-staging.up.railway.app
+APP_DOMAIN=fitsync-main-staging.up.railway.app
+NEXT_PUBLIC_APP_URL=https://fitsync-main-staging.up.railway.app
 
 # Environment
 NODE_ENV=staging
@@ -38,7 +38,7 @@ The landing page now dynamically determines where to send users:
    - All login/signup links go to → `https://app.fitsync.io`
 
 2. **In Staging** (Railway URL):
-   - All login/signup links go to → `https://ptsessiontracker-staging.up.railway.app`
+   - All login/signup links go to → `https://fitsync-main-staging.up.railway.app`
 
 3. **Auto-detection Logic**:
    - If hostname includes "staging" or "railway" → Use staging URL

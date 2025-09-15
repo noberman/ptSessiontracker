@@ -30,8 +30,8 @@ export default function LandingPage() {
       const hostname = window.location.hostname
       
       if (hostname.includes('staging') || hostname.includes('railway')) {
-        // Staging environment - use staging Railway URL
-        setAppUrl('https://ptsessiontracker-staging.up.railway.app')
+        // Staging environment - use current domain (same domain for landing and app)
+        setAppUrl(`${window.location.protocol}//${window.location.host}`)
       } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
         // Local development
         setAppUrl('http://localhost:3000')
