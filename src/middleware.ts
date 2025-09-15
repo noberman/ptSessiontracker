@@ -66,8 +66,11 @@ export function middleware(request: NextRequest) {
   // Determine if we're on app subdomain or landing domain
   // In staging, the same domain serves both landing and app
   const isOnStagingDomain = hostname.includes('staging') || hostname.includes('railway')
-  const isAppDomain = isOnStagingDomain || hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1')
-  const isLandingDomain = !isOnStagingDomain && !isAppDomain
+  
+  // For staging: treat as landing domain by default (to show landing page)
+  // For production: separate app. subdomain
+  const isAppDomain = !isOnStagingDomain && (hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1'))
+  const isLandingDomain = !isAppDomain
   
   // Special handling for validation routes (accessible from both)
   if (pathname.startsWith('/validate/')) {
@@ -75,7 +78,8 @@ export function middleware(request: NextRequest) {
   }
   
   // Redirect app routes to app subdomain if accessed from landing domain
-  if (isLandingDomain && isAppRoute(pathname)) {
+  // BUT: Skip this redirect for staging (single domain setup)
+  if (isLandingDomain && isAppRoute(pathname) && !isOnStagingDomain) {
     if (hostname.includes('staging') || hostname.includes('railway')) {
       console.log('Redirecting from landing to app domain')
       console.log('Is landing domain:', isLandingDomain)
@@ -86,18 +90,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(appUrl)
   }
   
-  // For app domain, apply authentication middleware to protected routes
-  if (isAppDomain) {
+  // For app domain OR staging with app routes, apply authentication middleware
+  if (isAppDomain || (isOnStagingDomain && isAppRoute(pathname))) {
     if (hostname.includes('staging') || hostname.includes('railway')) {
-      console.log('Processing app domain request')
+      console.log('Processing app/staging request')
       console.log('Is app domain:', isAppDomain)
-      console.log('Is landing route:', isLandingRoute(pathname))
+      console.log('Is staging domain:', isOnStagingDomain)
+      console.log('Is app route:', isAppRoute(pathname))
     }
     
     // Allow landing page routes to pass through (for development)
     if (isLandingRoute(pathname) && pathname !== '/') {
-      // Optionally redirect to landing domain in production
-      if (process.env.NODE_ENV === 'production') {
+      // Optionally redirect to landing domain in production (not staging)
+      if (process.env.NODE_ENV === 'production' && !isOnStagingDomain) {
         const landingUrl = new URL(pathname, `https://${LANDING_DOMAIN}`)
         landingUrl.search = request.nextUrl.search
         return NextResponse.redirect(landingUrl)

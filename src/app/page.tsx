@@ -16,9 +16,11 @@ export default async function Home() {
   }
   
   // Check if we're on the app subdomain
-  // In staging, treat the Railway domain as app domain (single domain for both)
   const isOnStagingDomain = hostname.includes('staging') || hostname.includes('railway')
-  const isAppDomain = isOnStagingDomain || hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1')
+  
+  // For staging: always show landing page at root
+  // For production: check if app subdomain
+  const isAppDomain = !isOnStagingDomain && (hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1'))
   
   if (isAppDomain) {
     // App subdomain behavior - redirect to dashboard or login
@@ -30,7 +32,7 @@ export default async function Home() {
       redirect('/login')
     }
   } else {
-    // Landing domain - show landing page
+    // Landing domain or staging - show landing page
     return <LandingPage />
   }
 }
