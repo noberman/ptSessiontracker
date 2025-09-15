@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { Mail, RefreshCw } from 'lucide-react'
 
 interface Session {
   id: string
@@ -193,7 +194,7 @@ export function SessionTable({ sessions, currentUserRole }: SessionTableProps) {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="flex space-x-2">
+                  <div className="flex items-center space-x-2">
                     <Link href={`/sessions/${session.id}`}>
                       <Button variant="ghost" size="sm">
                         View
@@ -205,8 +206,19 @@ export function SessionTable({ sessions, currentUserRole }: SessionTableProps) {
                         size="sm"
                         onClick={() => handleResendValidation(session.id)}
                         disabled={resendingIds.has(session.id)}
+                        title="Resend validation email"
                       >
-                        {resendingIds.has(session.id) ? 'Sending...' : 'Resend Email'}
+                        {resendingIds.has(session.id) ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin mr-1" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="w-4 h-4 mr-1" />
+                            Resend
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>
