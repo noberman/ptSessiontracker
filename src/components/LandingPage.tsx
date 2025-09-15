@@ -15,7 +15,8 @@ import {
 } from 'lucide-react'
 
 export default function LandingPage() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.fitsync.io'
+  // Use the app subdomain for all authentication links
+  const appUrl = 'https://app.fitsync.io'
   
   return (
     <div className="min-h-screen bg-white">
