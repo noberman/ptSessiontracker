@@ -152,7 +152,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl font-semibold mb-2">Smart Commission Tracking</h3>
               <p className="text-text-secondary">
-                Automatic tier-based commission calculations. Know exactly what you've earned.
+                Automatic tier-based commission calculations. Know exactly what you&apos;ve earned.
               </p>
             </div>
 
