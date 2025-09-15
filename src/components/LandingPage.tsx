@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
@@ -15,8 +18,29 @@ import {
 } from 'lucide-react'
 
 export default function LandingPage() {
-  // Use the app subdomain for all authentication links
-  const appUrl = 'https://app.fitsync.io'
+  // Dynamically determine the app URL based on current environment
+  const [appUrl, setAppUrl] = useState('https://app.fitsync.io')
+  
+  useEffect(() => {
+    // Check if we have a public app URL set
+    if (process.env.NEXT_PUBLIC_APP_URL) {
+      setAppUrl(process.env.NEXT_PUBLIC_APP_URL)
+    } else if (typeof window !== 'undefined') {
+      // Determine based on current hostname
+      const hostname = window.location.hostname
+      
+      if (hostname.includes('staging') || hostname.includes('railway')) {
+        // Staging environment - use staging Railway URL
+        setAppUrl('https://ptsessiontracker-staging.up.railway.app')
+      } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // Local development
+        setAppUrl('http://localhost:3000')
+      } else {
+        // Production
+        setAppUrl('https://app.fitsync.io')
+      }
+    }
+  }, [])
   
   return (
     <div className="min-h-screen bg-white">
