@@ -48,7 +48,7 @@ export function middleware(request: NextRequest) {
   
   // Determine if we're on app subdomain or landing domain
   const isAppDomain = hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1')
-  const isLandingDomain = !isAppDomain || hostname.includes('www.')
+  const isLandingDomain = !isAppDomain
   
   // Special handling for validation routes (accessible from both)
   if (pathname.startsWith('/validate/')) {
