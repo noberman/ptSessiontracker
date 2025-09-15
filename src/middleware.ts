@@ -37,8 +37,10 @@ function isAppRoute(pathname: string): boolean {
 }
 
 function isLandingRoute(pathname: string): boolean {
+  // Only exact match for root path
   if (pathname === '/') return true
-  return LANDING_ONLY_ROUTES.some(route => pathname.startsWith(route))
+  // Check other landing routes (excluding root)
+  return LANDING_ONLY_ROUTES.filter(route => route !== '/').some(route => pathname.startsWith(route))
 }
 
 // Main middleware function
