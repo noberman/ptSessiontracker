@@ -46,36 +46,55 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const pathname = request.nextUrl.pathname
   
+  console.log('=== MIDDLEWARE DEBUG ===')
+  console.log('Hostname:', hostname)
+  console.log('Pathname:', pathname)
+  console.log('Full URL:', request.url)
+  
   // Determine if we're on app subdomain or landing domain
   const isAppDomain = hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1')
   const isLandingDomain = !isAppDomain
   
+  console.log('Is App Domain?', isAppDomain)
+  console.log('Is Landing Domain?', isLandingDomain)
+  
   // Special handling for validation routes (accessible from both)
   if (pathname.startsWith('/validate/')) {
+    console.log('Validation route - allowing through')
     return NextResponse.next()
   }
   
   // Redirect app routes to app subdomain if accessed from landing domain
   if (isLandingDomain && isAppRoute(pathname)) {
+    console.log('Landing domain accessing app route - redirecting to app subdomain')
+    console.log('Is App Route?', isAppRoute(pathname))
     const appUrl = new URL(pathname, `https://${APP_DOMAIN}`)
     appUrl.search = request.nextUrl.search
+    console.log('Redirecting to:', appUrl.toString())
     return NextResponse.redirect(appUrl)
   }
   
   // For app domain, apply authentication middleware to protected routes
   if (isAppDomain) {
+    console.log('Processing app domain request')
+    
     // Allow landing page routes to pass through (for development)
     if (isLandingRoute(pathname) && pathname !== '/') {
+      console.log('App domain accessing landing route')
+      console.log('Is Landing Route?', isLandingRoute(pathname))
+      console.log('NODE_ENV:', process.env.NODE_ENV)
       // Optionally redirect to landing domain in production
       if (process.env.NODE_ENV === 'production') {
         const landingUrl = new URL(pathname, `https://${LANDING_DOMAIN}`)
         landingUrl.search = request.nextUrl.search
+        console.log('Redirecting to landing domain:', landingUrl.toString())
         return NextResponse.redirect(landingUrl)
       }
     }
     
     // Login page should be accessible without auth
     if (pathname === '/login') {
+      console.log('Login page - allowing through without auth')
       return NextResponse.next()
     }
     
@@ -95,12 +114,16 @@ export function middleware(request: NextRequest) {
     
     const isProtected = protectedRoutes.some(route => pathname.startsWith(route))
     
+    console.log('Is Protected Route?', isProtected)
+    
     if (isProtected) {
+      console.log('Protected route - applying auth middleware')
       // Use withAuth for protected routes
       return (withAuth as any)(request)
     }
   }
   
+  console.log('No special handling - allowing through')
   return NextResponse.next()
 }
 
