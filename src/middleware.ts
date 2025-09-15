@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from 'next-auth/middleware'
 
 // Domain configuration
+// For staging, both domains point to the same Railway URL
+const isStaging = typeof process !== 'undefined' && (
+  process.env.LANDING_DOMAIN?.includes('railway') || 
+  process.env.APP_DOMAIN?.includes('railway')
+)
 const LANDING_DOMAIN = process.env.LANDING_DOMAIN || 'fitsync.io'
 const APP_DOMAIN = process.env.APP_DOMAIN || 'app.fitsync.io'
 
@@ -59,8 +64,10 @@ export function middleware(request: NextRequest) {
   }
   
   // Determine if we're on app subdomain or landing domain
-  const isAppDomain = hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1')
-  const isLandingDomain = !isAppDomain
+  // In staging, the same domain serves both landing and app
+  const isOnStagingDomain = hostname.includes('staging') || hostname.includes('railway')
+  const isAppDomain = isOnStagingDomain || hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1')
+  const isLandingDomain = !isOnStagingDomain && !isAppDomain
   
   // Special handling for validation routes (accessible from both)
   if (pathname.startsWith('/validate/')) {

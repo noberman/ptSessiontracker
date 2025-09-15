@@ -16,7 +16,9 @@ export default async function Home() {
   }
   
   // Check if we're on the app subdomain
-  const isAppDomain = hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1')
+  // In staging, treat the Railway domain as app domain (single domain for both)
+  const isOnStagingDomain = hostname.includes('staging') || hostname.includes('railway')
+  const isAppDomain = isOnStagingDomain || hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1')
   
   if (isAppDomain) {
     // App subdomain behavior - redirect to dashboard or login
