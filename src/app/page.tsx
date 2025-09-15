@@ -9,7 +9,7 @@ export default async function Home() {
   const hostname = headersList.get('host') || ''
   
   // Debug logging for staging
-  if (process.env.NODE_ENV === 'staging' || hostname.includes('staging') || hostname.includes('railway')) {
+  if (hostname.includes('staging') || hostname.includes('railway')) {
     console.log('=== ROOT PAGE DEBUG (staging) ===')
     console.log('Hostname:', hostname)
     console.log('NODE_ENV:', process.env.NODE_ENV)
