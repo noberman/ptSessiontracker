@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import LandingPage from './(landing)/page'
 
 export default async function Home() {
-  const headersList = headers()
+  const headersList = await headers()
   const hostname = headersList.get('host') || ''
   
   // Check if we're on the app subdomain
