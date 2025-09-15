@@ -5,45 +5,101 @@ Transform FitSync into a multi-tenant SaaS platform with a focus on rapid adopti
 
 ---
 
-## 1. Organization Hierarchy
+## 🔍 Cross-Reference with Current Schema
 
-### Core Structure
-```
-Organization (Created by user at signup)
-  └── Locations (Gyms/Studios)
-       └── Trainers (PTs at each location)
-            └── Clients
-                 └── Sessions & Packages
-```
+### What We Already Have ✅
+1. **Location Model** - Already exists, just needs `organizationId`
+2. **User Model** - Exists with roles (TRAINER, CLUB_MANAGER, PT_MANAGER, ADMIN)
+3. **Client Model** - Complete with trainer relationships
+4. **Session Model** - Full validation system implemented
+5. **Package Model** - Working but needs to reference org-specific PackageTypes
+6. **CommissionTier Model** - Already exists! Just needs `organizationId`
+7. **EmailLog Model** - Email system fully implemented
+8. **AuditLog Model** - Audit trail system ready
+9. **PackageTemplate Model** - Templates exist, can be org-specific
 
-### Required Schema Changes
+### What We Need to Add 🆕
+1. **Organization Model** - New top-level entity
+2. **PackageType Model** - Replace hardcoded package types (CRITICAL for multi-org)
+3. **OWNER Role** - Add to existing Role enum
+4. **Subscription Enums** - SubscriptionTier, SubscriptionStatus
 
+### Minimal Schema Changes Required
 ```prisma
+// 1. Add Organization model (NEW)
 model Organization {
   id                String    @id @default(cuid())
   name              String
   email             String
   phone             String?
-  
-  // Subscription
   subscriptionTier  SubscriptionTier @default(FREE)
   subscriptionStatus SubscriptionStatus @default(ACTIVE)
   stripeCustomerId  String?   @unique
   stripeSubscriptionId String?
   
-  // Relations
+  // Relations to existing models
   locations         Location[]
   users             User[]
-  packageTypes      PackageType[]    // Org defines their own
-  commissionTiers   CommissionTier[] // Org defines their own
+  commissionTiers   CommissionTier[]
+  packageTypes      PackageType[]     // NEW: Org-specific types
+  packageTemplates  PackageTemplate[] // Use existing model
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
 
+// 2. Add PackageType model (NEW - CRITICAL)
+model PackageType {
+  id              String    @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  name            String    // "Prime", "Elite", "Basic", etc.
+  description     String?
+  isActive        Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// 2. Update existing models (ADD organizationId)
+model Location {
+  // ... existing fields ...
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+}
+
+model User {
+  // ... existing fields ...
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+}
+
+model CommissionTier {
+  // ... existing fields ...
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+}
+
+model PackageTemplate {
+  // ... existing fields ...
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+}
+
+// 3. Add OWNER to Role enum
+enum Role {
+  OWNER        // NEW
+  ADMIN        // Existing
+  PT_MANAGER   // Existing
+  CLUB_MANAGER // Existing
+  TRAINER      // Existing
+}
+
+// 4. Add new enums
 enum SubscriptionTier {
-  FREE    // Limited features
-  PRO     // $15/month - Full features
+  FREE
+  PRO
 }
 
 enum SubscriptionStatus {
@@ -53,341 +109,267 @@ enum SubscriptionStatus {
 }
 ```
 
-### User Role Hierarchy
-```prisma
-enum UserRole {
-  OWNER         // Creates organization, full access
-  ADMIN         // Organization admin (can manage everything)
-  PT_MANAGER    // Can manage trainers and view reports
-  CLUB_MANAGER  // Manages specific location
-  TRAINER       // Logs sessions, manages own clients
-}
-```
+---
+
+## ✅ Feature Implementation Status
+
+### 1. Core Platform Features
+
+| Feature | Status | What's Done | What's Needed |
+|---------|--------|-------------|---------------|
+| **User Authentication** | ✅ 90% | NextAuth, JWT, roles | Add OWNER role, org context |
+| **Session Management** | ✅ 100% | Create, validate, track | Just add org filtering |
+| **Email Validation** | ✅ 100% | Resend integration, validation flow | None |
+| **Package Tracking** | ✅ 95% | Full CRUD, deduction logic | Link to org templates |
+| **Commission Calculation** | ⚠️ 60% | Tiers exist in DB, logic defined in PRD | Need calculation implementation, reports |
+| **Location Management** | ✅ 100% | Full CRUD | Add org relationship |
+| **Client Management** | ✅ 100% | Full CRUD with trainers | Add org context |
+| **Audit Logging** | ✅ 100% | Complete audit trail | None |
+| **Email System** | ✅ 100% | Resend integrated, logging | None |
+| **Dashboard & Analytics** | ✅ 80% | Role-based dashboards | Add org-level analytics |
+| **Reports** | ✅ 70% | Commission, session reports | Add org filtering |
+
+### 2. Multi-Tenant Features
+
+| Feature | Status | What's Done | What's Needed |
+|---------|--------|-------------|---------------|
+| **Organization Model** | ❌ 0% | None | Create model |
+| **Multi-tenant Isolation** | ⚠️ 20% | Location-based isolation | Add org-level isolation |
+| **Onboarding Flow** | ❌ 0% | None | Build 3-step wizard |
+| **Subscription Management** | ❌ 0% | None | Stripe integration |
+| **Organization Switcher** | ❌ 0% | None | UI component |
+| **Invite System** | ⚠️ 30% | Manual user creation | Email invites |
+| **Customizable Package Types** | ❌ 0% | Currently hardcoded PRIME/ELITE | CRITICAL: Must be org-specific |
+| **Customizable Commission Tiers** | ⚠️ 50% | Model exists | Make org-specific |
+
+### 3. UI/UX Components
+
+| Component | Status | What's Done | What's Needed |
+|---------|--------|-------------|---------------|
+| **Landing Page** | ✅ 100% | Marketing page ready | None |
+| **Login/Signup** | ✅ 80% | Login works | Add org creation on signup |
+| **Dashboard** | ✅ 100% | Role-based views | Add org context |
+| **Session Forms** | ✅ 100% | Complete | None |
+| **Package Forms** | ✅ 100% | Complete | Link to org types |
+| **User Management** | ✅ 90% | CRUD operations | Add invite flow |
+| **Settings Pages** | ⚠️ 40% | Basic settings | Add org settings |
+| **Billing Page** | ❌ 0% | None | Stripe portal |
 
 ---
 
-## 2. Simple Pricing Model
+## 📋 Implementation Phases - What's Actually Needed
 
-### Free Tier (Forever Free)
-- 1 location
-- Up to 3 trainers
-- 50 sessions per month
-- Basic features
-- Email validation
-- Commission tracking
+### Phase 1: Add Organization Layer (Week 1)
+**Effort: Low - Mostly adding relationships**
 
-### Pro Tier ($15/month)
-- Unlimited locations
-- Unlimited trainers
-- Unlimited sessions
-- Priority support
-- Data exports
-- Advanced analytics
-- API access (future)
+1. ✅ Already have: All base models
+2. 🆕 Need to add:
+   - Organization model
+   - organizationId to existing models
+   - Migration script for existing data
 
-### Why This Pricing?
-- **Low barrier to entry** - Easy to try and adopt
-- **Focus on feedback** - More users = more insights
-- **Growth potential** - Can increase pricing after product-market fit
-- **Simple decision** - Only one paid tier to consider
-
----
-
-## 3. Quick Onboarding Flow (3 Steps Max)
-
-### Step 1: Create Account & Organization (Combined)
-```javascript
-// Single form submission
-{
-  email: "john@gym.com",
-  password: "********",
-  organizationName: "Apex Fitness",
-  yourName: "John Smith"
-}
-```
-- Creates user account (as OWNER)
-- Creates organization
-- Automatically starts FREE tier
-- Sends welcome email
-
-### Step 2: Add First Location
-```javascript
-{
-  locationName: "Downtown Gym",
-  address: "123 Main St", // Optional
-  phone: "555-0100" // Optional
-}
-```
-- Can skip and add later
-- Simple form, minimal fields
-
-### Step 3: You're Done!
-- Land on dashboard
-- Show quick tour (optional)
-- Prompt to invite first trainer
-- Start logging sessions immediately
-
-### What We DON'T Ask For
-- Payment info (can upgrade later)
-- Commission tiers (use defaults)
-- Package types (use defaults) 
-- Complex settings
-- Business rules
-
----
-
-## 4. Customizable Elements (Keep it Simple)
-
-### Package Types - Org Customizable
-```prisma
-model PackageType {
-  id              String    @id @default(cuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  name            String    // "10 Sessions", "Monthly Unlimited", etc.
-  description     String?
-  isDefault       Boolean   @default(false) // Org's default types
-  packages        Package[]
-}
-```
-
-### Commission Tiers - Org Customizable
-```prisma
-model CommissionTier {
-  id              String    @id @default(cuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  name            String    // "Tier 1", "Bronze", etc.
-  minSessions     Int       // 0 sessions
-  maxSessions     Int?      // 10 sessions (null = unlimited)
-  percentage      Float     // 50%
-  
-  @@unique([organizationId, minSessions]) // Prevent overlapping tiers
-}
-```
-
-### Default Setup (Auto-created)
-When organization is created, automatically create:
-
-**Default Package Types:**
-- 5 Sessions
-- 10 Sessions  
-- 20 Sessions
-- Custom
-
-**Default Commission Tiers:**
-- 0-10 sessions: 50%
-- 11-20 sessions: 55%
-- 21+ sessions: 60%
-
-Users can modify these anytime from Settings.
-
----
-
-## 5. Data Isolation (Simple Approach)
-
-### No Subdomains Needed
-- Single domain: app.fitsync.io
-- Organization context from user session
-- Every query filtered by organizationId
-
-### Implementation
 ```typescript
-// Middleware adds org context to all queries
-async function withOrgContext(userId: string) {
-  const user = await getUser(userId)
-  return {
-    where: {
-      organizationId: user.organizationId
-    }
+// Simple migration for existing data
+const woodSquare = await prisma.organization.create({
+  data: {
+    name: "Wood Square Fitness",
+    email: "admin@woodsquare.com",
+    subscriptionTier: "PRO"
   }
-}
+})
 
-// All queries automatically filtered
+// Update all existing records
+await prisma.$executeRaw`UPDATE locations SET "organizationId" = ${woodSquare.id}`
+await prisma.$executeRaw`UPDATE users SET "organizationId" = ${woodSquare.id}`
+```
+
+### Phase 2: Quick Onboarding (Week 2)
+**Effort: Medium - New feature**
+
+1. ✅ Already have: User creation, auth flow
+2. 🆕 Need to add:
+   - Combined signup/org creation form
+   - Default data seeding (templates, tiers)
+   - Skip-able location setup
+
+### Phase 3: Organization Context (Week 3)
+**Effort: Low - Update queries**
+
+1. ✅ Already have: All queries working
+2. 🆕 Need to add:
+   - Middleware for org context
+   - Update all Prisma queries to filter by org
+   - Test data isolation
+
+```typescript
+// Simple middleware addition
+const orgContext = { organizationId: session.user.organizationId }
 const sessions = await prisma.session.findMany({
-  ...orgContext,
-  // other filters
+  where: { ...existingWhere, ...orgContext }
 })
 ```
 
----
+### Phase 4: Stripe Integration (Week 4)
+**Effort: Medium - New integration**
 
-## 6. MVP Features for Launch
-
-### Core Features (Must Have)
-✅ Organization creation at signup  
-✅ Location management  
-✅ Trainer invitations  
-✅ Session logging  
-✅ Email validation  
-✅ Commission calculation  
-✅ Basic dashboard  
-✅ Package tracking  
-
-### Pro Features (Behind Paywall)
-💰 Unlimited locations/trainers  
-💰 Advanced analytics  
-💰 Data exports (CSV/Excel)  
-💰 Priority support  
-💰 Custom package types  
-💰 Custom commission tiers  
-
-### Post-MVP (Later)
-- Mobile app
-- API access
-- Integrations (Mindbody, etc.)
-- Custom branding
-- Advanced reports
+1. ✅ Already have: Nothing
+2. 🆕 Need to add:
+   - Stripe customer creation
+   - Simple subscription ($15/month)
+   - Upgrade/downgrade flow
+   - Webhook handling
 
 ---
 
-## 7. Technical Implementation (4 Week Sprint)
+## 📊 Commission Feature Documentation
 
-### Week 1: Core Schema
-- Add Organization model
-- Update all models with organizationId
-- Create migration scripts
-- Update queries with org filtering
+### Where It's Fully Defined:
+1. **PRD.md** - Business requirements:
+   - Tiered commission system with monthly reset
+   - Example tiers: 0-30 sessions: 25%, 31-60: 30%, 61+: 35%
+   - Only validated sessions count
+   - Need monthly payroll reports
 
-### Week 2: Auth & Onboarding
-- Update signup flow (create org + user)
-- Add organization context to session
-- Create minimal onboarding (3 steps)
-- Seed default data (package types, commission tiers)
+2. **tasks/07-commission-system.md** - Detailed implementation plan:
+   - Complete API endpoints defined
+   - Monthly summary calculation logic
+   - Commission dashboard specs
+   - Trainer view requirements
+   - Export format examples
 
-### Week 3: Features & Permissions
-- Implement role-based access per organization
-- Add location management
-- Add trainer invitation system
-- Update dashboard for multi-org
+3. **tasks/09b-payroll-exports.md** - Export specifications:
+   - Excel/CSV export formats
+   - Report structure defined
+   - Scheduled reports
+   - Email delivery
 
-### Week 4: Billing & Polish
-- Integrate Stripe (simple subscription)
-- Add upgrade/downgrade flow
-- Free tier limitations
-- Testing and bug fixes
+4. **schema.md** - Database model exists:
+   - CommissionTier table ready
+   - Just needs organizationId
+
+5. **Implementation Status**:
+   - ✅ Database model exists
+   - ✅ Business logic fully documented
+   - ✅ Complete task specs in tasks/07 and tasks/09b
+   - ❌ API endpoints not implemented
+   - ❌ Commission dashboard not built
+   - ❌ Calculation function not implemented
+   - ❌ Payroll exports not implemented
+
+### Files That Need Creating (per task docs):
+```typescript
+// 1. Commission calculation service
+function calculateTrainerCommission(trainerId, month, organizationId) {
+  // Get validated sessions for month
+  // Count total sessions
+  // Find applicable tier
+  // Calculate commission
+}
+
+// 2. Commission report page
+// 3. Payroll export (Excel/CSV)
+```
 
 ---
 
-## 8. Migration Plan for Existing Data
+## 🎯 Actual Work Required Summary
 
-### Simple Migration
+### Minimal Changes to Existing Code
+- **Database**: Add 1 new model, update 5 existing models with organizationId
+- **Auth**: Add OWNER role, include org in session
+- **Queries**: Add org filter to ~30 queries (simple where clause addition)
+- **UI**: Minimal changes, mostly adding org context
+
+### New Development Required
+1. **Onboarding Wizard** (3 simple forms)
+2. **Stripe Integration** (basic subscription)
+3. **Organization Settings Page**
+4. **Invite System** (email-based)
+
+### What We DON'T Need to Change
+- ❌ Session validation logic (works perfectly)
+- ❌ Email system (fully functional)
+- ❌ Commission calculation logic (just needs org context)
+- ❌ Dashboard components (just add filtering)
+- ❌ Package management (just link to org templates)
+- ❌ Audit system (already complete)
+
+---
+
+## 💡 Smart Migration Strategy
+
+### Keep It Simple
+1. **Don't rebuild** - We have 80% of the platform done
+2. **Add, don't replace** - Organization is just a parent entity
+3. **Gradual rollout** - Start with Wood Square as first org
+
+### Data Migration (1 Hour Task)
 ```sql
--- 1. Create default organization
-INSERT INTO Organization (name, email, subscriptionTier) 
+-- Step 1: Add Organization
+INSERT INTO organizations (name, email, subscription_tier) 
 VALUES ('Wood Square Fitness', 'admin@woodsquare.com', 'PRO');
 
--- 2. Add organizationId to all existing records
-UPDATE Location SET organizationId = [wood-square-id];
-UPDATE User SET organizationId = [wood-square-id];
-UPDATE Client SET organizationId = [wood-square-id];
+-- Step 2: Link existing data
+UPDATE locations SET organization_id = [org-id];
+UPDATE users SET organization_id = [org-id];
+UPDATE commission_tiers SET organization_id = [org-id];
+UPDATE package_templates SET organization_id = [org-id];
 
--- 3. Create default package types and commission tiers
--- (Run seed script)
+-- Done! Everything else works as-is
 ```
 
 ---
 
-## 9. Stripe Integration (Keep it Simple)
+## 🚀 Realistic Timeline
 
-### What We Need
-- Customer creation on signup
-- Single product: "FitSync Pro" at $15/month
-- Simple subscription management
-- Cancel anytime
+### Week 1: Schema Updates
+- Day 1-2: Add Organization model, update schema
+- Day 3: Migration script for existing data
+- Day 4-5: Update queries with org context
 
-### What We DON'T Need (Yet)
-- Complex pricing tiers
-- Usage-based billing
-- Invoicing
-- Multiple payment methods
+### Week 2: Onboarding
+- Day 1-2: Signup + org creation form
+- Day 3: Default data seeding
+- Day 4-5: Testing
 
-### Implementation
-```typescript
-// On upgrade to Pro
-const subscription = await stripe.subscriptions.create({
-  customer: org.stripeCustomerId,
-  items: [{ price: 'price_fitsync_pro_monthly' }],
-  trial_period_days: 7, // Optional trial
-})
+### Week 3: Multi-tenant Features
+- Day 1-2: Org isolation testing
+- Day 3: Settings page
+- Day 4-5: Invite system
 
-// On cancel
-await stripe.subscriptions.cancel(subscriptionId)
-```
+### Week 4: Billing
+- Day 1-2: Stripe setup
+- Day 3: Subscription flow
+- Day 4-5: Testing & polish
+
+### Total: 4 Weeks to MVP
+**Not 3 months - we're 80% there already!**
 
 ---
 
-## 10. Success Metrics for Beta
+## 📊 Risk Assessment
 
-### Target: 100 Organizations in First Month
-- 20% convert to Pro ($300 MRR)
-- Average 5 trainers per org
-- 500+ sessions logged weekly
+### Low Risk Items (We already have these)
+- ✅ Session tracking system
+- ✅ Email validation
+- ✅ Commission calculation
+- ✅ User management
+- ✅ Reporting system
 
-### Key Metrics to Track
-- Time to first session logged (target: < 5 minutes)
-- Onboarding completion rate (target: > 80%)
-- Free to Pro conversion (target: > 20%)
-- Weekly active organizations (target: > 60%)
-- Support tickets per org (target: < 1)
+### Medium Risk Items (New but simple)
+- ⚠️ Organization model (just a parent entity)
+- ⚠️ Stripe integration (well-documented)
+- ⚠️ Onboarding flow (3 simple forms)
 
-### Feedback Loops
-- In-app feedback widget
-- Weekly email check-ins
-- User interviews with top 10 users
-- Feature request voting board
+### High Risk Items (Complex/Unknown)
+- ❌ None! We're not doing anything complex
 
 ---
 
-## 11. Go-to-Market Strategy
+## Next Immediate Steps
 
-### Launch Channels
-1. **ProductHunt** - Time for Tuesday launch
-2. **Reddit** - r/fitness, r/personaltraining
-3. **Facebook Groups** - PT communities
-4. **Direct Outreach** - Local gyms (email/calls)
-
-### Positioning
-"The simplest way to track PT sessions and commissions. Free to start, $15/month for unlimited."
-
-### First 10 Customers
-- Manually onboard
-- Weekly calls for feedback
-- Build features they request
-- Use as case studies
-
----
-
-## Next Steps (Priority Order)
-
-1. **Week 1**: Implement Organization model and update schema
-2. **Week 2**: Build 3-step onboarding flow
-3. **Week 3**: Add org context to all queries and pages
-4. **Week 4**: Integrate Stripe and deploy
-
-Then:
-- Launch to 10 beta users
-- Gather feedback for 2 weeks
-- Iterate based on feedback
-- Public launch
-
----
-
-## Risks & Mitigation
-
-### Biggest Risks
-1. **Onboarding still too complex**
-   - Solution: Track drop-off, simplify further
-   
-2. **Free tier too generous**
-   - Solution: Adjust limits based on usage data
-   
-3. **$15 too cheap (no perceived value)**
-   - Solution: Test price points after 100 users
-
-### What We're NOT Worrying About Yet
-- Scale beyond 1000 orgs
-- Enterprise features  
-- Complex integrations
-- International payments
-- GDPR compliance (US focus first)
+1. **Today**: Create Organization model in schema.prisma
+2. **Tomorrow**: Add organizationId to existing models
+3. **Day 3**: Create migration script
+4. **Day 4**: Test with Wood Square as first org
+5. **Week 2**: Build onboarding and go live with beta!
