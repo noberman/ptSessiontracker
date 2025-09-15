@@ -74,6 +74,11 @@ export function middleware(request: NextRequest) {
       }
     }
     
+    // Login page should be accessible without auth
+    if (pathname === '/login') {
+      return NextResponse.next()
+    }
+    
     // Apply auth to protected routes
     const protectedRoutes = [
       '/dashboard',
