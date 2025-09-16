@@ -39,15 +39,49 @@ export interface TrainerCommission {
  * Get commission tiers from database
  */
 async function getCommissionTiers(): Promise<CommissionTier[]> {
-  const tiers = await prisma.commissionTier.findMany({
-    orderBy: { minSessions: 'asc' }
-  })
+  console.log('🔍 CALCULATOR: Fetching commission tiers from database...')
   
-  return tiers.map(tier => ({
-    minSessions: tier.minSessions,
-    maxSessions: tier.maxSessions,
-    percentage: tier.percentage
-  }))
+  try {
+    const tiers = await prisma.commissionTier.findMany({
+      orderBy: { minSessions: 'asc' }
+    })
+    
+    console.log(`📊 CALCULATOR: Found ${tiers.length} tiers`)
+    
+    if (tiers.length === 0) {
+      console.error('❌ CALCULATOR: No commission tiers found in database!')
+      console.log('💡 CALCULATOR: Returning default tiers as fallback')
+      
+      // Return default tiers as fallback
+      return [
+        { minSessions: 0, maxSessions: 30, percentage: 25 },
+        { minSessions: 31, maxSessions: 60, percentage: 30 },
+        { minSessions: 61, maxSessions: null, percentage: 35 }
+      ]
+    }
+    
+    const result = tiers.map(tier => ({
+      minSessions: tier.minSessions,
+      maxSessions: tier.maxSessions,
+      percentage: tier.percentage
+    }))
+    
+    console.log('✅ CALCULATOR: Tiers loaded successfully:', result.map(t => `${t.minSessions}-${t.maxSessions || '∞'}:${t.percentage}%`).join(', '))
+    
+    return result
+  } catch (error: any) {
+    console.error('❌ CALCULATOR: Error fetching tiers:', error)
+    console.error('   Error code:', error.code)
+    console.error('   Error message:', error.message)
+    
+    // Return default tiers as fallback
+    console.log('💡 CALCULATOR: Using default tiers due to error')
+    return [
+      { minSessions: 0, maxSessions: 30, percentage: 25 },
+      { minSessions: 31, maxSessions: 60, percentage: 30 },
+      { minSessions: 61, maxSessions: null, percentage: 35 }
+    ]
+  }
 }
 
 /**
