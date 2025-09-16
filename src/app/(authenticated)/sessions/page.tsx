@@ -1,3 +1,4 @@
+// Rebuilt: 2025-09-16 - Regenerate Prisma client with cancelled fields
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
