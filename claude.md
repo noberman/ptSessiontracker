@@ -56,53 +56,62 @@
     - Log all import events with user and timestamp
 
 ## Deployment & Production
-30. Railway deployment configuration:
+30. **CRITICAL GIT WORKFLOW: NEVER commit directly to main branch**
+    - Development flow MUST be: Local → Staging → Production
+    - Create features in staging branch first
+    - Test thoroughly in staging environment
+    - Only merge staging to main after verification
+    - Main branch = production, must always be stable
+    - If git hook warns about committing to main, STOP
+31. Railway deployment configuration:
     - Environment variables managed through Railway dashboard
     - Use Railway CLI for production commands
     - PostgreSQL provided by Railway
-31. **CRITICAL DATABASE RULE #1: NEVER use `prisma migrate reset` on production**
+    - Staging branch → staging environment
+    - Main branch → production environment
+32. **CRITICAL DATABASE RULE #1: NEVER use `prisma migrate reset` on production**
     - This command DESTROYS ALL DATA permanently
     - It drops all tables and recreates from scratch
     - Only use in development environments
     - If you're about to run this command, STOP and ask the user first
-32. **CRITICAL DATABASE RULE #2: For production, ONLY use `prisma migrate deploy`**
+33. **CRITICAL DATABASE RULE #2: For production, ONLY use `prisma migrate deploy`**
     - This safely applies pending migrations without data loss
     - Never use reset, drop, or push commands on production
     - If migrations fail, debug the specific issue - don't reset
-33. For production migrations:
+34. For production migrations:
     - Test thoroughly in development first
     - Use `prisma migrate deploy` for production (NEVER reset)
     - Verify migrations with database queries
-34. Always verify migrations ran successfully:
+35. Always verify migrations ran successfully:
     - Check _prisma_migrations table
     - Verify schema changes applied correctly
-35. After production migrations:
+36. After production migrations:
     - Update code referencing old schema
     - Deploy immediately to avoid schema/code mismatch
 
 ## Session Management Specific
-36. Session validation must use secure, time-limited tokens
-37. Always validate trainer-client relationships before creating sessions
-38. Implement proper error handling for email validation failures
-39. Maintain audit trail for all session modifications
-40. Track commission calculations with clear tier progression logic
+37. Session validation must use secure, time-limited tokens
+38. Always validate trainer-client relationships before creating sessions
+39. Implement proper error handling for email validation failures
+40. Maintain audit trail for all session modifications
+41. Track commission calculations with clear tier progression logic
 
 ## Security & Compliance
-41. Never expose API keys or tokens in code
-42. Implement proper authentication checks on all routes
-43. Follow data privacy requirements for client PII (name, email only)
-44. Audit log all significant actions (session creation, validation, modifications)
-45. Encrypt sensitive data (validation tokens) in database
+42. Never expose API keys or tokens in code
+43. Implement proper authentication checks on all routes
+44. Follow data privacy requirements for client PII (name, email only)
+45. Audit log all significant actions (session creation, validation, modifications)
+46. Encrypt sensitive data (validation tokens) in database
 
 ## Commission & Payroll Constraints
-46. CRITICAL: Commission tiers reset monthly
-47. Only validated sessions count toward commission calculations
-48. No-show sessions must be excluded from commission calculations
-49. Commission tier breakpoints must be configurable by admin
-50. Payroll reports must be exportable in Excel/CSV format
+47. CRITICAL: Commission tiers reset monthly
+48. Only validated sessions count toward commission calculations
+49. No-show sessions must be excluded from commission calculations
+50. Commission tier breakpoints must be configurable by admin
+51. Payroll reports must be exportable in Excel/CSV format
 
 ## Database Schema Changes
-51. **CRITICAL SCHEMA RULE**: When proposing ANY database schema changes (new models, new fields, field modifications):
+52. **CRITICAL SCHEMA RULE**: When proposing ANY database schema changes (new models, new fields, field modifications):
     - MUST present in ALL CAPS the exact fields being added/modified
     - MUST explain the business purpose of EACH field
     - MUST justify why each field is necessary
