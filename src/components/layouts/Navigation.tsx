@@ -59,6 +59,15 @@ export function Navigation() {
                 </Link>
               )}
               
+              {session.user.role === 'TRAINER' && (
+                <Link
+                  href="/my-commission"
+                  className="text-text-secondary hover:text-text-primary hover:bg-surface-hover px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  My Commission
+                </Link>
+              )}
+              
               {(session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER' || 
                 session.user.role === 'ADMIN') && (
                 <>
@@ -73,6 +82,12 @@ export function Navigation() {
                     className="text-text-secondary hover:text-text-primary hover:bg-surface-hover px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
                     Packages
+                  </Link>
+                  <Link
+                    href="/commission"
+                    className="text-text-secondary hover:text-text-primary hover:bg-surface-hover px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    Commission
                   </Link>
                   <Link
                     href="/users"

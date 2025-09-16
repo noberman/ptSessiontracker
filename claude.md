@@ -60,40 +60,49 @@
     - Environment variables managed through Railway dashboard
     - Use Railway CLI for production commands
     - PostgreSQL provided by Railway
-31. For production migrations:
+31. **CRITICAL DATABASE RULE #1: NEVER use `prisma migrate reset` on production**
+    - This command DESTROYS ALL DATA permanently
+    - It drops all tables and recreates from scratch
+    - Only use in development environments
+    - If you're about to run this command, STOP and ask the user first
+32. **CRITICAL DATABASE RULE #2: For production, ONLY use `prisma migrate deploy`**
+    - This safely applies pending migrations without data loss
+    - Never use reset, drop, or push commands on production
+    - If migrations fail, debug the specific issue - don't reset
+33. For production migrations:
     - Test thoroughly in development first
-    - Use Prisma migrate deploy for production
+    - Use `prisma migrate deploy` for production (NEVER reset)
     - Verify migrations with database queries
-32. Always verify migrations ran successfully:
+34. Always verify migrations ran successfully:
     - Check _prisma_migrations table
     - Verify schema changes applied correctly
-33. After production migrations:
+35. After production migrations:
     - Update code referencing old schema
     - Deploy immediately to avoid schema/code mismatch
 
 ## Session Management Specific
-34. Session validation must use secure, time-limited tokens
-35. Always validate trainer-client relationships before creating sessions
-36. Implement proper error handling for email validation failures
-37. Maintain audit trail for all session modifications
-38. Track commission calculations with clear tier progression logic
+36. Session validation must use secure, time-limited tokens
+37. Always validate trainer-client relationships before creating sessions
+38. Implement proper error handling for email validation failures
+39. Maintain audit trail for all session modifications
+40. Track commission calculations with clear tier progression logic
 
 ## Security & Compliance
-39. Never expose API keys or tokens in code
-40. Implement proper authentication checks on all routes
-41. Follow data privacy requirements for client PII (name, email only)
-42. Audit log all significant actions (session creation, validation, modifications)
-43. Encrypt sensitive data (validation tokens) in database
+41. Never expose API keys or tokens in code
+42. Implement proper authentication checks on all routes
+43. Follow data privacy requirements for client PII (name, email only)
+44. Audit log all significant actions (session creation, validation, modifications)
+45. Encrypt sensitive data (validation tokens) in database
 
 ## Commission & Payroll Constraints
-44. CRITICAL: Commission tiers reset monthly
-45. Only validated sessions count toward commission calculations
-46. No-show sessions must be excluded from commission calculations
-47. Commission tier breakpoints must be configurable by admin
-48. Payroll reports must be exportable in Excel/CSV format
+46. CRITICAL: Commission tiers reset monthly
+47. Only validated sessions count toward commission calculations
+48. No-show sessions must be excluded from commission calculations
+49. Commission tier breakpoints must be configurable by admin
+50. Payroll reports must be exportable in Excel/CSV format
 
 ## Database Schema Changes
-49. **CRITICAL SCHEMA RULE**: When proposing ANY database schema changes (new models, new fields, field modifications):
+51. **CRITICAL SCHEMA RULE**: When proposing ANY database schema changes (new models, new fields, field modifications):
     - MUST present in ALL CAPS the exact fields being added/modified
     - MUST explain the business purpose of EACH field
     - MUST justify why each field is necessary
