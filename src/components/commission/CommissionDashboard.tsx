@@ -125,7 +125,9 @@ export function CommissionDashboard({
   
   const handleTierChange = (index: number, field: keyof CommissionTier, value: any) => {
     const newTiers = [...editableTiers]
-    if (field === 'minSessions' || field === 'maxSessions') {
+    if (field === 'minSessions') {
+      newTiers[index][field] = value === '' ? 0 : parseInt(value)
+    } else if (field === 'maxSessions') {
       newTiers[index][field] = value === '' ? null : parseInt(value)
     } else if (field === 'percentage') {
       newTiers[index][field] = value === '' ? 0 : parseFloat(value)
