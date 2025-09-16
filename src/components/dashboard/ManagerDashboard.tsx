@@ -611,11 +611,10 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
       </div>
 
       {/* Alerts Section */}
-      {((data.stats.unassignedClients && data.stats.unassignedClients > 0) || (data.lowValidationTrainers && data.lowValidationTrainers.length > 0)) && (
+      {data.stats.unassignedClients && data.stats.unassignedClients > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Unassigned Clients Alert */}
-          {data.stats.unassignedClients && data.stats.unassignedClients > 0 && (
-            <Card className="border-orange-200 bg-orange-50">
+          <Card className="border-orange-200 bg-orange-50">
               <CardContent className="p-4">
                 <div className="flex items-start space-x-3">
                   <div className="text-orange-600 mt-0.5">⚠️</div>
@@ -631,31 +630,6 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
                 </div>
               </CardContent>
             </Card>
-          )}
-          
-          {/* Low Validation Warning */}
-          {data.lowValidationTrainers && data.lowValidationTrainers.length > 0 && (
-            <Card className="border-red-200 bg-red-50">
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  <div className="text-red-600 mt-0.5">⚠️</div>
-                  <div>
-                    <p className="text-sm font-medium text-red-900">Low Validation Rate</p>
-                    <p className="text-sm text-red-700 mt-1">
-                      {data.lowValidationTrainers.length} trainer{data.lowValidationTrainers.length > 1 ? 's' : ''} below 70% validation
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      {data.lowValidationTrainers.slice(0, 3).map(trainer => (
-                        <p key={trainer.email} className="text-xs text-red-600">
-                          {trainer.name}: {trainer.validationRate}% ({trainer.validatedSessions}/{trainer.totalSessions})
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       )}
 
