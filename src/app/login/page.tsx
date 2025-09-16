@@ -39,6 +39,11 @@ export default function LoginPage() {
     setError('')
     setIsLoading(true)
 
+    console.log('🚀 LOGIN: Starting login attempt')
+    console.log('📧 LOGIN: Email:', email)
+    console.log('🌍 LOGIN: Current URL:', window.location.href)
+    console.log('🔗 LOGIN: NextAuth endpoint:', '/api/auth/callback/credentials')
+
     try {
       const result = await signIn('credentials', {
         email,
@@ -46,13 +51,21 @@ export default function LoginPage() {
         redirect: false,
       })
 
+      console.log('📨 LOGIN: SignIn result:', result)
+      console.log('❓ LOGIN: Has error?', !!result?.error)
+      console.log('✅ LOGIN: OK status?', result?.ok)
+      console.log('🔗 LOGIN: Result URL:', result?.url)
+
       if (result?.error) {
+        console.log('❌ LOGIN: Authentication failed:', result.error)
         setError('Invalid email or password')
       } else {
+        console.log('✅ LOGIN: Authentication successful, redirecting...')
         router.push('/dashboard')
         router.refresh()
       }
     } catch (error) {
+      console.error('💥 LOGIN: Exception during sign in:', error)
       setError('An error occurred. Please try again.')
     } finally {
       setIsLoading(false)
