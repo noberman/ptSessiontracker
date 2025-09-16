@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { CommissionDashboard } from '@/components/commission/CommissionDashboard'
 import { calculateMonthlyCommissions, getCommissionMethod } from '@/lib/commission/calculator'
 import { prisma } from '@/lib/prisma'
+import { ensureCommissionTiers } from '@/lib/commission/ensure-tiers'
 
 export default async function CommissionPage({
   searchParams
@@ -25,6 +26,9 @@ export default async function CommissionPage({
   if (session.user.role === 'TRAINER') {
     redirect('/my-commission')
   }
+  
+  // Ensure commission tiers exist (creates defaults if empty)
+  await ensureCommissionTiers()
   
   // Get current month or from params
   const currentDate = new Date()
