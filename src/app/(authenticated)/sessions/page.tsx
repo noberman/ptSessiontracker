@@ -30,6 +30,11 @@ export default async function SessionsPage({
     redirect('/login')
   }
 
+  // Debug logging for production issue
+  console.log('🔍 SESSIONS PAGE: Starting session query')
+  console.log('📊 SESSIONS PAGE: Database URL prefix:', process.env.DATABASE_URL?.substring(0, 30))
+  console.log('📊 SESSIONS PAGE: User role:', session.user.role)
+  
   const page = parseInt(params.page || '1')
   const limit = 20
   const skip = (page - 1) * limit
@@ -168,12 +173,20 @@ export default async function SessionsPage({
     filterLocations = locations
   }
 
-  const [sessions, total] = await Promise.all([
-    prisma.session.findMany({
-      where,
-      skip,
-      take: limit,
-      include: {
+  // Log before the query that's failing
+  console.log('🔍 SESSIONS PAGE: About to query sessions table')
+  console.log('📊 SESSIONS PAGE: Query params:', { where, skip, limit })
+  
+  let sessions, total;
+  
+  try {
+    console.log('🔍 SESSIONS PAGE: Executing Prisma findMany...')
+    const results = await Promise.all([
+      prisma.session.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
         client: {
           select: {
             id: true,
@@ -208,6 +221,34 @@ export default async function SessionsPage({
     }),
     prisma.session.count({ where })
   ])
+    
+    sessions = results[0]
+    total = results[1]
+    console.log('✅ SESSIONS PAGE: Query successful, found', total, 'sessions')
+    
+  } catch (error: any) {
+    console.error('❌ SESSIONS PAGE: Query failed:', error)
+    console.error('❌ SESSIONS PAGE: Error code:', error.code)
+    console.error('❌ SESSIONS PAGE: Error message:', error.message)
+    
+    // Try to provide more info
+    if (error.code === 'P2022') {
+      console.error('❌ SESSIONS PAGE: Column not found error - checking database schema...')
+      try {
+        const checkColumns = await prisma.$queryRaw`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'sessions' 
+          AND column_name IN ('cancelled', 'cancelledAt')
+        ` as any[]
+        console.log('📊 SESSIONS PAGE: Column check result:', checkColumns)
+      } catch (checkErr) {
+        console.error('❌ SESSIONS PAGE: Could not check columns:', checkErr)
+      }
+    }
+    
+    throw error // Re-throw to maintain original behavior
+  }
 
   const pagination = {
     page,
