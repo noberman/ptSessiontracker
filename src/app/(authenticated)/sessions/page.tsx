@@ -249,6 +249,7 @@ export default async function SessionsPage({
               sessionDate: s.sessionDate.toISOString(),
               validatedAt: s.validatedAt?.toISOString() || null,
               validationExpiry: s.validationExpiry?.toISOString() || null,
+              cancelledAt: s.cancelledAt?.toISOString() || null,
               createdAt: s.createdAt.toISOString(),
               updatedAt: s.updatedAt.toISOString(),
             }))}
