@@ -5,11 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { 
-  Download
+  Download,
+  WifiOff
 } from 'lucide-react'
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -35,6 +38,7 @@ interface DashboardData {
     validationRate: number
     activeTrainers: number
     activeClients: number
+    unassignedClients?: number
     period: {
       from: string
       to: string
@@ -70,11 +74,23 @@ interface DashboardData {
       count: number
     }>
   }>
+  lowValidationTrainers?: Array<{
+    name: string
+    email: string
+    validationRate: number
+    totalSessions: number
+    validatedSessions: number
+  }>
+  peakActivityHours?: Array<{
+    hour: number
+    count: number
+  }>
 }
 
 export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [period, setPeriod] = useState('month')
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
@@ -101,6 +117,20 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
+    
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
     }
   }, [])
 
@@ -331,10 +361,16 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
     <div className="space-y-6">
       {/* Header - Only show for non-admin roles */}
       {userRole !== 'ADMIN' && (
-        <div>
+        <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-text-primary">
             {userRole === 'CLUB_MANAGER' ? 'Club Manager' : 'PT Manager'} Dashboard
           </h1>
+          {isOffline && (
+            <div className="flex items-center space-x-2 text-orange-600 bg-orange-50 px-3 py-1 rounded-md">
+              <WifiOff className="h-4 w-4" />
+              <span className="text-sm">Offline - Data may be outdated</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -574,6 +610,55 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
         </Card>
       </div>
 
+      {/* Alerts Section */}
+      {(data.stats.unassignedClients > 0 || (data.lowValidationTrainers && data.lowValidationTrainers.length > 0)) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Unassigned Clients Alert */}
+          {data.stats.unassignedClients > 0 && (
+            <Card className="border-orange-200 bg-orange-50">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="text-orange-600 mt-0.5">⚠️</div>
+                  <div>
+                    <p className="text-sm font-medium text-orange-900">Unassigned Clients</p>
+                    <p className="text-sm text-orange-700 mt-1">
+                      {data.stats.unassignedClients} client{data.stats.unassignedClients > 1 ? 's' : ''} need trainer assignment
+                    </p>
+                    <a href="/clients?filter=unassigned" className="text-sm text-orange-600 hover:text-orange-800 mt-2 inline-block">
+                      View unassigned clients →
+                    </a>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Low Validation Warning */}
+          {data.lowValidationTrainers && data.lowValidationTrainers.length > 0 && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="text-red-600 mt-0.5">⚠️</div>
+                  <div>
+                    <p className="text-sm font-medium text-red-900">Low Validation Rate</p>
+                    <p className="text-sm text-red-700 mt-1">
+                      {data.lowValidationTrainers.length} trainer{data.lowValidationTrainers.length > 1 ? 's' : ''} below 70% validation
+                    </p>
+                    <div className="mt-2 space-y-1">
+                      {data.lowValidationTrainers.slice(0, 3).map(trainer => (
+                        <p key={trainer.email} className="text-xs text-red-600">
+                          {trainer.name}: {trainer.validationRate}% ({trainer.validatedSessions}/{trainer.totalSessions})
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
       {/* Cumulative Sessions Chart - Full width */}
       <Card>
         <CardHeader>
@@ -629,6 +714,41 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
           />
         </CardContent>
       </Card>
+
+      {/* Peak Activity Hours Chart */}
+      {data.peakActivityHours && data.peakActivityHours.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Peak Activity Hours</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={data.peakActivityHours}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis 
+                  dataKey="hour" 
+                  fontSize={12}
+                  tickFormatter={(hour) => {
+                    const h = hour % 12 || 12
+                    const ampm = hour < 12 ? 'AM' : 'PM'
+                    return `${h}${ampm}`
+                  }}
+                />
+                <YAxis fontSize={12} />
+                <Tooltip 
+                  formatter={(value: number) => [`${value} sessions`, 'Count']}
+                  labelFormatter={(hour) => {
+                    const h = hour % 12 || 12
+                    const ampm = hour < 12 ? 'AM' : 'PM'
+                    return `${h}:00 ${ampm}`
+                  }}
+                />
+                <Bar dataKey="count" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Session Details Panel */}
       <SessionDetailsPanel

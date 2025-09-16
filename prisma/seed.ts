@@ -210,7 +210,9 @@ async function main() {
 
   console.log('✅ Created sample sessions')
 
-  // Create commission tiers (for future use)
+  // Create commission tiers
+  // See /docs/COMMISSION_SYSTEM_DESIGN.md for complete commission system architecture
+  // Default seed data uses Progressive Tier System (Wood Square Fitness default)
   const tiersData = [
     { minSessions: 0, maxSessions: 30, percentage: 0.25 },
     { minSessions: 31, maxSessions: 60, percentage: 0.30 },

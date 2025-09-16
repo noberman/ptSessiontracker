@@ -238,7 +238,10 @@ export async function GET(request: Request) {
         trainerStats,
         dailyStats,
         activeTrainers,
-        activeClients
+        activeClients,
+        unassignedClients,
+        lowValidationTrainers,
+        peakActivityHours
       ] = await Promise.all([
         // Total sessions
         prisma.session.count({ where: sessionsWhere }),
@@ -324,7 +327,60 @@ export async function GET(request: Request) {
           : prisma.user.count({ where: trainersWhere }),
         
         // Active clients
-        prisma.client.count({ where: clientsWhere })
+        prisma.client.count({ where: clientsWhere }),
+        
+        // Unassigned clients
+        prisma.client.count({ 
+          where: { 
+            ...clientsWhere,
+            primaryTrainerId: null 
+          } 
+        }),
+        
+        // Low validation trainers (< 70% validation rate)
+        prisma.session.groupBy({
+          by: ['trainerId'],
+          where: sessionsWhere,
+          _count: { id: true }
+        }).then(async (trainerSessions) => {
+          const lowValidation = []
+          for (const trainer of trainerSessions) {
+            const validatedCount = await prisma.session.count({
+              where: {
+                ...sessionsWhere,
+                trainerId: trainer.trainerId,
+                validated: true
+              }
+            })
+            const validationRate = (validatedCount / trainer._count.id) * 100
+            if (validationRate < 70) {
+              const trainerInfo = await prisma.user.findUnique({
+                where: { id: trainer.trainerId },
+                select: { name: true, email: true }
+              })
+              lowValidation.push({
+                ...trainerInfo,
+                validationRate: Math.round(validationRate),
+                totalSessions: trainer._count.id,
+                validatedSessions: validatedCount
+              })
+            }
+          }
+          return lowValidation
+        }),
+        
+        // Peak activity hours
+        prisma.session.findMany({
+          where: sessionsWhere,
+          select: { sessionDate: true }
+        }).then(sessions => {
+          const hourCounts = new Array(24).fill(0)
+          sessions.forEach(session => {
+            const hour = new Date(session.sessionDate).getHours()
+            hourCounts[hour]++
+          })
+          return hourCounts.map((count, hour) => ({ hour, count }))
+        })
       ])
 
       // Get ALL trainers (not just those with sessions) with their locations
@@ -372,6 +428,12 @@ export async function GET(request: Request) {
       const validationRate = totalSessions > 0 
         ? Math.round((validatedSessions / totalSessions) * 100)
         : 0
+      
+      // Calculate average sessions per day/week
+      const daysDiff = Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24))
+      const weeksDiff = Math.ceil(daysDiff / 7)
+      const averagePerDay = daysDiff > 0 ? (totalSessions / daysDiff).toFixed(1) : '0'
+      const averagePerWeek = weeksDiff > 0 ? (totalSessions / weeksDiff).toFixed(1) : '0'
 
       return NextResponse.json({
         stats: {
@@ -381,6 +443,9 @@ export async function GET(request: Request) {
           validationRate,
           activeTrainers,
           activeClients,
+          unassignedClients,
+          averagePerDay,
+          averagePerWeek,
           period: {
             from: dateFrom,
             to: dateTo
@@ -390,6 +455,8 @@ export async function GET(request: Request) {
         allTrainers, // Include all trainers for filtering
         allLocations, // Include all locations for filtering (PT_MANAGER and ADMIN only)
         dailyStats,
+        lowValidationTrainers,
+        peakActivityHours,
         userRole: session.user.role
       })
     }

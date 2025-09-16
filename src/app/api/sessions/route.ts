@@ -156,7 +156,8 @@ export async function POST(request: Request) {
       packageId,
       sessionDate,
       sessionTime,
-      notes
+      notes,
+      isNoShow
     } = body
 
     // Validate required fields
@@ -262,10 +263,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // Generate validation token
-    const validationToken = crypto.randomBytes(32).toString('hex')
-    const validationExpiry = new Date()
-    validationExpiry.setDate(validationExpiry.getDate() + 30) // 30 days from now
+    // Generate validation token (only if not a no-show)
+    const validationToken = isNoShow ? null : crypto.randomBytes(32).toString('hex')
+    const validationExpiry = isNoShow ? null : (() => {
+      const expiry = new Date()
+      expiry.setDate(expiry.getDate() + 30) // 30 days from now
+      return expiry
+    })()
 
     // Combine date and time if provided
     const sessionDateTime = new Date(sessionDate)
@@ -285,8 +289,10 @@ export async function POST(request: Request) {
           locationId: client.locationId,
           sessionDate: sessionDateTime,
           sessionValue: pkg.sessionValue,
-          notes: notes || null,
+          notes: isNoShow ? (notes ? `${notes}\n\nNo-Show` : 'No-Show') : (notes || null),
           validated: false,
+          cancelled: isNoShow || false,
+          cancelledAt: isNoShow ? new Date() : null,
           validationToken,
           validationExpiry,
         },
@@ -336,38 +342,42 @@ export async function POST(request: Request) {
       return createdSession
     })
 
-    // Send validation email to client
-    try {
-      const validationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/validate/${newSession.validationToken}`
-      
-      const { html, text } = await renderSessionValidationEmail({
-        clientName: newSession.client.name,
-        trainerName: newSession.trainer.name,
-        sessionDate: newSession.sessionDate,
-        location: newSession.location.name,
-        sessionValue: newSession.sessionValue,
-        validationUrl,
-        expiryDays: parseInt(process.env.SESSION_VALIDATION_EXPIRY_DAYS || '30'),
-      })
+    // Send validation email to client (only if not a no-show)
+    if (!isNoShow) {
+      try {
+        const validationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/validate/${newSession.validationToken}`
+        
+        const { html, text } = await renderSessionValidationEmail({
+          clientName: newSession.client.name,
+          trainerName: newSession.trainer.name,
+          sessionDate: newSession.sessionDate,
+          location: newSession.location.name,
+          sessionValue: newSession.sessionValue,
+          validationUrl,
+          expiryDays: parseInt(process.env.SESSION_VALIDATION_EXPIRY_DAYS || '30'),
+        })
 
-      await EmailService.sendWithRetry({
-        to: newSession.client.email,
-        subject: `Please confirm your training session with ${newSession.trainer.name}`,
-        html,
-        text,
-        template: 'session-validation',
-        metadata: {
-          sessionId: newSession.id,
-          clientId: newSession.client.id,
-          trainerId: newSession.trainer.id,
-        }
-      })
+        await EmailService.sendWithRetry({
+          to: newSession.client.email,
+          subject: `Please confirm your training session with ${newSession.trainer.name}`,
+          html,
+          text,
+          template: 'session-validation',
+          metadata: {
+            sessionId: newSession.id,
+            clientId: newSession.client.id,
+            trainerId: newSession.trainer.id,
+          }
+        })
 
-      console.log(`Validation email sent to ${newSession.client.email} for session ${newSession.id}`)
-    } catch (emailError) {
-      // Log error but don't fail the session creation
-      console.error('Failed to send validation email:', emailError)
-      // You might want to create a notification for admins here
+        console.log(`Validation email sent to ${newSession.client.email} for session ${newSession.id}`)
+      } catch (emailError) {
+        // Log error but don't fail the session creation
+        console.error('Failed to send validation email:', emailError)
+        // You might want to create a notification for admins here
+      }
+    } else {
+      console.log(`No-show session created for client ${newSession.client.email} - no validation email sent`)
     }
 
     return NextResponse.json(newSession, { status: 201 })

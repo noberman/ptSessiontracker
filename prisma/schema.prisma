@@ -87,6 +87,8 @@ model Session {
   validatedAt      DateTime?
   validationToken  String?   @unique
   validationExpiry DateTime?
+  cancelled        Boolean   @default(false)
+  cancelledAt      DateTime?
   notes            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

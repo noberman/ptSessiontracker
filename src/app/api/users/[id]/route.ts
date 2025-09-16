@@ -114,6 +114,36 @@ export async function PUT(
       )
     }
 
+    // Prevent removing last admin
+    if (role && currentUser.role === 'ADMIN' && role !== 'ADMIN') {
+      const adminCount = await prisma.user.count({
+        where: { 
+          role: 'ADMIN',
+          active: true
+        }
+      })
+      if (adminCount <= 1) {
+        return NextResponse.json(
+          { error: 'Cannot remove last admin from system' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Handle role downgrade impacts - reassign clients if trainer role is being changed
+    if (role && currentUser.role === 'TRAINER' && role !== 'TRAINER') {
+      // Check if trainer has assigned clients
+      const clientCount = await prisma.client.count({
+        where: { primaryTrainerId: id }
+      })
+      if (clientCount > 0) {
+        return NextResponse.json(
+          { error: `Cannot change role: ${clientCount} clients are assigned to this trainer. Please reassign them first.` },
+          { status: 400 }
+        )
+      }
+    }
+
     // Check if email is being changed and if it's unique
     if (email && email !== currentUser.email) {
       const existingUser = await prisma.user.findUnique({
@@ -200,6 +230,27 @@ export async function DELETE(
         { error: 'Cannot delete your own account' },
         { status: 400 }
       )
+    }
+
+    // Prevent removing last admin
+    const userToDelete = await prisma.user.findUnique({
+      where: { id },
+      select: { role: true }
+    })
+    
+    if (userToDelete?.role === 'ADMIN') {
+      const adminCount = await prisma.user.count({
+        where: { 
+          role: 'ADMIN',
+          active: true
+        }
+      })
+      if (adminCount <= 1) {
+        return NextResponse.json(
+          { error: 'Cannot deactivate last admin from system' },
+          { status: 400 }
+        )
+      }
     }
 
     // Soft delete (set inactive)
