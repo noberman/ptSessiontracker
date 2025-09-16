@@ -58,7 +58,8 @@ export function SessionForm({
     packageId: '',
     sessionDate: new Date().toISOString().split('T')[0],
     sessionTime: new Date().toTimeString().slice(0, 5), // Default to current time (HH:MM)
-    notes: ''
+    notes: '',
+    isNoShow: false
   })
 
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
@@ -389,10 +390,37 @@ export function SessionForm({
             />
           </div>
 
+          {/* No-Show Checkbox */}
+          <div className="bg-background-secondary rounded-lg p-4">
+            <div className="flex items-start">
+              <input
+                id="isNoShow"
+                type="checkbox"
+                checked={formData.isNoShow}
+                onChange={(e) => setFormData({ ...formData, isNoShow: e.target.checked })}
+                className="mt-0.5 h-4 w-4 rounded border-border text-primary-600 focus:ring-primary-500"
+              />
+              <label htmlFor="isNoShow" className="ml-3">
+                <span className="block text-sm font-medium text-text-primary">
+                  Mark as No-Show
+                </span>
+                <span className="block text-xs text-text-secondary mt-1">
+                  Check this if the client did not show up for the scheduled session. 
+                  The session will be logged but won't count toward commission.
+                </span>
+              </label>
+            </div>
+          </div>
+
           <div className="bg-background-secondary rounded-lg p-3">
             <p className="text-sm text-text-secondary">
-              This session will be marked as <span className="font-semibold">Pending Validation</span> and 
-              an email will be sent to the client for confirmation.
+              {formData.isNoShow ? (
+                <>This session will be marked as <span className="font-semibold text-red-600">No-Show</span> and 
+                no validation email will be sent.</>
+              ) : (
+                <>This session will be marked as <span className="font-semibold">Pending Validation</span> and 
+                an email will be sent to the client for confirmation.</>
+              )}
             </p>
           </div>
 

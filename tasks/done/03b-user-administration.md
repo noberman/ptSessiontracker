@@ -19,9 +19,9 @@ Implement administrative functions for managing user roles, permissions, locatio
 ### Role Management
 - [x] Role change interface for admins
 - [x] Validate role change permissions
-- [ ] Prevent last admin removal
-- [x] Log all role changes to audit
-- [ ] Handle role downgrade impacts
+- [x] Prevent last admin removal ✅ COMPLETE
+- [ ] ~~Log all role changes to audit~~ (Moved to postMVP.md)
+- [x] Handle role downgrade impacts ✅ COMPLETE
 
 ### Location Assignment
 - [x] Assign trainers to locations
@@ -47,23 +47,17 @@ Implement administrative functions for managing user roles, permissions, locatio
 - [ ] Document permission hierarchy
 
 ### Bulk Operations
-- [ ] Select multiple users for actions
-- [ ] Bulk activate/deactivate
-- [ ] Bulk location assignment
-- [ ] Export user list to CSV
-- [ ] Confirmation dialogs for bulk actions
+- [ ] ~~Moved to postMVP.md~~
 
 ## Acceptance Criteria
 - [ ] Only admins can change roles
 - [ ] Cannot remove last admin
 - [ ] Deactivated users cannot login
 - [ ] Location changes reflected immediately
-- [ ] All changes logged to audit table
-- [ ] Bulk operations work with confirmation
+- [ ] ~~All changes logged to audit table~~ (Moved to postMVP.md)
 
 ## Technical Notes
 - Create permission enum or constants
-- Use database transactions for bulk operations
 - Consider impacts on related data
 - Implement soft delete pattern
 - Cache permission checks for performance

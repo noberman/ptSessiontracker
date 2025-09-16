@@ -184,13 +184,12 @@ model CommissionTier {
 }
 ```
 
-**Business Rules:**
-- Tiers reset monthly
-- Applied to validated sessions only
-- Percentage stored as decimal
-- No overlapping ranges allowed
-- **IMPORTANT**: The achieved tier rate applies to ALL sessions in the month (not progressive)
-- Example: 65 sessions = 35% on all 65 sessions, not just sessions 61-65
+**Commission System:**
+See `/docs/COMMISSION_SYSTEM_DESIGN.md` for complete commission system architecture including:
+- Multiple calculation methods (Progressive, Graduated, Package-Based, Target-Based, Hybrid)
+- Organization-specific configuration
+- Detailed calculation examples
+- Migration strategy for multi-tenant
 
 ### AuditLog
 Tracks all data modifications for compliance and debugging.

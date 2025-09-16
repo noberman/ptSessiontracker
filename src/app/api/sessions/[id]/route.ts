@@ -99,7 +99,9 @@ export async function PUT(
     const {
       sessionDate,
       notes,
-      validated
+      validated,
+      sessionValue,
+      cancelled
     } = body
 
     // Get the existing session
@@ -156,6 +158,25 @@ export async function PUT(
       updateData.validated = validated
       if (validated) {
         updateData.validatedAt = new Date()
+      }
+    }
+    
+    // Only managers and above can change session value
+    if (sessionValue !== undefined) {
+      if (session.user.role === 'TRAINER') {
+        return NextResponse.json(
+          { error: 'Only managers can change session values' },
+          { status: 403 }
+        )
+      }
+      updateData.sessionValue = sessionValue
+    }
+    
+    // Track cancellations (no-shows)
+    if (cancelled !== undefined) {
+      updateData.cancelled = cancelled
+      if (cancelled) {
+        updateData.cancelledAt = new Date()
       }
     }
 

@@ -100,16 +100,14 @@
 
 ### 4.1.4 Commission Calculation
 
-- **Tiered System (Monthly Reset)**
-    - Configure tiers (e.g., 0-30 sessions: 25%, 31-60: 30%, 61+: 35%)
-    - Rate based on total sessions achieved
-    - **Single rate applies to ALL sessions** (not progressive)
-    - Only validated sessions count
-    - No-shows excluded
-- **Payout Calculation**
-    - Total Session Value × Commission Percentage
-    - Example: 65 sessions = 35% rate on ALL 65 sessions
-    - Real-time tier progress visibility
+**See `/docs/COMMISSION_SYSTEM_DESIGN.md` for complete commission system architecture and calculation methods.**
+
+- Multiple calculation methods supported per organization
+- Only validated sessions count toward commission
+- No-shows excluded from calculations
+- Monthly reset for tier progression
+- Real-time tier progress visibility
+- Configurable by organization admin
 
 ### 4.1.5 Reporting
 

@@ -47,7 +47,7 @@ Implement comprehensive client management system including CRUD operations, trai
 - [x] Quick reassignment interface
 - [ ] Bulk reassignment for trainer departures
 - [x] Show unassigned clients prominently
-- [x] Assignment history in audit log
+- [ ] ~~Assignment history in audit log~~ (Moved to postMVP.md)
 
 ### Client Profile View
 - [x] Display all client information
@@ -58,25 +58,25 @@ Implement comprehensive client management system including CRUD operations, trai
 - [x] Validation rate statistics
 
 ### Bulk Import
-- [ ] CSV/Excel file upload interface
-- [ ] Column mapping configuration
-- [ ] Validation before import
-- [ ] Error reporting for failed rows
-- [ ] Duplicate detection (by email)
-- [ ] Import summary report
+- [x] CSV/Excel file upload interface (Completed in Task 13)
+- [x] Column mapping configuration  (Completed in Task 13)
+- [x] Validation before import (Completed in Task 13)
+- [x] Error reporting for failed rows (Completed in Task 13)
+- [x] Duplicate detection (by email) (Completed in Task 13)
+- [x] Import summary report (Completed in Task 13)
 
 ### Search & Filtering
 - [x] Real-time search as you type
 - [x] Multiple filter combinations
-- [ ] Save filter preferences
-- [ ] Export filtered results
+- [ ] ~~Save filter preferences~~ (Moved to postMVP.md)
+- [ ] ~~Export filtered results~~ (Moved to postMVP.md)
 - [x] Clear all filters option
 
 ## Acceptance Criteria
 - [x] Clients can be created with all required fields
 - [x] Email uniqueness is enforced
 - [x] Primary trainer can be assigned/changed
-- [ ] Bulk import handles 100+ records
+- [ ] ~~Bulk import handles 100+ records~~ (Moved to postMVP.md)
 - [x] Search returns results instantly
 - [x] Deactivated clients hidden by default
 

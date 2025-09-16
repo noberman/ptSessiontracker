@@ -13,6 +13,8 @@ interface Session {
   validated: boolean
   validatedAt?: string | null
   validationExpiry?: string | null
+  cancelled?: boolean
+  cancelledAt?: string | null
   notes?: string | null
   client: {
     name: string
@@ -110,9 +112,10 @@ export function SessionTable({ sessions, currentUserRole }: SessionTableProps) {
             const daysLeft = session.validationExpiry 
               ? Math.ceil((new Date(session.validationExpiry).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
               : 0
+            const isCancelled = session.cancelled
             
             return (
-              <tr key={session.id} className="hover:bg-background-secondary">
+              <tr key={session.id} className={`hover:bg-background-secondary ${isCancelled ? 'opacity-60' : ''}`}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div>
                     <div className="text-sm text-text-primary">
@@ -165,7 +168,18 @@ export function SessionTable({ sessions, currentUserRole }: SessionTableProps) {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {session.validated ? (
+                  {isCancelled ? (
+                    <div className="flex flex-col space-y-1">
+                      <Badge variant="error" size="sm">
+                        ❌ No-Show
+                      </Badge>
+                      {session.cancelledAt && (
+                        <span className="text-xs text-text-secondary">
+                          {new Date(session.cancelledAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  ) : session.validated ? (
                     <div className="flex flex-col space-y-1">
                       <Badge variant="success" size="sm">
                         ✅ Validated
@@ -178,7 +192,7 @@ export function SessionTable({ sessions, currentUserRole }: SessionTableProps) {
                     </div>
                   ) : isExpired ? (
                     <Badge variant="error" size="sm">
-                      ❌ Expired
+                      ⚠️ Expired
                     </Badge>
                   ) : (
                     <div className="flex flex-col space-y-1">
@@ -200,7 +214,7 @@ export function SessionTable({ sessions, currentUserRole }: SessionTableProps) {
                         View
                       </Button>
                     </Link>
-                    {!session.validated && !isExpired && canResendValidation(session) && (
+                    {!session.validated && !isExpired && canResendValidation(session) && !isCancelled && (
                       <Button
                         variant="outline"
                         size="sm"

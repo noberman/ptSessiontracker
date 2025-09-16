@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Clock, User, MapPin, Package, DollarSign, AlertCircle, CheckCircle, Trash2 } from 'lucide-react'
+import { Clock, User, MapPin, Package, DollarSign, AlertCircle, CheckCircle, Trash2, XCircle } from 'lucide-react'
 import { DeleteSessionDialog } from '@/components/sessions/DeleteSessionDialog'
 
 interface SessionDetailsClientProps {
@@ -18,6 +19,8 @@ interface SessionDetailsClientProps {
     validatedAt: Date | null
     validationToken: string | null
     validationExpiry: Date | null
+    cancelled?: boolean
+    cancelledAt?: Date | null
     createdAt: Date
     updatedAt: Date
     client: {
@@ -54,12 +57,50 @@ interface SessionDetailsClientProps {
 
 export function SessionDetailsClient({ session, canEdit, canDelete }: SessionDetailsClientProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [markingNoShow, setMarkingNoShow] = useState(false)
+  const router = useRouter()
 
   // Check if this is a substitute session
   const isSubstitute = session.client.primaryTrainer?.id !== session.trainerId
 
+  const handleMarkNoShow = async () => {
+    if (!confirm('Mark this session as a no-show? This cannot be undone.')) {
+      return
+    }
+    
+    setMarkingNoShow(true)
+    
+    try {
+      const response = await fetch(`/api/sessions/${session.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cancelled: true,
+          notes: session.notes ? `${session.notes}\n\nMarked as no-show` : 'Marked as no-show'
+        })
+      })
+      
+      if (response.ok) {
+        alert('Session marked as no-show')
+        router.refresh()
+      } else {
+        const data = await response.json()
+        alert(`Error: ${data.error}`)
+      }
+    } catch (error) {
+      alert('Failed to mark session as no-show')
+    } finally {
+      setMarkingNoShow(false)
+    }
+  }
+
   // Determine validation status
   const getValidationStatus = () => {
+    if (session.cancelled) {
+      return { label: 'No-Show', variant: 'error' as const, icon: XCircle }
+    }
     if (session.validated) {
       return { label: 'Validated', variant: 'success' as const, icon: CheckCircle }
     }
@@ -90,7 +131,7 @@ export function SessionDetailsClient({ session, canEdit, canDelete }: SessionDet
             <Link href="/sessions">
               <Button variant="outline">Back to Sessions</Button>
             </Link>
-            {canEdit && (
+            {canEdit && !session.cancelled && (
               <Link href={`/sessions/${session.id}/edit`}>
                 <Button>Edit Session</Button>
               </Link>

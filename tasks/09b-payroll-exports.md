@@ -6,7 +6,10 @@
 **Dependencies: Task 07 (Commission System)**
 
 ## Objective
-Implement payroll report generation and data export functionality for HR to calculate commissions and process payments.
+Implement payroll report generation and data export functionality for HR to process commission payments.
+
+## Commission Calculation Methods
+**See `/docs/COMMISSION_SYSTEM_DESIGN.md` for complete commission calculation methods and organization-specific configurations.**
 
 ## Requirements from PRD
 - Monthly payroll report generation

@@ -6,15 +6,19 @@
 **Dependencies: Task 06C (Session Management)**
 
 ## Objective
-Implement simplified commission tracking system that counts validated sessions and calculates total session values for HR to apply commission percentages.
+Implement flexible commission tracking system supporting multiple calculation methods per organization.
 
-## Requirements from PRD
+## Commission System Architecture
+**See `/docs/COMMISSION_SYSTEM_DESIGN.md` for complete system design, calculation methods, and database schema.**
+
+## Core Requirements
+- Support multiple commission calculation methods
 - Count validated sessions per trainer per month
-- Calculate total session value
+- Calculate total session values
 - Only validated sessions count
 - No-shows excluded
 - Monthly reset
-- HR applies commission percentages externally
+- Organization-specific configuration
 
 ## Implementation Checklist
 
@@ -83,19 +87,13 @@ Implement simplified commission tracking system that counts validated sessions a
 - UTC timezone for consistency
 - Index sessions by trainer, date, validation
 
-## Commission Calculation Example
-```
-Trainer: John Smith
-Month: December 2024
-
-Validated Sessions: 45
-Total Session Value: $4,500
-
-Commission Tier Achieved: 31-60 sessions = 30% rate
-Commission Due: $1,350 (30% × $4,500)
-
-Note: The 30% rate applies to ALL 45 sessions, not just sessions 31-45
-```
+## Commission Calculation
+**See `/docs/COMMISSION_SYSTEM_DESIGN.md` for detailed calculation examples for all supported methods:**
+- Progressive Tier System
+- Graduated Tier System
+- Package-Based Commission
+- Target-Based Commission
+- Hybrid System
 
 ## Report Format
 ```csv

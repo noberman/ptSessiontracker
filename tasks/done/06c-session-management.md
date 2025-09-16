@@ -41,14 +41,14 @@ Implement comprehensive session management including viewing, editing, and track
 - [x] Show package information
 - [x] Display notes
 - [x] Edit button (if permitted)
-- [ ] Audit history
+- [ ] ~~Audit history~~ (Moved to postMVP.md)
 
 ### Session Editing
 - [x] Edit date/time (admin only)
 - [x] Update notes
 - [ ] Change session value (manager only)
 - [x] Cannot edit validated sessions (trainers)
-- [ ] Log all changes to audit
+- [ ] ~~Log all changes to audit~~ (Moved to postMVP.md)
 - [x] Reason required for edits
 
 ### Validation Status Management
@@ -63,17 +63,17 @@ Implement comprehensive session management including viewing, editing, and track
 
 ### Substitute Session Tracking
 - [x] Mark substitute sessions clearly
-- [ ] Filter for substitute sessions
-- [ ] Substitute session report
-- [ ] Track coverage patterns
-- [ ] Notify primary trainer
+- [ ] ~~Filter for substitute sessions~~ (Moved to postMVP.md)
+- [ ] ~~Substitute session report~~ (Moved to postMVP.md)
+- [ ] ~~Track coverage patterns~~ (Moved to postMVP.md)
+- [ ] ~~Notify primary trainer~~ (Moved to postMVP.md)
 
 ### Session Analytics
 - [x] Sessions per trainer (in dashboard)
 - [x] Sessions per client (in client details)
 - [x] Validation rates (in dashboard)
 - [ ] Average sessions per day/week
-- [ ] Peak session times
+- [ ] ~~Peak session times~~ (Moved to postMVP.md)
 - [ ] No-show tracking
 
 ## Acceptance Criteria
@@ -81,7 +81,7 @@ Implement comprehensive session management including viewing, editing, and track
 - [x] Edit permissions enforced properly
 - [x] Validation status clearly visible
 - [x] Substitute sessions identifiable
-- [ ] Changes logged to audit trail
+- [ ] ~~Changes logged to audit trail~~ (Moved to postMVP.md)
 - [x] Reports exportable to CSV (in dashboard)
 
 ## Technical Notes

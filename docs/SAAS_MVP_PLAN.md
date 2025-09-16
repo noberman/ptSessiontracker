@@ -223,51 +223,33 @@ const sessions = await prisma.session.findMany({
 
 ## 📊 Commission Feature Documentation
 
-### Where It's Fully Defined:
-1. **PRD.md** - Business requirements:
-   - Tiered commission system with monthly reset
-   - Example tiers: 0-30 sessions: 25%, 31-60: 30%, 61+: 35%
-   - Only validated sessions count
-   - Need monthly payroll reports
+### Complete System Design:
+**See `/docs/COMMISSION_SYSTEM_DESIGN.md` for comprehensive commission system architecture including:**
+- 5 different calculation methods (Progressive, Graduated, Package-Based, Target-Based, Hybrid)
+- Flexible database schema supporting multiple methods per organization
+- Step-by-step calculation flow with code examples
+- UI/UX configuration flow
+- Migration strategy for existing data
 
-2. **tasks/07-commission-system.md** - Detailed implementation plan:
-   - Complete API endpoints defined
-   - Monthly summary calculation logic
-   - Commission dashboard specs
-   - Trainer view requirements
-   - Export format examples
+### Implementation Status:
+- ✅ Database model exists (CommissionTier table)
+- ✅ Complete system design documented
+- ✅ Multiple calculation methods defined
+- ❌ API endpoints not implemented
+- ❌ Commission dashboard not built
+- ❌ Calculation functions not implemented
+- ❌ Payroll exports not implemented
 
-3. **tasks/09b-payroll-exports.md** - Export specifications:
-   - Excel/CSV export formats
-   - Report structure defined
-   - Scheduled reports
-   - Email delivery
-
-4. **schema.md** - Database model exists:
-   - CommissionTier table ready
-   - Just needs organizationId
-
-5. **Implementation Status**:
-   - ✅ Database model exists
-   - ✅ Business logic fully documented
-   - ✅ Complete task specs in tasks/07 and tasks/09b
-   - ❌ API endpoints not implemented
-   - ❌ Commission dashboard not built
-   - ❌ Calculation function not implemented
-   - ❌ Payroll exports not implemented
-
-### Files That Need Creating (per task docs):
+### Files That Need Creating:
 ```typescript
-// 1. Commission calculation service
-function calculateTrainerCommission(trainerId, month, organizationId) {
-  // Get validated sessions for month
-  // Count total sessions
-  // Find applicable tier
-  // Calculate commission
+// 1. Commission calculation service (supports all methods)
+function calculateCommission(trainerId, month, orgId) {
+  // Implementation per COMMISSION_SYSTEM_DESIGN.md
 }
 
-// 2. Commission report page
-// 3. Payroll export (Excel/CSV)
+// 2. Commission configuration UI
+// 3. Commission dashboard
+// 4. Payroll export (Excel/CSV)
 ```
 
 ---
