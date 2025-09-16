@@ -304,7 +304,7 @@ export function TrainerCommissionView({
                         {tier.minSessions}-{tier.maxSessions || '+'} sessions
                       </div>
                     </div>
-                    <Badge variant={isCurrentTier ? 'primary' : 'secondary'}>
+                    <Badge variant={isCurrentTier ? 'success' : 'secondary'}>
                       {tier.percentage}%
                     </Badge>
                   </div>
@@ -323,13 +323,13 @@ export function TrainerCommissionView({
 
 // Add Button component if not already imported
 function Button({ children, onClick, size = 'md', variant = 'primary', ...props }: any) {
-  const sizeClasses = {
+  const sizeClasses: Record<string, string> = {
     sm: 'px-3 py-1 text-sm',
     md: 'px-4 py-2',
     lg: 'px-6 py-3'
   }
   
-  const variantClasses = {
+  const variantClasses: Record<string, string> = {
     primary: 'bg-primary-600 text-white hover:bg-primary-700',
     outline: 'border border-border hover:bg-background-secondary'
   }
@@ -337,7 +337,7 @@ function Button({ children, onClick, size = 'md', variant = 'primary', ...props 
   return (
     <button
       onClick={onClick}
-      className={`rounded-lg font-medium transition-colors ${sizeClasses[size]} ${variantClasses[variant]}`}
+      className={`rounded-lg font-medium transition-colors ${sizeClasses[size] || sizeClasses.md} ${variantClasses[variant] || variantClasses.primary}`}
       {...props}
     >
       {children}
