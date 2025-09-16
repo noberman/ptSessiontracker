@@ -10,14 +10,32 @@
 
 **Solution:** A web-based, mobile-friendly application that digitally tracks sessions, validates completion via email confirmation, and automatically calculates commission payouts based on tiered percentages and session values.
 
-### 2. Objectives & Success Metrics
+### 2. Core User Stories & Objectives
 
-**Primary Objectives:**
+**Three Critical User Stories:**
 
-- Eliminate paper-based session tracking
-- Automate commission calculations
-- Provide real-time visibility into session completion and payroll obligations
-- Ensure session validation authenticity
+#### A. Commission Calculation (Admin/HR)
+**Story:** As an admin, I need to automatically calculate PT commissions based on their validated sessions so that payroll is accurate and timely.
+- **Current Pain:** Manual Excel aggregation, error-prone calculations, time-consuming
+- **Solution:** Automated tiered commission calculations with real-time visibility
+- **Status:** ✅ Implemented (Progressive & Graduated tier systems)
+
+#### B. Program Quality Control (PT Manager)
+**Story:** As a PT Manager, I need to review and approve the training programs that PTs create for clients to ensure quality and consistency.
+- **Current Pain:** No visibility into training programs, can't ensure quality standards
+- **Solution:** Centralized program repository with approval workflow
+- **Status:** 🔄 To be implemented
+
+#### C. Frictionless Program Import (Personal Trainers)
+**Story:** As a PT, I need to quickly import my existing training programs from PDFs, Excel sheets, or even photos without manual data entry.
+- **Current Pain:** Laborious manual program creation, high friction for onboarding
+- **Solution:** AI-powered import system that can:
+  - Accept screenshots, PDFs, Excel files, or photos
+  - Automatically parse exercises, sets, reps, and structure
+  - Match to existing exercise database or create new entries
+  - Connect programs to correct clients
+  - Handle various formats (table, list, handwritten)
+- **Status:** 🔄 To be implemented (High Priority)
 
 **Success Metrics:**
 
@@ -25,6 +43,9 @@
 - 80% reduction in time spent on payroll calculations
 - 90%+ session validation rate
 - Zero payroll calculation errors
+- <5 minutes to import a complete training program
+- 95% accuracy in AI program parsing
+- 100% of programs reviewed by PT Manager before client use
 
 ### 3. User Personas
 
@@ -280,10 +301,149 @@ RiskImpactMitigationLow email validation ratesIncomplete payroll dataReminder sy
 **Week 7:** Testing and refinement
 **Week 8:** Deployment and training
 
-### 12. Open Questions / Decisions Needed
+### 12. Program Management System (Phase 2 Priority)
+
+#### 12.1 AI-Powered Program Import
+**Objective:** Zero-friction onboarding for PTs to import existing programs
+
+**Technical Implementation:**
+- **Frontend:** Drag-and-drop interface accepting multiple formats
+  - Images (PNG, JPG) - screenshots or photos
+  - Documents (PDF, DOCX)
+  - Spreadsheets (Excel, CSV)
+  - Direct paste from clipboard
+  
+- **AI Processing Pipeline:**
+  1. **OCR Layer** (for images/PDFs): Extract text using Tesseract or Cloud Vision API
+  2. **Structure Recognition**: Identify tables, lists, or structured data
+  3. **NLP Parser**: Extract exercise names, sets, reps, weights, rest periods
+  4. **Exercise Matching**: 
+     - Fuzzy match against exercise database
+     - Handle variations (e.g., "bench press" = "barbell bench press" = "BP")
+     - Auto-create new exercises with suggested muscle groups
+  5. **Program Assembly**: Structure into weeks, days, and workout blocks
+  6. **Validation**: Flag ambiguities for PT review
+
+**User Flow:**
+1. PT uploads/pastes program in any format
+2. AI processes and shows preview with confidence scores
+3. PT reviews and corrects any misinterpretations
+4. Program saved and linked to client(s)
+5. PT Manager notified for approval
+
+#### 12.2 Program Quality Control System
+**For PT Managers to maintain standards:**
+
+- **Program Repository:**
+  - Centralized database of all programs
+  - Version control for program updates
+  - Template library for common programs
+  
+- **Approval Workflow:**
+  - New programs require PT Manager approval
+  - Automated checks for completeness
+  - Comments and revision requests
+  - Approval status tracking
+  
+- **Quality Metrics:**
+  - Program completion rates
+  - Client progress tracking
+  - Exercise variety and progression
+  - Compliance with gym standards
+
+#### 12.3 Database Schema Extensions
+
+```prisma
+model Program {
+  id              String @id @default(cuid())
+  name            String
+  trainerId       String
+  status          ProgramStatus @default(DRAFT)
+  approvedBy      String?
+  approvalDate    DateTime?
+  clientId        String?
+  templateType    String?
+  importMethod    ImportMethod?
+  aiConfidence    Float?
+  weeks           ProgramWeek[]
+  exercises       ProgramExercise[]
+  revisions       ProgramRevision[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Exercise {
+  id              String @id @default(cuid())
+  name            String @unique
+  aliases         String[] // Alternative names
+  category        String // Strength, Cardio, Flexibility
+  muscleGroups    String[]
+  equipment       String?
+  instructions    String?
+  videoUrl        String?
+  createdBy       String?
+  aiGenerated     Boolean @default(false)
+}
+
+model ProgramExercise {
+  id              String @id @default(cuid())
+  programId       String
+  exerciseId      String
+  dayNumber       Int
+  orderInDay      Int
+  sets            Int
+  reps            String // Can be range like "8-12"
+  weight          String? // Can be "BW" or "70%" etc
+  restSeconds     Int?
+  notes           String?
+}
+
+enum ProgramStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum ImportMethod {
+  MANUAL
+  PDF_UPLOAD
+  IMAGE_UPLOAD
+  EXCEL_IMPORT
+  AI_ASSISTED
+}
+```
+
+### 13. Implementation Roadmap
+
+**Phase 1 (Current - Completed):**
+- ✅ Session tracking
+- ✅ Commission calculations
+- ✅ Basic reporting
+
+**Phase 2 (Next Priority):**
+- AI-powered program import system
+- Exercise database with fuzzy matching
+- Basic program approval workflow
+
+**Phase 3:**
+- Advanced program analytics
+- Client progress tracking
+- Program recommendation engine
+
+**Phase 4:**
+- Mobile app for program execution
+- Video exercise demonstrations
+- Real-time form checking (using phone camera)
+
+### 14. Open Questions / Decisions Needed
 
 1. Validation link expiration time (suggested 30 days)
 2. Reminder email frequency for unvalidated sessions
 3. Historical data import requirements
 4. Specific commission tier breakpoints
 5. Session edit permissions and time limits
+6. Preferred AI service (OpenAI GPT-4 Vision, Google Cloud Vision, AWS Textract)
+7. Exercise database source (create custom vs. integrate existing)
+8. Program approval SLA for PT Managers
