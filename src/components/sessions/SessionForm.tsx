@@ -406,7 +406,7 @@ export function SessionForm({
                 </span>
                 <span className="block text-xs text-text-secondary mt-1">
                   Check this if the client did not show up for the scheduled session. 
-                  The session will be logged but won't count toward commission.
+                  The session will be logged but won&apos;t count toward commission.
                 </span>
               </label>
             </div>
