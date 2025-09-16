@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { format } from 'date-fns'
+import { Input } from '@/components/ui/Input'
+import { Pencil, Plus, Trash2, Save, X } from 'lucide-react'
 import { CommissionMethod, TrainerCommission, CommissionTier } from '@/lib/commission/calculator'
 
 interface CommissionDashboardProps {
@@ -37,6 +38,9 @@ export function CommissionDashboard({
   const router = useRouter()
   const [isExporting, setIsExporting] = useState(false)
   const [expandedTrainer, setExpandedTrainer] = useState<string | null>(null)
+  const [isEditingTiers, setIsEditingTiers] = useState(false)
+  const [editableTiers, setEditableTiers] = useState<CommissionTier[]>(tiers)
+  const [isSavingTiers, setIsSavingTiers] = useState(false)
   
   const handleMonthChange = (newMonth: string) => {
     const params = new URLSearchParams()
@@ -91,6 +95,70 @@ export function CommissionDashboard({
   }
   
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`
+  
+  const handleEditTiers = () => {
+    setIsEditingTiers(true)
+    setEditableTiers([...tiers])
+  }
+  
+  const handleCancelEdit = () => {
+    setIsEditingTiers(false)
+    setEditableTiers(tiers)
+  }
+  
+  const handleAddTier = () => {
+    const lastTier = editableTiers[editableTiers.length - 1]
+    const newMinSessions = lastTier ? (lastTier.maxSessions || lastTier.minSessions) + 1 : 0
+    setEditableTiers([
+      ...editableTiers,
+      {
+        minSessions: newMinSessions,
+        maxSessions: null,
+        percentage: 25
+      }
+    ])
+  }
+  
+  const handleRemoveTier = (index: number) => {
+    setEditableTiers(editableTiers.filter((_, i) => i !== index))
+  }
+  
+  const handleTierChange = (index: number, field: keyof CommissionTier, value: any) => {
+    const newTiers = [...editableTiers]
+    if (field === 'minSessions' || field === 'maxSessions') {
+      newTiers[index][field] = value === '' ? null : parseInt(value)
+    } else if (field === 'percentage') {
+      newTiers[index][field] = value === '' ? 0 : parseFloat(value)
+    }
+    setEditableTiers(newTiers)
+  }
+  
+  const handleSaveTiers = async () => {
+    setIsSavingTiers(true)
+    try {
+      const response = await fetch('/api/commission/tiers', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tiers: editableTiers })
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save tiers')
+      }
+      
+      setIsEditingTiers(false)
+      // Refresh the page to get updated calculations
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to save tiers:', error)
+      alert('Failed to save commission tiers. Please try again.')
+    } finally {
+      setIsSavingTiers(false)
+    }
+  }
   
   return (
     <div className="space-y-6">
@@ -156,30 +224,141 @@ export function CommissionDashboard({
       {/* Current Tier Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">
-            {method === 'PROGRESSIVE' ? 'Progressive' : 'Graduated'} Tier Configuration
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">
+              {method === 'PROGRESSIVE' ? 'Progressive' : 'Graduated'} Tier Configuration
+            </CardTitle>
+            {(currentUserRole === 'ADMIN' || currentUserRole === 'PT_MANAGER') && (
+              <div>
+                {!isEditingTiers ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleEditTiers}
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit Tiers
+                  </Button>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={handleSaveTiers}
+                      disabled={isSavingTiers}
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      {isSavingTiers ? 'Saving...' : 'Save'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCancelEdit}
+                      disabled={isSavingTiers}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            {tiers.map((tier, index) => (
-              <div key={index} className="flex items-center justify-between p-2 bg-background-secondary rounded">
-                <span className="font-medium">
-                  Tier {index + 1}: {tier.minSessions}-{tier.maxSessions || '+'} sessions
-                </span>
-                <Badge variant="secondary">{tier.percentage}%</Badge>
+          {!isEditingTiers ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                {tiers.map((tier, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-background-secondary rounded">
+                    <span className="font-medium">
+                      Tier {index + 1}: {tier.minSessions}-{tier.maxSessions || '+'} sessions
+                    </span>
+                    <Badge variant="secondary">{tier.percentage}%</Badge>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          {method === 'PROGRESSIVE' && (
-            <p className="text-xs text-text-secondary mt-2">
-              * Achieved tier rate applies to ALL sessions
-            </p>
-          )}
-          {method === 'GRADUATED' && (
-            <p className="text-xs text-text-secondary mt-2">
-              * Different rates apply per bracket (like tax brackets)
-            </p>
+              {method === 'PROGRESSIVE' && (
+                <p className="text-xs text-text-secondary mt-3">
+                  * Achieved tier rate applies to ALL sessions
+                </p>
+              )}
+              {method === 'GRADUATED' && (
+                <p className="text-xs text-text-secondary mt-3">
+                  * Different rates apply per bracket (like tax brackets)
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                {editableTiers.map((tier, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 bg-background-secondary rounded">
+                    <div className="flex-1 grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-xs text-text-secondary">Min Sessions</label>
+                        <Input
+                          type="number"
+                          value={tier.minSessions}
+                          onChange={(e) => handleTierChange(index, 'minSessions', e.target.value)}
+                          min="0"
+                          className="mt-1"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-text-secondary">Max Sessions</label>
+                        <Input
+                          type="number"
+                          value={tier.maxSessions || ''}
+                          onChange={(e) => handleTierChange(index, 'maxSessions', e.target.value)}
+                          min={tier.minSessions + 1}
+                          className="mt-1"
+                          placeholder="No limit"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-text-secondary">Commission %</label>
+                        <Input
+                          type="number"
+                          value={tier.percentage}
+                          onChange={(e) => handleTierChange(index, 'percentage', e.target.value)}
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          className="mt-1"
+                          placeholder="25"
+                        />
+                      </div>
+                    </div>
+                    {editableTiers.length > 1 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRemoveTier(index)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleAddTier}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Tier
+              </Button>
+              <p className="text-xs text-text-secondary">
+                {method === 'PROGRESSIVE' 
+                  ? '* The achieved tier rate will apply to ALL sessions'
+                  : '* Different rates will apply per bracket (like tax brackets)'}
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
