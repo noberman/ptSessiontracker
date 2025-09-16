@@ -13,7 +13,11 @@
     "migrate:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
     "studio": "prisma studio",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "check:deploy": "tsx scripts/check-deployment-ready.ts",
+    "pre-deploy": "./scripts/pre-deploy.sh",
+    "deploy:staging": "npm run pre-deploy && git push origin staging",
+    "deploy:production": "npm run pre-deploy && git push origin main"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
