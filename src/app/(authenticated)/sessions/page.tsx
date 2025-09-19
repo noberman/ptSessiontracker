@@ -172,7 +172,16 @@ export default async function SessionsPage({
       where,
       skip,
       take: limit,
-      include: {
+      select: {
+        id: true,
+        sessionDate: true,
+        sessionValue: true,
+        validated: true,
+        validatedAt: true,
+        cancelled: true,
+        noShow: true,
+        createdAt: true,
+        updatedAt: true,
         client: {
           select: {
             id: true,
