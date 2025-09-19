@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
           validated: true,
           validatedAt: true,
           cancelled: true,
-          noShow: true,
+          cancelledAt: true,
           trainer: {
             select: {
               id: true,

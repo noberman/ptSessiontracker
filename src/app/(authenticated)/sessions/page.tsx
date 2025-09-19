@@ -179,7 +179,7 @@ export default async function SessionsPage({
         validated: true,
         validatedAt: true,
         cancelled: true,
-        noShow: true,
+        cancelledAt: true,
         createdAt: true,
         updatedAt: true,
         client: {

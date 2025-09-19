@@ -14,7 +14,7 @@ interface Session {
   validated: boolean
   validatedAt: string | Date | null
   cancelled: boolean
-  noShow: boolean
+  cancelledAt?: string | Date | null
   trainer: {
     id: string
     name: string
@@ -96,9 +96,6 @@ export function SessionTable({
   const getStatusBadge = (session: Session) => {
     if (session.cancelled) {
       return <Badge variant="gray" size="sm">Cancelled</Badge>
-    }
-    if (session.noShow) {
-      return <Badge variant="error" size="sm">No Show</Badge>
     }
     if (session.validated) {
       return <Badge variant="success" size="sm">Validated</Badge>
