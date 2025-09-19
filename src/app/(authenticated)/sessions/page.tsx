@@ -242,59 +242,12 @@ export default async function SessionsPage({
           locations={filterLocations}
         />
 
-        <Card padding="none">
-          <SessionTable 
-            sessions={sessions.map(s => ({
-              ...s,
-              sessionDate: s.sessionDate.toISOString(),
-              validatedAt: s.validatedAt?.toISOString() || null,
-              validationExpiry: s.validationExpiry?.toISOString() || null,
-              cancelledAt: s.cancelledAt?.toISOString() || null,
-              createdAt: s.createdAt.toISOString(),
-              updatedAt: s.updatedAt.toISOString(),
-            }))}
-            currentUserRole={session.user.role}
-          />
-          
-          {/* Pagination */}
-          <div className="px-6 py-3 flex items-center justify-between border-t border-border bg-background-secondary">
-            <div className="text-sm text-text-secondary">
-              Showing {sessions.length > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to{' '}
-              {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-              {pagination.total} results
-            </div>
-            <div className="flex space-x-2">
-              {pagination.page > 1 ? (
-                <Link href={`/sessions?${new URLSearchParams({
-                  ...params,
-                  page: String(pagination.page - 1)
-                }).toString()}`}>
-                  <Button variant="outline" size="sm">
-                    Previous
-                  </Button>
-                </Link>
-              ) : (
-                <Button variant="outline" size="sm" disabled>
-                  Previous
-                </Button>
-              )}
-              {pagination.page < pagination.totalPages ? (
-                <Link href={`/sessions?${new URLSearchParams({
-                  ...params,
-                  page: String(pagination.page + 1)
-                }).toString()}`}>
-                  <Button variant="outline" size="sm">
-                    Next
-                  </Button>
-                </Link>
-              ) : (
-                <Button variant="outline" size="sm" disabled>
-                  Next
-                </Button>
-              )}
-            </div>
-          </div>
-        </Card>
+        <SessionTable 
+          initialSessions={sessions}
+          pagination={pagination}
+          canEdit={canValidate || canDelete}
+          userRole={session.user.role}
+        />
     </div>
   )
 }

@@ -1,34 +1,38 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
-interface Client {
+interface Package {
   id: string
   name: string
-  email: string
-  phone: string | null
-  active: boolean
-  location?: {
-    name: string
-  } | null
-  primaryTrainer?: {
+  packageType: string
+  totalSessions: number
+  sessionsRemaining: number
+  price: number
+  status: string
+  startDate: string | Date | null
+  expiryDate: string | Date | null
+  client: {
+    id: string
     name: string
     email: string
-  } | null
-  _count: {
-    packages: number
+    primaryTrainer?: {
+      id: string
+      name: string
+    } | null
   }
-  createdAt: string | Date
-  updatedAt: string | Date
+  _count: {
+    sessions: number
+  }
 }
 
-interface ClientTableProps {
-  initialClients: Client[]
+interface PackageTableProps {
+  initialPackages: Package[]
   pagination: {
     page: number
     limit: number
@@ -39,66 +43,82 @@ interface ClientTableProps {
   canDelete?: boolean
 }
 
-export function ClientTable({ 
-  initialClients, 
+export function PackageTable({ 
+  initialPackages, 
   pagination: initialPagination,
   canEdit = false,
-  canDelete = false 
-}: ClientTableProps) {
-  const [clients, setClients] = useState(initialClients)
+  canDelete = false
+}: PackageTableProps) {
+  const [packages, setPackages] = useState(initialPackages)
   const [pagination, setPagination] = useState(initialPagination)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   
-  // Fetch clients when page changes
-  const fetchClients = async (targetPage: number) => {
+  // Fetch packages when page changes
+  const fetchPackages = async (targetPage: number) => {
     setLoading(true)
     try {
       const params = new URLSearchParams(searchParams.toString())
       params.set('page', String(targetPage))
       
-      const response = await fetch(`/api/clients/list?${params.toString()}`)
-      if (!response.ok) throw new Error('Failed to fetch clients')
+      const response = await fetch(`/api/packages/list?${params.toString()}`)
+      if (!response.ok) throw new Error('Failed to fetch packages')
       
       const data = await response.json()
-      setClients(data.clients)
+      setPackages(data.packages)
       setPagination(data.pagination)
       
       // Update URL without page refresh
-      router.push(`/clients?${params.toString()}`, { scroll: false })
+      router.push(`/packages?${params.toString()}`, { scroll: false })
     } catch (error) {
-      console.error('Error fetching clients:', error)
+      console.error('Error fetching packages:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  // Update state when props change (when filters are applied)
-  useEffect(() => {
-    setClients(initialClients)
-    setPagination(initialPagination)
-  }, [initialClients, initialPagination])
+  const formatDate = (date: string | Date | null) => {
+    if (!date) return '-'
+    return new Date(date).toLocaleDateString()
+  }
 
-  const handleDelete = async (clientId: string) => {
-    if (!confirm('Are you sure you want to deactivate this client?')) {
-      return
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount)
+  }
+
+  const getStatusBadge = (pkg: Package) => {
+    if (pkg.status === 'EXPIRED' || (pkg.expiryDate && new Date(pkg.expiryDate) < new Date())) {
+      return <Badge variant="error" size="sm">Expired</Badge>
     }
-
-    try {
-      const response = await fetch(`/api/clients/${clientId}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        setClients(clients.filter(c => c.id !== clientId))
-      } else {
-        alert('Failed to deactivate client')
-      }
-    } catch (error) {
-      console.error('Error deleting client:', error)
-      alert('Failed to deactivate client')
+    if (pkg.sessionsRemaining === 0) {
+      return <Badge variant="gray" size="sm">Completed</Badge>
     }
+    if (pkg.status === 'ACTIVE') {
+      return <Badge variant="success" size="sm">Active</Badge>
+    }
+    return <Badge variant="default" size="sm">{pkg.status}</Badge>
+  }
+
+  const getPackageTypeBadge = (type: string) => {
+    const typeColors = {
+      MONTHLY: 'secondary',
+      QUARTERLY: 'primary',
+      ANNUAL: 'warning',
+      CUSTOM: 'default',
+    } as const
+    
+    return (
+      <Badge 
+        variant={typeColors[type as keyof typeof typeColors] || 'default'} 
+        size="sm"
+      >
+        {type}
+      </Badge>
+    )
   }
 
   return (
@@ -113,16 +133,25 @@ export function ClientTable({
           <thead className="bg-background-secondary">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Package
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Client
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Contact
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Location
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Trainer
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Sessions
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Price
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Expiry
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Status
@@ -133,78 +162,60 @@ export function ClientTable({
             </tr>
           </thead>
           <tbody className="bg-surface divide-y divide-border">
-            {clients.map((client) => (
-              <tr key={client.id} className="hover:bg-surface-hover transition-colors">
+            {packages.map((pkg) => (
+              <tr key={pkg.id} className="hover:bg-surface-hover transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm font-medium text-text-primary">
-                      {client.name}
-                    </div>
-                    <div className="text-xs text-text-secondary">
-                      {client._count.packages} package{client._count.packages !== 1 ? 's' : ''}
-                    </div>
+                  <div className="text-sm font-medium text-text-primary">
+                    {pkg.name}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm text-text-primary">
-                      {client.email}
-                    </div>
-                    {client.phone && (
-                      <div className="text-xs text-text-secondary">
-                        {client.phone}
-                      </div>
-                    )}
+                  <div className="text-sm font-medium text-text-primary">
+                    {pkg.client.name}
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-text-secondary">
-                    {client.location?.name || 'No location'}
+                    {pkg.client.email}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm">
-                    {client.primaryTrainer ? (
-                      <div>
-                        <div className="text-text-primary">
-                          {client.primaryTrainer.name}
-                        </div>
-                        <div className="text-xs text-text-secondary">
-                          {client.primaryTrainer.email}
-                        </div>
-                      </div>
-                    ) : (
-                      <Badge variant="warning" size="sm">
-                        Unassigned
-                      </Badge>
-                    )}
-                  </div>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                  {pkg.client.primaryTrainer?.name || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <Badge variant={client.active ? 'success' : 'gray'} size="sm">
-                    {client.active ? 'Active' : 'Inactive'}
-                  </Badge>
+                  {getPackageTypeBadge(pkg.packageType)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-text-primary">
+                    {pkg.sessionsRemaining} / {pkg.totalSessions}
+                  </div>
+                  <div className="text-xs text-text-secondary">
+                    {pkg._count.sessions} used
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
+                  {formatCurrency(pkg.price)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                  {formatDate(pkg.expiryDate)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {getStatusBadge(pkg)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex space-x-2">
-                    <Link href={`/clients/${client.id}`}>
+                    <Link href={`/packages/${pkg.id}`}>
                       <Button variant="ghost" size="sm">
                         View
                       </Button>
                     </Link>
                     {canEdit && (
-                      <Link href={`/clients/${client.id}/edit`}>
+                      <Link href={`/packages/${pkg.id}/edit`}>
                         <Button variant="outline" size="sm">
                           Edit
                         </Button>
                       </Link>
                     )}
                     {canDelete && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDelete(client.id)}
-                      >
+                      <Button variant="danger" size="sm">
                         Delete
                       </Button>
                     )}
@@ -212,13 +223,6 @@ export function ClientTable({
                 </td>
               </tr>
             ))}
-            {clients.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-6 py-8 text-center text-text-secondary">
-                  No clients found
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
@@ -226,7 +230,7 @@ export function ClientTable({
       {/* Pagination */}
       <div className="px-6 py-3 flex items-center justify-between border-t border-border bg-background-secondary">
         <div className="text-sm text-text-secondary">
-          Showing {clients.length > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to{' '}
+          Showing {packages.length > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to{' '}
           {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
           {pagination.total} results
         </div>
@@ -235,7 +239,7 @@ export function ClientTable({
             variant="outline"
             size="sm"
             disabled={pagination.page === 1 || loading}
-            onClick={() => fetchClients(pagination.page - 1)}
+            onClick={() => fetchPackages(pagination.page - 1)}
           >
             {loading ? 'Loading...' : 'Previous'}
           </Button>
@@ -243,7 +247,7 @@ export function ClientTable({
             variant="outline"
             size="sm"
             disabled={pagination.page === pagination.totalPages || loading}
-            onClick={() => fetchClients(pagination.page + 1)}
+            onClick={() => fetchPackages(pagination.page + 1)}
           >
             {loading ? 'Loading...' : 'Next'}
           </Button>

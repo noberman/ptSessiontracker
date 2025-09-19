@@ -2,253 +2,233 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Mail, RefreshCw } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
 
 interface Session {
   id: string
-  sessionDate: string
+  sessionDate: string | Date
   sessionValue: number
   validated: boolean
-  validatedAt?: string | null
-  validationExpiry?: string | null
-  cancelled?: boolean
-  cancelledAt?: string | null
-  notes?: string | null
-  client: {
-    name: string
-    email: string
-  }
+  validatedAt: string | Date | null
+  cancelled: boolean
+  noShow: boolean
   trainer: {
+    id: string
     name: string
     email: string
   }
-  package?: {
+  client: {
+    id: string
     name: string
-    packageType: string
-  } | null
+    email: string
+  }
   location?: {
+    id: string
+    name: string
+  } | null
+  package?: {
+    id: string
     name: string
   } | null
 }
 
 interface SessionTableProps {
-  sessions: Session[]
-  currentUserRole: string
+  initialSessions: Session[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  canEdit?: boolean
+  userRole?: string
 }
 
-export function SessionTable({ sessions, currentUserRole }: SessionTableProps) {
-  const [resendingIds, setResendingIds] = useState<Set<string>>(new Set())
-
-  const handleResendValidation = async (sessionId: string) => {
-    setResendingIds(prev => new Set(prev).add(sessionId))
-    
+export function SessionTable({ 
+  initialSessions, 
+  pagination: initialPagination,
+  canEdit = false,
+  userRole
+}: SessionTableProps) {
+  const [sessions, setSessions] = useState(initialSessions)
+  const [pagination, setPagination] = useState(initialPagination)
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // Fetch sessions when page changes
+  const fetchSessions = async (targetPage: number) => {
+    setLoading(true)
     try {
-      const response = await fetch(`/api/sessions/${sessionId}/resend-validation`, {
-        method: 'POST',
-      })
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('page', String(targetPage))
+      
+      const response = await fetch(`/api/sessions/list?${params.toString()}`)
+      if (!response.ok) throw new Error('Failed to fetch sessions')
       
       const data = await response.json()
+      setSessions(data.sessions)
+      setPagination(data.pagination)
       
-      if (response.ok) {
-        alert(`Validation email resent successfully to ${data.message}`)
-      } else {
-        alert(`Error: ${data.error}`)
-      }
+      // Update URL without page refresh
+      router.push(`/sessions?${params.toString()}`, { scroll: false })
     } catch (error) {
-      alert('Failed to resend validation email')
+      console.error('Error fetching sessions:', error)
     } finally {
-      setResendingIds(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(sessionId)
-        return newSet
-      })
+      setLoading(false)
     }
   }
 
-  const canResendValidation = (session: Session) => {
-    // Can't resend if already validated or expired
-    if (session.validated) return false
-    
-    // Check role permissions
-    return ['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER', 'TRAINER'].includes(currentUserRole)
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString()
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount)
+  }
+
+  const getStatusBadge = (session: Session) => {
+    if (session.cancelled) {
+      return <Badge variant="gray" size="sm">Cancelled</Badge>
+    }
+    if (session.noShow) {
+      return <Badge variant="error" size="sm">No Show</Badge>
+    }
+    if (session.validated) {
+      return <Badge variant="success" size="sm">Validated</Badge>
+    }
+    return <Badge variant="warning" size="sm">Pending</Badge>
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-border">
-        <thead>
-          <tr className="bg-background-secondary">
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-              Date
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-              Client
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-              Trainer
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-              Package
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-              Location
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-              Value
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-              Status
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {sessions.map((session) => {
-            const isExpired = session.validationExpiry && new Date(session.validationExpiry) < new Date()
-            const daysLeft = session.validationExpiry 
-              ? Math.ceil((new Date(session.validationExpiry).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-              : 0
-            const isCancelled = session.cancelled
-            
-            return (
-              <tr key={session.id} className={`hover:bg-background-secondary ${isCancelled ? 'opacity-60' : ''}`}>
+    <Card padding="none">
+      <div className="overflow-x-auto relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+            <div className="text-sm text-text-secondary">Loading...</div>
+          </div>
+        )}
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-background-secondary">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Trainer
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Client
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Location
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Package
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Value
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Status
+              </th>
+              {canEdit && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="bg-surface divide-y divide-border">
+            {sessions.map((session) => (
+              <tr key={session.id} className="hover:bg-surface-hover transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
+                  {formatDate(session.sessionDate)}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm text-text-primary">
-                      {new Date(session.sessionDate).toLocaleDateString()}
-                    </div>
-                    <div className="text-xs text-text-secondary">
-                      {new Date(session.sessionDate).toLocaleTimeString()}
-                    </div>
+                  <div className="text-sm font-medium text-text-primary">
+                    {session.trainer.name}
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm font-medium text-text-primary">
-                      {session.client.name}
-                    </div>
-                    <div className="text-xs text-text-secondary">
-                      {session.client.email}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm text-text-primary">
-                      {session.trainer.name}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {session.package ? (
-                    <div>
-                      <div className="text-sm text-text-primary">
-                        {session.package.name}
-                      </div>
-                      <Badge variant="gray" size="xs" className="mt-1">
-                        {session.package.packageType}
-                      </Badge>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-text-secondary">No package</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-text-primary">
-                    {session.location?.name || '-'}
+                  <div className="text-sm text-text-secondary">
+                    {session.trainer.email}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-text-primary">
-                    ${session.sessionValue?.toFixed(2) || '0.00'}
+                    {session.client.name}
                   </div>
+                  <div className="text-sm text-text-secondary">
+                    {session.client.email}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                  {session.location?.name || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                  {session.package?.name || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
+                  {formatCurrency(session.sessionValue)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {isCancelled ? (
-                    <div className="flex flex-col space-y-1">
-                      <Badge variant="error" size="sm">
-                        ❌ No-Show
-                      </Badge>
-                      {session.cancelledAt && (
-                        <span className="text-xs text-text-secondary">
-                          {new Date(session.cancelledAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  ) : session.validated ? (
-                    <div className="flex flex-col space-y-1">
-                      <Badge variant="success" size="sm">
-                        ✅ Validated
-                      </Badge>
-                      {session.validatedAt && (
-                        <span className="text-xs text-text-secondary">
-                          {new Date(session.validatedAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  ) : isExpired ? (
-                    <Badge variant="error" size="sm">
-                      ⚠️ Expired
-                    </Badge>
-                  ) : (
-                    <div className="flex flex-col space-y-1">
-                      <Badge variant="warning" size="sm">
-                        ⏳ Pending
-                      </Badge>
-                      {session.validationExpiry && daysLeft > 0 && (
-                        <span className="text-xs text-text-secondary">
-                          {daysLeft}d left
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {getStatusBadge(session)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="flex items-center space-x-2">
-                    <Link href={`/sessions/${session.id}`}>
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
-                    </Link>
-                    {!session.validated && !isExpired && canResendValidation(session) && !isCancelled && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleResendValidation(session.id)}
-                        disabled={resendingIds.has(session.id)}
-                        title="Resend validation email"
-                      >
-                        {resendingIds.has(session.id) ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin mr-1" />
-                            Sending...
-                          </>
-                        ) : (
-                          <>
-                            <Mail className="w-4 h-4 mr-1" />
-                            Resend
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </td>
+                {canEdit && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <div className="flex space-x-2">
+                      <Link href={`/sessions/${session.id}`}>
+                        <Button variant="ghost" size="sm">
+                          View
+                        </Button>
+                      </Link>
+                      {!session.validated && !session.cancelled && (
+                        <Link href={`/sessions/${session.id}/edit`}>
+                          <Button variant="outline" size="sm">
+                            Edit
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </td>
+                )}
               </tr>
-            )
-          })}
-          {sessions.length === 0 && (
-            <tr>
-              <td colSpan={8} className="px-6 py-8 text-center text-text-secondary">
-                No sessions found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Pagination */}
+      <div className="px-6 py-3 flex items-center justify-between border-t border-border bg-background-secondary">
+        <div className="text-sm text-text-secondary">
+          Showing {sessions.length > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to{' '}
+          {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+          {pagination.total} results
+        </div>
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page === 1 || loading}
+            onClick={() => fetchSessions(pagination.page - 1)}
+          >
+            {loading ? 'Loading...' : 'Previous'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page === pagination.totalPages || loading}
+            onClick={() => fetchSessions(pagination.page + 1)}
+          >
+            {loading ? 'Loading...' : 'Next'}
+          </Button>
+        </div>
+      </div>
+    </Card>
   )
 }

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
@@ -47,6 +48,31 @@ export function UserTable({
   const [users, setUsers] = useState(initialUsers)
   const [pagination, setPagination] = useState(initialPagination)
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // Fetch users when page changes
+  const fetchUsers = async (targetPage: number) => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('page', String(targetPage))
+      
+      const response = await fetch(`/api/users/list?${params.toString()}`)
+      if (!response.ok) throw new Error('Failed to fetch users')
+      
+      const data = await response.json()
+      setUsers(data.users)
+      setPagination(data.pagination)
+      
+      // Update URL without page refresh
+      router.push(`/users?${params.toString()}`, { scroll: false })
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleDelete = async (userId: string) => {
     if (!confirm('Are you sure you want to deactivate this user?')) {
@@ -71,7 +97,12 @@ export function UserTable({
 
   return (
     <Card padding="none">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+            <div className="text-sm text-text-secondary">Loading...</div>
+          </div>
+        )}
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-background-secondary">
             <tr>
@@ -168,16 +199,18 @@ export function UserTable({
           <Button
             variant="outline"
             size="sm"
-            disabled={pagination.page === 1}
+            disabled={pagination.page === 1 || loading}
+            onClick={() => fetchUsers(pagination.page - 1)}
           >
-            Previous
+            {loading ? 'Loading...' : 'Previous'}
           </Button>
           <Button
             variant="outline"
             size="sm"
-            disabled={pagination.page === pagination.totalPages}
+            disabled={pagination.page === pagination.totalPages || loading}
+            onClick={() => fetchUsers(pagination.page + 1)}
           >
-            Next
+            {loading ? 'Loading...' : 'Next'}
           </Button>
         </div>
       </div>

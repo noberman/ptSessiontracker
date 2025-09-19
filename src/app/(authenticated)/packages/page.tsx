@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { PackageFilters } from '@/components/packages/PackageFilters'
+import { PackageTable } from '@/components/packages/PackageTable'
 
 export default async function PackagesPage({
   searchParams,
@@ -240,187 +241,19 @@ export default async function PackagesPage({
           currentUserRole={session.user.role}
         />
 
-        <Card padding="none">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border">
-              <thead className="bg-background-secondary">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Client
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Package
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Value
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Sessions
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Expiration
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-surface divide-y divide-border">
-                {packages.map((pkg: any) => {
-                  const usedSessions = pkg._count.sessions
-                  const percentUsed = pkg.totalSessions > 0 
-                    ? Math.round((usedSessions / pkg.totalSessions) * 100)
-                    : 0
-                  const isExpired = pkg.expiresAt && new Date(pkg.expiresAt) < new Date()
-                  
-                  return (
-                    <tr key={pkg.id} className="hover:bg-surface-hover transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-text-primary">
-                            {pkg.client.name}
-                          </div>
-                          <div className="text-xs text-text-secondary">
-                            {pkg.client.email}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-text-primary">
-                            {pkg.name}
-                          </div>
-                          <Badge variant="gray" size="xs" className="mt-1">
-                            {pkg.packageType}
-                          </Badge>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-text-primary">
-                            ${pkg.totalValue.toFixed(2)}
-                          </div>
-                          <div className="text-xs text-text-secondary">
-                            ${pkg.sessionValue.toFixed(2)}/session
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm text-text-primary">
-                            {pkg.remainingSessions} / {pkg.totalSessions}
-                          </div>
-                          <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
-                            <div 
-                              className={`h-2 rounded-full ${
-                                percentUsed > 75 ? 'bg-error-500' : 
-                                percentUsed > 50 ? 'bg-warning-500' : 
-                                'bg-success-500'
-                              }`}
-                              style={{ width: `${percentUsed}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {pkg.expiresAt ? (
-                          <div>
-                            <div className="text-sm text-text-primary">
-                              {new Date(pkg.expiresAt).toLocaleDateString()}
-                            </div>
-                            {isExpired && (
-                              <Badge variant="error" size="xs" className="mt-1">
-                                Expired
-                              </Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-sm text-text-secondary">No expiry</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge variant={pkg.active ? 'success' : 'gray'} size="sm">
-                          {pkg.active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2">
-                          <Link href={`/packages/${pkg.id}`}>
-                            <Button variant="ghost" size="sm">
-                              View
-                            </Button>
-                          </Link>
-                          {canEdit && (
-                            <Link href={`/packages/${pkg.id}/edit`}>
-                              <Button variant="outline" size="sm">
-                                Edit
-                              </Button>
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-                {packages.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-text-secondary">
-                      No packages found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          
-          {/* Pagination */}
-          <div className="px-6 py-3 flex items-center justify-between border-t border-border bg-background-secondary">
-            <div className="text-sm text-text-secondary">
-              Showing {packages.length > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to{' '}
-              {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-              {pagination.total} results
-            </div>
-            <div className="flex space-x-2">
-              <Link 
-                href={{
-                  pathname: '/packages',
-                  query: {
-                    ...Object.fromEntries(new URLSearchParams(params as any)),
-                    page: (page - 1).toString()
-                  }
-                }}
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pagination.page === 1}
-                >
-                  Previous
-                </Button>
-              </Link>
-              <Link 
-                href={{
-                  pathname: '/packages',
-                  query: {
-                    ...Object.fromEntries(new URLSearchParams(params as any)),
-                    page: (page + 1).toString()
-                  }
-                }}
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pagination.page === pagination.totalPages}
-                >
-                  Next
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </Card>
+        <PackageTable 
+          initialPackages={packages.map((pkg: any) => ({
+            ...pkg,
+            price: pkg.totalValue,
+            status: pkg.active ? 'ACTIVE' : 'INACTIVE',
+            sessionsRemaining: pkg.remainingSessions,
+            startDate: pkg.createdAt,
+            expiryDate: pkg.expiresAt
+          }))}
+          pagination={pagination}
+          canEdit={canEdit}
+          canDelete={canDelete}
+        />
       </div>
     </div>
   )
