@@ -81,13 +81,11 @@ export function MixedContentDetector() {
 
     // Monitor XMLHttpRequest
     const originalXHROpen = XMLHttpRequest.prototype.open
-    // @ts-expect-error - TypeScript doesn't like our override but it works
-    XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...rest: any[]) {
+    XMLHttpRequest.prototype.open = function(method: string, url: string | URL, async?: boolean, username?: string | null, password?: string | null) {
       if (typeof url === 'string' && url.startsWith('http://')) {
         console.error('❌ HTTP XHR REQUEST:', url)
       }
-      // @ts-expect-error - Applying with spread args
-      return originalXHROpen.apply(this, [method, url, ...rest])
+      return originalXHROpen.call(this, method, url, async ?? true, username, password)
     }
 
     // Monitor fetch requests
@@ -130,7 +128,7 @@ export function MixedContentDetector() {
     for (let i = 0; i < metaTags.length; i++) {
       const meta = metaTags[i]
       if (meta.content && meta.content.includes('http://')) {
-        console.warn('⚠️ Meta tag with HTTP content:', meta.name || meta.property, meta.content)
+        console.warn('⚠️ Meta tag with HTTP content:', meta.name || (meta as any).property, meta.content)
       }
     }
 
