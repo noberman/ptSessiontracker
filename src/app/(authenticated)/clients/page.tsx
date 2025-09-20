@@ -12,6 +12,7 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<{ 
     page?: string
+    limit?: string
     search?: string
     locationId?: string // Keep for backwards compatibility
     locationIds?: string // New multi-select
@@ -28,7 +29,7 @@ export default async function ClientsPage({
   }
 
   const page = parseInt(params.page || '1')
-  const limit = 10
+  const limit = parseInt(params.limit || '10')
   const search = params.search || ''
   
   // Handle both old single and new multi-select parameters

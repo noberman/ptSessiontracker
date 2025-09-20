@@ -8,36 +8,33 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
 
-interface Session {
+interface Package {
   id: string
-  sessionDate: string | Date
+  name: string
+  packageType: string
+  totalSessions: number
+  remainingSessions: number
+  totalValue: number
   sessionValue: number
-  validated: boolean
-  validatedAt: string | Date | null
-  cancelled: boolean
-  cancelledAt?: string | Date | null
-  trainer: {
-    id: string
-    name: string
-    email: string
-  }
+  active: boolean
+  startDate: string | Date | null
+  expiresAt: string | Date | null
   client: {
     id: string
     name: string
     email: string
+    primaryTrainer?: {
+      id: string
+      name: string
+    } | null
   }
-  location?: {
-    id: string
-    name: string
-  } | null
-  package?: {
-    id: string
-    name: string
-  } | null
+  _count: {
+    sessions: number
+  }
 }
 
-interface SessionTableProps {
-  initialSessions: Session[]
+interface PackageTableProps {
+  initialPackages: Package[]
   pagination: {
     page: number
     limit: number
@@ -45,23 +42,23 @@ interface SessionTableProps {
     totalPages: number
   }
   canEdit?: boolean
-  userRole?: string
+  canDelete?: boolean
 }
 
-export function SessionTable({ 
-  initialSessions, 
+export function PackageTable({ 
+  initialPackages, 
   pagination: initialPagination,
   canEdit = false,
-  userRole
-}: SessionTableProps) {
-  const [sessions, setSessions] = useState(initialSessions)
+  canDelete = false
+}: PackageTableProps) {
+  const [packages, setPackages] = useState(initialPackages)
   const [pagination, setPagination] = useState(initialPagination)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   
-  // Fetch sessions when page or limit changes
-  const fetchSessions = async (targetPage: number, targetLimit?: number) => {
+  // Fetch packages when page or limit changes
+  const fetchPackages = async (targetPage: number, targetLimit?: number) => {
     setLoading(true)
     try {
       const params = new URLSearchParams(searchParams.toString())
@@ -70,17 +67,17 @@ export function SessionTable({
         params.set('limit', String(targetLimit))
       }
       
-      const response = await fetch(`/api/sessions/list?${params.toString()}`)
-      if (!response.ok) throw new Error('Failed to fetch sessions')
+      const response = await fetch(`/api/packages/list?${params.toString()}`)
+      if (!response.ok) throw new Error('Failed to fetch packages')
       
       const data = await response.json()
-      setSessions(data.sessions)
+      setPackages(data.packages)
       setPagination(data.pagination)
       
       // Update URL without page refresh
-      router.push(`/sessions?${params.toString()}`, { scroll: false })
+      router.push(`/packages?${params.toString()}`, { scroll: false })
     } catch (error) {
-      console.error('Error fetching sessions:', error)
+      console.error('Error fetching packages:', error)
     } finally {
       setLoading(false)
     }
@@ -88,10 +85,11 @@ export function SessionTable({
 
   const handlePageSizeChange = (newLimit: number) => {
     // Reset to page 1 when changing page size
-    fetchSessions(1, newLimit)
+    fetchPackages(1, newLimit)
   }
 
-  const formatDate = (date: string | Date) => {
+  const formatDate = (date: string | Date | null) => {
+    if (!date) return '-'
     return new Date(date).toLocaleDateString()
   }
 
@@ -102,14 +100,35 @@ export function SessionTable({
     }).format(amount)
   }
 
-  const getStatusBadge = (session: Session) => {
-    if (session.cancelled) {
-      return <Badge variant="gray" size="sm">Cancelled</Badge>
+  const getStatusBadge = (pkg: Package) => {
+    if (pkg.expiresAt && new Date(pkg.expiresAt) < new Date()) {
+      return <Badge variant="error" size="sm">Expired</Badge>
     }
-    if (session.validated) {
-      return <Badge variant="success" size="sm">Validated</Badge>
+    if (pkg.remainingSessions === 0) {
+      return <Badge variant="gray" size="sm">Completed</Badge>
     }
-    return <Badge variant="warning" size="sm">Pending</Badge>
+    if (pkg.active) {
+      return <Badge variant="success" size="sm">Active</Badge>
+    }
+    return <Badge variant="gray" size="sm">Inactive</Badge>
+  }
+
+  const getPackageTypeBadge = (type: string) => {
+    const typeColors = {
+      MONTHLY: 'secondary',
+      QUARTERLY: 'default',
+      ANNUAL: 'warning',
+      CUSTOM: 'gray',
+    } as const
+    
+    return (
+      <Badge 
+        variant={typeColors[type as keyof typeof typeColors] || 'default'} 
+        size="sm"
+      >
+        {type}
+      </Badge>
+    )
   }
 
   return (
@@ -124,85 +143,94 @@ export function SessionTable({
           <thead className="bg-background-secondary">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Trainer
+                Package
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Client
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Location
+                Trainer
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Package
+                Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Value
+                Sessions
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Price
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Expiry
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Status
               </th>
-              {canEdit && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                  Actions
-                </th>
-              )}
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="bg-surface divide-y divide-border">
-            {sessions.map((session) => (
-              <tr key={session.id} className="hover:bg-surface-hover transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                  {formatDate(session.sessionDate)}
-                </td>
+            {packages.map((pkg) => (
+              <tr key={pkg.id} className="hover:bg-surface-hover transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-text-primary">
-                    {session.trainer.name}
-                  </div>
-                  <div className="text-sm text-text-secondary">
-                    {session.trainer.email}
+                    {pkg.name}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-text-primary">
-                    {session.client.name}
+                    {pkg.client.name}
                   </div>
                   <div className="text-sm text-text-secondary">
-                    {session.client.email}
+                    {pkg.client.email}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                  {session.location?.name || '-'}
+                  {pkg.client.primaryTrainer?.name || '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                  {session.package?.name || '-'}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {getPackageTypeBadge(pkg.packageType)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-text-primary">
+                    {pkg.remainingSessions} / {pkg.totalSessions}
+                  </div>
+                  <div className="text-xs text-text-secondary">
+                    {pkg._count.sessions} used
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                  {formatCurrency(session.sessionValue)}
+                  {formatCurrency(pkg.totalValue)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                  {formatDate(pkg.expiresAt)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {getStatusBadge(session)}
+                  {getStatusBadge(pkg)}
                 </td>
-                {canEdit && (
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex space-x-2">
-                      <Link href={`/sessions/${session.id}`}>
-                        <Button variant="ghost" size="sm">
-                          View
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <div className="flex space-x-2">
+                    <Link href={`/packages/${pkg.id}`}>
+                      <Button variant="ghost" size="sm">
+                        View
+                      </Button>
+                    </Link>
+                    {canEdit && (
+                      <Link href={`/packages/${pkg.id}/edit`}>
+                        <Button variant="outline" size="sm">
+                          Edit
                         </Button>
                       </Link>
-                      {!session.validated && !session.cancelled && (
-                        <Link href={`/sessions/${session.id}/edit`}>
-                          <Button variant="outline" size="sm">
-                            Edit
-                          </Button>
-                        </Link>
-                      )}
-                    </div>
-                  </td>
-                )}
+                    )}
+                    {canDelete && (
+                      <Button variant="danger" size="sm">
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -212,7 +240,7 @@ export function SessionTable({
       {/* Pagination */}
       <div className="px-6 py-3 flex items-center justify-between border-t border-border bg-background-secondary">
         <div className="text-sm text-text-secondary">
-          Showing {sessions.length > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to{' '}
+          Showing {packages.length > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to{' '}
           {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
           {pagination.total} results
         </div>
@@ -227,7 +255,7 @@ export function SessionTable({
               variant="outline"
               size="sm"
               disabled={pagination.page === 1 || loading}
-              onClick={() => fetchSessions(pagination.page - 1)}
+              onClick={() => fetchPackages(pagination.page - 1)}
             >
               {loading ? 'Loading...' : 'Previous'}
             </Button>
@@ -235,7 +263,7 @@ export function SessionTable({
               variant="outline"
               size="sm"
               disabled={pagination.page === pagination.totalPages || loading}
-              onClick={() => fetchSessions(pagination.page + 1)}
+              onClick={() => fetchPackages(pagination.page + 1)}
             >
               {loading ? 'Loading...' : 'Next'}
             </Button>

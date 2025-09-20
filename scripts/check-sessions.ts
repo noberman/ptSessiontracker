@@ -1,7 +1,38 @@
 import { prisma } from '../src/lib/prisma'
+import { ensureCommissionTiers } from '../src/lib/commission/ensure-tiers'
 
 async function checkSessions() {
   try {
+    // Check and ensure commission tiers first
+    console.log('\n📊 Checking commission tiers...')
+    const tierCount = await prisma.commissionTier.count()
+    console.log(`   Found ${tierCount} commission tiers in database`)
+    
+    if (tierCount === 0) {
+      console.log('   ⚠️  No tiers found! Creating defaults...')
+      const created = await ensureCommissionTiers()
+      if (created) {
+        console.log('   ✅ Default tiers created successfully')
+        
+        // Show the created tiers
+        const tiers = await prisma.commissionTier.findMany({
+          orderBy: { minSessions: 'asc' }
+        })
+        console.log('   Created tiers:')
+        tiers.forEach(tier => {
+          console.log(`   - ${tier.minSessions}-${tier.maxSessions || '∞'}: ${tier.percentage}%`)
+        })
+      }
+    } else {
+      const tiers = await prisma.commissionTier.findMany({
+        orderBy: { minSessions: 'asc' }
+      })
+      console.log('   Existing tiers:')
+      tiers.forEach(tier => {
+        console.log(`   - ${tier.minSessions}-${tier.maxSessions || '∞'}: ${tier.percentage}%`)
+      })
+    }
+
     // Get total session count
     const totalSessions = await prisma.session.count()
     console.log(`\n📊 Total sessions in database: ${totalSessions}`)

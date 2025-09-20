@@ -15,6 +15,7 @@ export default async function SessionsPage({
 }: {
   searchParams: Promise<{ 
     page?: string
+    limit?: string
     clientIds?: string  // comma-separated IDs
     trainerIds?: string  // comma-separated IDs
     locationIds?: string  // comma-separated IDs
@@ -29,14 +30,9 @@ export default async function SessionsPage({
   if (!session) {
     redirect('/login')
   }
-
-  // Debug logging for production issue
-  console.log('🔍 SESSIONS PAGE: Starting session query')
-  console.log('📊 SESSIONS PAGE: Database URL prefix:', process.env.DATABASE_URL?.substring(0, 30))
-  console.log('📊 SESSIONS PAGE: User role:', session.user.role)
   
   const page = parseInt(params.page || '1')
-  const limit = 20
+  const limit = parseInt(params.limit || '10')
   const skip = (page - 1) * limit
 
   const where: any = {}
@@ -173,20 +169,21 @@ export default async function SessionsPage({
     filterLocations = locations
   }
 
-  // Log before the query that's failing
-  console.log('🔍 SESSIONS PAGE: About to query sessions table')
-  console.log('📊 SESSIONS PAGE: Query params:', { where, skip, limit })
-  
-  let sessions, total;
-  
-  try {
-    console.log('🔍 SESSIONS PAGE: Executing Prisma findMany...')
-    const results = await Promise.all([
-      prisma.session.findMany({
-        where,
-        skip,
-        take: limit,
-        include: {
+  const [sessions, total] = await Promise.all([
+    prisma.session.findMany({
+      where,
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        sessionDate: true,
+        sessionValue: true,
+        validated: true,
+        validatedAt: true,
+        cancelled: true,
+        cancelledAt: true,
+        createdAt: true,
+        updatedAt: true,
         client: {
           select: {
             id: true,
@@ -221,34 +218,6 @@ export default async function SessionsPage({
     }),
     prisma.session.count({ where })
   ])
-    
-    sessions = results[0]
-    total = results[1]
-    console.log('✅ SESSIONS PAGE: Query successful, found', total, 'sessions')
-    
-  } catch (error: any) {
-    console.error('❌ SESSIONS PAGE: Query failed:', error)
-    console.error('❌ SESSIONS PAGE: Error code:', error.code)
-    console.error('❌ SESSIONS PAGE: Error message:', error.message)
-    
-    // Try to provide more info
-    if (error.code === 'P2022') {
-      console.error('❌ SESSIONS PAGE: Column not found error - checking database schema...')
-      try {
-        const checkColumns = await prisma.$queryRaw`
-          SELECT column_name 
-          FROM information_schema.columns 
-          WHERE table_name = 'sessions' 
-          AND column_name IN ('cancelled', 'cancelledAt')
-        ` as any[]
-        console.log('📊 SESSIONS PAGE: Column check result:', checkColumns)
-      } catch (checkErr) {
-        console.error('❌ SESSIONS PAGE: Could not check columns:', checkErr)
-      }
-    }
-    
-    throw error // Re-throw to maintain original behavior
-  }
 
   const pagination = {
     page,
@@ -284,59 +253,12 @@ export default async function SessionsPage({
           locations={filterLocations}
         />
 
-        <Card padding="none">
-          <SessionTable 
-            sessions={sessions.map(s => ({
-              ...s,
-              sessionDate: s.sessionDate.toISOString(),
-              validatedAt: s.validatedAt?.toISOString() || null,
-              validationExpiry: s.validationExpiry?.toISOString() || null,
-              cancelledAt: s.cancelledAt?.toISOString() || null,
-              createdAt: s.createdAt.toISOString(),
-              updatedAt: s.updatedAt.toISOString(),
-            }))}
-            currentUserRole={session.user.role}
-          />
-          
-          {/* Pagination */}
-          <div className="px-6 py-3 flex items-center justify-between border-t border-border bg-background-secondary">
-            <div className="text-sm text-text-secondary">
-              Showing {sessions.length > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to{' '}
-              {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-              {pagination.total} results
-            </div>
-            <div className="flex space-x-2">
-              {pagination.page > 1 ? (
-                <Link href={`/sessions?${new URLSearchParams({
-                  ...params,
-                  page: String(pagination.page - 1)
-                }).toString()}`}>
-                  <Button variant="outline" size="sm">
-                    Previous
-                  </Button>
-                </Link>
-              ) : (
-                <Button variant="outline" size="sm" disabled>
-                  Previous
-                </Button>
-              )}
-              {pagination.page < pagination.totalPages ? (
-                <Link href={`/sessions?${new URLSearchParams({
-                  ...params,
-                  page: String(pagination.page + 1)
-                }).toString()}`}>
-                  <Button variant="outline" size="sm">
-                    Next
-                  </Button>
-                </Link>
-              ) : (
-                <Button variant="outline" size="sm" disabled>
-                  Next
-                </Button>
-              )}
-            </div>
-          </div>
-        </Card>
+        <SessionTable 
+          initialSessions={sessions}
+          pagination={pagination}
+          canEdit={canValidate || canDelete}
+          userRole={session.user.role}
+        />
     </div>
   )
 }
