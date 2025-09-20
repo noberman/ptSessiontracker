@@ -30,11 +30,11 @@ export function MixedContentDetector() {
     // Observe all resource types
     try {
       observer.observe({ entryTypes: ['resource', 'navigation', 'fetch'] })
-    } catch (e) {
+    } catch {
       // Some entry types might not be supported
       try {
         observer.observe({ entryTypes: ['resource'] })
-      } catch (e2) {
+      } catch {
         console.warn('Performance observer not fully supported')
       }
     }
@@ -81,12 +81,12 @@ export function MixedContentDetector() {
 
     // Monitor XMLHttpRequest
     const originalXHROpen = XMLHttpRequest.prototype.open
-    // @ts-ignore - TypeScript doesn't like our override but it works
+    // @ts-expect-error - TypeScript doesn't like our override but it works
     XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...rest: any[]) {
       if (typeof url === 'string' && url.startsWith('http://')) {
         console.error('❌ HTTP XHR REQUEST:', url)
       }
-      // @ts-ignore
+      // @ts-expect-error - Applying with spread args
       return originalXHROpen.apply(this, [method, url, ...rest])
     }
 
