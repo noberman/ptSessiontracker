@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { MixedContentDetector } from "@/components/MixedContentDetector";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,11 +26,11 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://fitsync.io"),
+  metadataBase: new URL("https://www.fitsync.io"),
   openGraph: {
     title: "FitSync - Personal Training Session Tracker",
     description: "Track, manage, and optimize your personal training business",
-    url: "https://fitsync.io",
+    url: "https://www.fitsync.io",
     siteName: "FitSync",
     locale: "en_US",
     type: "website",
@@ -64,6 +65,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
+          <MixedContentDetector />
           {children}
         </AuthProvider>
       </body>
