@@ -53,15 +53,21 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const pathname = request.nextUrl.pathname
   
-  // Debug logging for staging
-  if (hostname.includes('staging') || hostname.includes('railway')) {
-    console.log('=== STAGING MIDDLEWARE DEBUG ===')
-    console.log('Hostname:', hostname)
-    console.log('Pathname:', pathname)
-    console.log('NODE_ENV:', process.env.NODE_ENV)
-    console.log('LANDING_DOMAIN:', process.env.LANDING_DOMAIN)
-    console.log('APP_DOMAIN:', process.env.APP_DOMAIN)
-  }
+  // ENHANCED Debug logging - always log in production to debug redirect issue
+  console.log('=== MIDDLEWARE DEBUG (ENHANCED) ===')
+  console.log('🔍 REQUEST INFO:')
+  console.log('- Full URL:', request.url)
+  console.log('- Hostname:', hostname)
+  console.log('- Pathname:', pathname)
+  console.log('- Method:', request.method)
+  console.log('🔧 ENV VARS:')
+  console.log('- NODE_ENV:', process.env.NODE_ENV)
+  console.log('- LANDING_DOMAIN:', process.env.LANDING_DOMAIN || 'NOT SET (default: www.fitsync.io)')
+  console.log('- APP_DOMAIN:', process.env.APP_DOMAIN || 'NOT SET (default: www.fitsync.io)')
+  console.log('- NEXTAUTH_URL:', process.env.NEXTAUTH_URL)
+  console.log('🔧 CONSTANTS:')
+  console.log('- LANDING_DOMAIN const:', LANDING_DOMAIN)
+  console.log('- APP_DOMAIN const:', APP_DOMAIN)
   
   // Determine if we're on app subdomain or landing domain
   // In staging, the same domain serves both landing and app
@@ -72,6 +78,13 @@ export function middleware(request: NextRequest) {
   const isAppDomain = hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('www.fitsync.io')
   const isLandingDomain = isAppDomain // Same domain for both now
   
+  console.log('🚨 DOMAIN DETECTION ISSUE:')
+  console.log('- hostname:', hostname)
+  console.log('- isAppDomain:', isAppDomain)
+  console.log('- isLandingDomain:', isLandingDomain)
+  console.log('- PROBLEM: Both are', isAppDomain, 'for single domain setup!')
+  console.log('- This will cause redirects if not handled properly!')
+  
   // Special handling for validation routes (accessible from both)
   if (pathname.startsWith('/validate/')) {
     return NextResponse.next()
@@ -79,12 +92,17 @@ export function middleware(request: NextRequest) {
   
   // Redirect app routes to app subdomain if accessed from landing domain
   // BUT: Skip this redirect for staging (single domain setup)
+  console.log('🎯 REDIRECT CHECK:')
+  console.log('- isLandingDomain:', isLandingDomain)
+  console.log('- isAppDomain:', isAppDomain)
+  console.log('- isAppRoute(pathname):', isAppRoute(pathname))
+  console.log('- isOnStagingDomain:', isOnStagingDomain)
+  console.log('- Will redirect?:', isLandingDomain && isAppRoute(pathname) && !isOnStagingDomain)
+  
   if (isLandingDomain && isAppRoute(pathname) && !isOnStagingDomain) {
-    if (hostname.includes('staging') || hostname.includes('railway')) {
-      console.log('Redirecting from landing to app domain')
-      console.log('Is landing domain:', isLandingDomain)
-      console.log('Is app route:', isAppRoute(pathname))
-    }
+    console.log('⚠️ REDIRECTING to app domain!')
+    console.log('- From:', request.url)
+    console.log('- To:', `https://${APP_DOMAIN}${pathname}`)
     const appUrl = new URL(pathname, `https://${APP_DOMAIN}`)
     appUrl.search = request.nextUrl.search
     return NextResponse.redirect(appUrl)
