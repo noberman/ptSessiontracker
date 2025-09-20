@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
@@ -17,6 +18,17 @@ import {
 } from 'lucide-react'
 
 export default function LandingPage() {
+  useEffect(() => {
+    // Debug logging for redirect issues
+    console.log('🔍 LANDING PAGE DEBUG:')
+    console.log('- Current URL:', window.location.href)
+    console.log('- Hostname:', window.location.hostname)
+    console.log('- Protocol:', window.location.protocol)
+    console.log('- Pathname:', window.location.pathname)
+    console.log('- NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL)
+    console.log('- All login links will go to: /login (relative path)')
+  }, [])
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
