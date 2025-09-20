@@ -107,9 +107,9 @@ export function PackageTable({
   const getPackageTypeBadge = (type: string) => {
     const typeColors = {
       MONTHLY: 'secondary',
-      QUARTERLY: 'primary',
+      QUARTERLY: 'default',
       ANNUAL: 'warning',
-      CUSTOM: 'default',
+      CUSTOM: 'gray',
     } as const
     
     return (
