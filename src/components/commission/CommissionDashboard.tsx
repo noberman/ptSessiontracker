@@ -474,26 +474,73 @@ export function CommissionDashboard({
                       </td>
                     </tr>
                     
-                    {/* Expanded details for Graduated tier */}
-                    {expandedTrainer === commission.trainerId && method === 'GRADUATED' && commission.tiersApplied && (
+                    {/* Expanded details */}
+                    {expandedTrainer === commission.trainerId && (
                       <tr>
                         <td colSpan={7} className="p-4 bg-background-secondary">
                           <div className="space-y-2">
-                            <div className="text-sm font-medium mb-2">Tier Breakdown:</div>
-                            {commission.tiersApplied.map((tier, index) => (
-                              <div key={index} className="flex items-center justify-between text-sm">
-                                <span>
-                                  Tier {index + 1}: {tier.sessions} sessions × {tier.tier.percentage}%
-                                </span>
-                                <span>
-                                  {formatCurrency(tier.value)} → {formatCurrency(tier.commission)}
-                                </span>
-                              </div>
-                            ))}
-                            <div className="border-t pt-2 flex justify-between font-medium">
-                              <span>Total:</span>
-                              <span>{formatCurrency(commission.commissionAmount)}</span>
-                            </div>
+                            {/* Show tier breakdown for Graduated method */}
+                            {method === 'GRADUATED' && commission.tiersApplied ? (
+                              <>
+                                <div className="text-sm font-medium mb-2">Tier Breakdown:</div>
+                                {commission.tiersApplied.map((tier, index) => (
+                                  <div key={index} className="flex items-center justify-between text-sm">
+                                    <span>
+                                      Tier {index + 1}: {tier.sessions} sessions × {tier.tier.percentage}%
+                                    </span>
+                                    <span>
+                                      {formatCurrency(tier.value)} → {formatCurrency(tier.commission)}
+                                    </span>
+                                  </div>
+                                ))}
+                                <div className="border-t pt-2 flex justify-between font-medium">
+                                  <span>Total:</span>
+                                  <span>{formatCurrency(commission.commissionAmount)}</span>
+                                </div>
+                              </>
+                            ) : (
+                              /* Show summary for Progressive method */
+                              <>
+                                <div className="text-sm font-medium mb-2">Commission Details:</div>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-text-secondary">Method:</span>{' '}
+                                    <span className="font-medium">Progressive Tier</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-text-secondary">Tier Achieved:</span>{' '}
+                                    <span className="font-medium">
+                                      {commission.tierAchieved ? 
+                                        `${commission.tierAchieved.minSessions}-${commission.tierAchieved.maxSessions || '+'} sessions` 
+                                        : 'N/A'}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-text-secondary">Commission Rate:</span>{' '}
+                                    <span className="font-medium">{commission.commissionRate.toFixed(1)}%</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-text-secondary">Validated Sessions:</span>{' '}
+                                    <span className="font-medium">{commission.validatedSessions} of {commission.totalSessions}</span>
+                                  </div>
+                                </div>
+                                <div className="border-t pt-2 flex justify-between">
+                                  <span className="text-sm">
+                                    Total Value ({commission.totalSessions} sessions × {commission.commissionRate.toFixed(1)}%):
+                                  </span>
+                                  <span className="font-medium">{formatCurrency(commission.commissionAmount)}</span>
+                                </div>
+                                <div className="mt-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => router.push(`/sessions?trainerIds=${commission.trainerId}&startDate=${month}-01`)}
+                                  >
+                                    View Session Details →
+                                  </Button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
