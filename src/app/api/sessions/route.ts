@@ -345,7 +345,7 @@ export async function POST(request: Request) {
     // Send validation email to client (only if not a no-show)
     if (!isNoShow) {
       try {
-        const validationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/validate/${newSession.validationToken}`
+        const validationUrl = `${process.env.APP_URL || 'https://www.fitsync.io'}/validate/${newSession.validationToken}`
         
         const { html, text } = await renderSessionValidationEmail({
           clientName: newSession.client.name,
