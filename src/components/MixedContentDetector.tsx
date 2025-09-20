@@ -81,12 +81,13 @@ export function MixedContentDetector() {
 
     // Monitor XMLHttpRequest
     const originalXHROpen = XMLHttpRequest.prototype.open
-    XMLHttpRequest.prototype.open = function(...args) {
-      const url = args[1]
+    // @ts-ignore - TypeScript doesn't like our override but it works
+    XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...rest: any[]) {
       if (typeof url === 'string' && url.startsWith('http://')) {
         console.error('❌ HTTP XHR REQUEST:', url)
       }
-      return originalXHROpen.apply(this, args as any)
+      // @ts-ignore
+      return originalXHROpen.apply(this, [method, url, ...rest])
     }
 
     // Monitor fetch requests
