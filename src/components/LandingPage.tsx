@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
@@ -18,30 +17,6 @@ import {
 } from 'lucide-react'
 
 export default function LandingPage() {
-  // Dynamically determine the app URL based on current environment
-  const [appUrl, setAppUrl] = useState('https://www.fitsync.io')
-  
-  useEffect(() => {
-    // Check if we have a public app URL set
-    if (process.env.NEXT_PUBLIC_APP_URL) {
-      setAppUrl(process.env.NEXT_PUBLIC_APP_URL)
-    } else if (typeof window !== 'undefined') {
-      // Determine based on current hostname
-      const hostname = window.location.hostname
-      
-      if (hostname.includes('staging') || hostname.includes('railway')) {
-        // Staging environment - use current domain (same domain for landing and app)
-        setAppUrl(`${window.location.protocol}//${window.location.host}`)
-      } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        // Local development
-        setAppUrl('http://localhost:3000')
-      } else {
-        // Production - now using www.fitsync.io for everything
-        setAppUrl('https://www.fitsync.io')
-      }
-    }
-  }, [])
-  
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -73,10 +48,10 @@ export default function LandingPage() {
               </Link>
             </div>
             <div className="flex items-center gap-4">
-              <Link href={`${appUrl}/login`}>
+              <Link href="/login">
                 <Button variant="ghost">Sign In</Button>
               </Link>
-              <Link href={`${appUrl}/login`}>
+              <Link href="/login">
                 <Button>Get Started</Button>
               </Link>
             </div>
@@ -96,7 +71,7 @@ export default function LandingPage() {
               automates client validation, and streamlines commission payouts for personal trainers.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href={`${appUrl}/login`}>
+              <Link href="/login">
                 <Button size="xl" className="min-w-[200px]">
                   Start Free Trial
                 </Button>
@@ -304,7 +279,7 @@ export default function LandingPage() {
             Join fitness clubs that have already eliminated paper tracking
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href={`${appUrl}/login`}>
+            <Link href="/login">
               <Button size="xl" variant="secondary" className="min-w-[200px]">
                 Start Free Trial
               </Button>
