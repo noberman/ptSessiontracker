@@ -12,11 +12,12 @@ interface Package {
   name: string
   packageType: string
   totalSessions: number
-  sessionsRemaining: number
-  price: number
-  status: string
+  remainingSessions: number
+  totalValue: number
+  sessionValue: number
+  active: boolean
   startDate: string | Date | null
-  expiryDate: string | Date | null
+  expiresAt: string | Date | null
   client: {
     id: string
     name: string
@@ -91,16 +92,16 @@ export function PackageTable({
   }
 
   const getStatusBadge = (pkg: Package) => {
-    if (pkg.status === 'EXPIRED' || (pkg.expiryDate && new Date(pkg.expiryDate) < new Date())) {
+    if (pkg.expiresAt && new Date(pkg.expiresAt) < new Date()) {
       return <Badge variant="error" size="sm">Expired</Badge>
     }
-    if (pkg.sessionsRemaining === 0) {
+    if (pkg.remainingSessions === 0) {
       return <Badge variant="gray" size="sm">Completed</Badge>
     }
-    if (pkg.status === 'ACTIVE') {
+    if (pkg.active) {
       return <Badge variant="success" size="sm">Active</Badge>
     }
-    return <Badge variant="default" size="sm">{pkg.status}</Badge>
+    return <Badge variant="gray" size="sm">Inactive</Badge>
   }
 
   const getPackageTypeBadge = (type: string) => {
@@ -185,17 +186,17 @@ export function PackageTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-text-primary">
-                    {pkg.sessionsRemaining} / {pkg.totalSessions}
+                    {pkg.remainingSessions} / {pkg.totalSessions}
                   </div>
                   <div className="text-xs text-text-secondary">
                     {pkg._count.sessions} used
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                  {formatCurrency(pkg.price)}
+                  {formatCurrency(pkg.totalValue)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                  {formatDate(pkg.expiryDate)}
+                  {formatDate(pkg.expiresAt)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {getStatusBadge(pkg)}

@@ -74,11 +74,12 @@ export async function GET(request: NextRequest) {
           name: true,
           packageType: true,
           totalSessions: true,
-          sessionsRemaining: true,
-          price: true,
-          status: true,
+          remainingSessions: true,
+          totalValue: true,
+          sessionValue: true,
+          active: true,
           startDate: true,
-          expiryDate: true,
+          expiresAt: true,
           client: {
             select: {
               id: true,

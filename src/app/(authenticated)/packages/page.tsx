@@ -242,14 +242,7 @@ export default async function PackagesPage({
         />
 
         <PackageTable 
-          initialPackages={packages.map((pkg: any) => ({
-            ...pkg,
-            price: pkg.totalValue,
-            status: pkg.active ? 'ACTIVE' : 'INACTIVE',
-            sessionsRemaining: pkg.remainingSessions,
-            startDate: pkg.createdAt,
-            expiryDate: pkg.expiresAt
-          }))}
+          initialPackages={packages}
           pagination={pagination}
           canEdit={canEdit}
           canDelete={canDelete}
