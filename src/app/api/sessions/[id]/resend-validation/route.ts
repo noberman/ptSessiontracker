@@ -74,7 +74,7 @@ export async function POST(
     })
 
     // Send new validation email
-    const validationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/validate/${newValidationToken}`
+    const validationUrl = `${process.env.APP_URL || 'https://www.fitsync.io'}/validate/${newValidationToken}`
     
     const { html, text } = await renderSessionValidationEmail({
       clientName: sessionData.client.name,
