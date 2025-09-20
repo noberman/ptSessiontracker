@@ -7,8 +7,8 @@ const isStaging = typeof process !== 'undefined' && (
   process.env.LANDING_DOMAIN?.includes('railway') || 
   process.env.APP_DOMAIN?.includes('railway')
 )
-const LANDING_DOMAIN = process.env.LANDING_DOMAIN || 'fitsync.io'
-const APP_DOMAIN = process.env.APP_DOMAIN || 'app.fitsync.io'
+const LANDING_DOMAIN = process.env.LANDING_DOMAIN || 'www.fitsync.io'
+const APP_DOMAIN = process.env.APP_DOMAIN || 'www.fitsync.io'
 
 // Routes that should only be accessible on the app subdomain
 const APP_ONLY_ROUTES = [
@@ -68,9 +68,9 @@ export function middleware(request: NextRequest) {
   const isOnStagingDomain = hostname.includes('staging') || hostname.includes('railway')
   
   // For staging: treat as landing domain by default (to show landing page)
-  // For production: separate app. subdomain
-  const isAppDomain = !isOnStagingDomain && (hostname.includes('app.') || hostname.includes('localhost') || hostname.includes('127.0.0.1'))
-  const isLandingDomain = !isAppDomain
+  // For production: now using single domain (www.fitsync.io)
+  const isAppDomain = hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('www.fitsync.io')
+  const isLandingDomain = isAppDomain // Same domain for both now
   
   // Special handling for validation routes (accessible from both)
   if (pathname.startsWith('/validate/')) {

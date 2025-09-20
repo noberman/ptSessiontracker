@@ -19,7 +19,7 @@ import {
 
 export default function LandingPage() {
   // Dynamically determine the app URL based on current environment
-  const [appUrl, setAppUrl] = useState('https://app.fitsync.io')
+  const [appUrl, setAppUrl] = useState('https://www.fitsync.io')
   
   useEffect(() => {
     // Check if we have a public app URL set
@@ -36,8 +36,8 @@ export default function LandingPage() {
         // Local development
         setAppUrl('http://localhost:3000')
       } else {
-        // Production
-        setAppUrl('https://app.fitsync.io')
+        // Production - now using www.fitsync.io for everything
+        setAppUrl('https://www.fitsync.io')
       }
     }
   }, [])
