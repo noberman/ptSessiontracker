@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
+import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
 
 interface User {
   id: string
@@ -51,12 +52,15 @@ export function UserTable({
   const router = useRouter()
   const searchParams = useSearchParams()
   
-  // Fetch users when page changes
-  const fetchUsers = async (targetPage: number) => {
+  // Fetch users when page or limit changes
+  const fetchUsers = async (targetPage: number, targetLimit?: number) => {
     setLoading(true)
     try {
       const params = new URLSearchParams(searchParams.toString())
       params.set('page', String(targetPage))
+      if (targetLimit) {
+        params.set('limit', String(targetLimit))
+      }
       
       const response = await fetch(`/api/users/list?${params.toString()}`)
       if (!response.ok) throw new Error('Failed to fetch users')
@@ -72,6 +76,11 @@ export function UserTable({
     } finally {
       setLoading(false)
     }
+  }
+
+  const handlePageSizeChange = (newLimit: number) => {
+    // Reset to page 1 when changing page size
+    fetchUsers(1, newLimit)
   }
 
   const handleDelete = async (userId: string) => {
@@ -195,23 +204,30 @@ export function UserTable({
           {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
           {pagination.total} results
         </div>
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={pagination.page === 1 || loading}
-            onClick={() => fetchUsers(pagination.page - 1)}
-          >
-            {loading ? 'Loading...' : 'Previous'}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={pagination.page === pagination.totalPages || loading}
-            onClick={() => fetchUsers(pagination.page + 1)}
-          >
-            {loading ? 'Loading...' : 'Next'}
-          </Button>
+        <div className="flex items-center gap-4">
+          <PageSizeSelector
+            value={pagination.limit}
+            onChange={handlePageSizeChange}
+            disabled={loading}
+          />
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pagination.page === 1 || loading}
+              onClick={() => fetchUsers(pagination.page - 1)}
+            >
+              {loading ? 'Loading...' : 'Previous'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pagination.page === pagination.totalPages || loading}
+              onClick={() => fetchUsers(pagination.page + 1)}
+            >
+              {loading ? 'Loading...' : 'Next'}
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

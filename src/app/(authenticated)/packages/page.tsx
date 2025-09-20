@@ -14,6 +14,7 @@ export default async function PackagesPage({
 }: {
   searchParams: Promise<{ 
     page?: string
+    limit?: string
     clientIds?: string  // comma-separated IDs
     locationIds?: string  // comma-separated IDs
     activeStatuses?: string  // comma-separated values
@@ -30,7 +31,7 @@ export default async function PackagesPage({
   }
 
   const page = parseInt(params.page || '1')
-  const limit = 10
+  const limit = parseInt(params.limit || '10')
   const skip = (page - 1) * limit
 
   const where: any = {}

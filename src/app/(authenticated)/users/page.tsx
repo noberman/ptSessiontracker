@@ -11,7 +11,7 @@ import { UserSearch } from '@/components/users/UserSearch'
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; search?: string; role?: string; locationId?: string }>
+  searchParams: Promise<{ page?: string; limit?: string; search?: string; role?: string; locationId?: string }>
 }) {
   const params = await searchParams
   const session = await getServerSession(authOptions)
@@ -26,7 +26,7 @@ export default async function UsersPage({
   }
 
   const page = parseInt(params.page || '1')
-  const limit = 10
+  const limit = parseInt(params.limit || '10')
   const search = params.search || ''
   const role = params.role || ''
   const locationId = params.locationId || ''

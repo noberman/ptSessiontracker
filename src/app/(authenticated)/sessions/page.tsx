@@ -14,6 +14,7 @@ export default async function SessionsPage({
 }: {
   searchParams: Promise<{ 
     page?: string
+    limit?: string
     clientIds?: string  // comma-separated IDs
     trainerIds?: string  // comma-separated IDs
     locationIds?: string  // comma-separated IDs
@@ -30,7 +31,7 @@ export default async function SessionsPage({
   }
 
   const page = parseInt(params.page || '1')
-  const limit = 20
+  const limit = parseInt(params.limit || '10')
   const skip = (page - 1) * limit
 
   const where: any = {}
