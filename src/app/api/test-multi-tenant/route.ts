@@ -78,7 +78,7 @@ export async function GET() {
     
     const otherOrgId = allOrgs.find(org => org.id !== orgId)?.id
     
-    let crossOrgTest = {
+    const crossOrgTest = {
       otherOrgExists: !!otherOrgId,
       canSeeOtherOrgUsers: false,
       canSeeOtherOrgLocations: false,
