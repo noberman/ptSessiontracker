@@ -15,6 +15,7 @@
     "studio": "prisma studio",
     "prisma:generate": "prisma generate",
     "check:deploy": "tsx scripts/check-deployment-ready.ts",
+    "migrate:organization": "tsx scripts/migrate-to-organization.ts",
     "pre-deploy": "./scripts/pre-deploy.sh",
     "deploy:staging": "npm run pre-deploy && git push origin staging",
     "deploy:production": "npm run pre-deploy && git push origin main"
