@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getOrganizationId } from '@/lib/organization-context'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -11,8 +12,13 @@ export async function GET() {
   }
 
   try {
+    // Get organization context
+    const organizationId = await getOrganizationId()
+    
     // Build query based on user role
-    const whereClause: any = {}
+    const whereClause: any = {
+      organizationId // Filter by organization
+    }
     
     // Club managers can only see their location
     if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
@@ -53,7 +59,8 @@ export async function GET() {
           where: {
             locationId: location.id,
             role: 'TRAINER',
-            active: true
+            active: true,
+            organizationId // Filter trainers by org
           },
           select: {
             id: true,
@@ -108,9 +115,15 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if location with same name exists
-    const existing = await prisma.location.findUnique({
-      where: { name: name.trim() }
+    // Get organization context
+    const organizationId = await getOrganizationId()
+    
+    // Check if location with same name exists in this organization
+    const existing = await prisma.location.findFirst({
+      where: { 
+        name: name.trim(),
+        organizationId
+      }
     })
 
     if (existing) {
@@ -123,7 +136,8 @@ export async function POST(request: Request) {
     const location = await prisma.location.create({
       data: {
         name: name.trim(),
-        active: true
+        active: true,
+        organizationId // Set organization for new location
       }
     })
 

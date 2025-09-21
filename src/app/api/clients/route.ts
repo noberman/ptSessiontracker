@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getOrganizationId } from '@/lib/organization-context'
 
 // GET /api/clients - List all clients with pagination and filters
 export async function GET(request: NextRequest) {
@@ -47,13 +48,25 @@ export async function GET(request: NextRequest) {
       where.primaryTrainerId = primaryTrainerId
     }
 
-    // Restrict based on user role
+    // Get organization context
+    const organizationId = await getOrganizationId()
+    
+    // Restrict based on user role and organization
     if (session.user.role === 'TRAINER') {
       // Trainers can only see their assigned clients
       where.primaryTrainerId = session.user.id
     } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
       // Club managers can only see clients at their location
       where.locationId = session.user.locationId
+      // Also ensure clients belong to trainers in same org
+      where.primaryTrainer = {
+        organizationId
+      }
+    } else {
+      // For other roles, filter by trainers in same org
+      where.primaryTrainer = {
+        organizationId
+      }
     }
 
     const [clients, total] = await Promise.all([
@@ -161,6 +174,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Get organization context
+    const organizationId = await getOrganizationId()
+    
     // Validate trainer assignment
     if (primaryTrainerId) {
       const trainer = await prisma.user.findFirst({
@@ -169,6 +185,7 @@ export async function POST(request: NextRequest) {
           role: 'TRAINER',
           active: true,
           locationId: locationId || undefined,
+          organizationId, // Ensure trainer is in same org
         },
       })
 
