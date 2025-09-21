@@ -1,10 +1,36 @@
-import { PrismaClient, Role } from '@prisma/client'
+import { PrismaClient, Role, SubscriptionTier, SubscriptionStatus } from '@prisma/client'
 import { hash } from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
   console.log('🌱 Starting seed...')
+  
+  // Create Organizations
+  const snapFitness = await prisma.organization.upsert({
+    where: { email: 'admin@snapfitness.sg' },
+    update: {},
+    create: {
+      name: 'Snap Fitness Singapore',
+      email: 'admin@snapfitness.sg',
+      phone: '+65 6789 0123',
+      subscriptionTier: SubscriptionTier.PRO,
+      subscriptionStatus: SubscriptionStatus.ACTIVE
+    }
+  })
+  
+  const testOrg = await prisma.organization.upsert({
+    where: { email: 'test@testgym.com' },
+    update: {},
+    create: {
+      name: 'Test Gym',
+      email: 'test@testgym.com',
+      subscriptionTier: SubscriptionTier.FREE,
+      subscriptionStatus: SubscriptionStatus.ACTIVE
+    }
+  })
+  
+  console.log('✅ Created 2 organizations')
 
   // Create or find locations (prevent duplicates)
   const woodSquare = await prisma.location.upsert({
