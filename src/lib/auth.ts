@@ -31,6 +31,7 @@ export const authOptions: NextAuthOptions = {
           },
           include: {
             location: true,
+            organization: true,
           },
         })
 
@@ -53,6 +54,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           locationId: user.locationId,
+          organizationId: user.organizationId,
         }
       },
     }),
@@ -65,6 +67,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           role: (user as any).role,
           locationId: (user as any).locationId,
+          organizationId: (user as any).organizationId,
         }
       }
       return token
@@ -77,6 +80,7 @@ export const authOptions: NextAuthOptions = {
           id: token.id as string,
           role: token.role as string,
           locationId: token.locationId as string | null,
+          organizationId: token.organizationId as string | null,
         },
       }
     },

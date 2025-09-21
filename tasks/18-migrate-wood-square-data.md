@@ -1,8 +1,8 @@
-# Task 18: Migrate Wood Square Data to Organization
+# Task 18: Migrate Snap Fitness Singapore Data to Organization
 
 **Complexity: 2/10**  
 **Priority: CRITICAL (SaaS Foundation)**  
-**Status: Not Started**  
+**Status: ✅ COMPLETED**  
 **Dependencies: Task 17 (organizationId fields)**  
 **Estimated Time: 1 hour**
 
