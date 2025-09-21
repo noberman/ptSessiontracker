@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { EmailService } from '@/lib/email/sender'
 import { renderSessionValidationEmail } from '@/lib/email/render'
+import { getOrganizationId } from '@/lib/organization-context'
 import crypto from 'crypto'
 
 export async function GET(request: Request) {
@@ -11,6 +12,14 @@ export async function GET(request: Request) {
   
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Get organization context
+  let orgId: string
+  try {
+    orgId = await getOrganizationId()
+  } catch (error) {
+    return NextResponse.json({ error: 'No organization context' }, { status: 400 })
   }
 
   const { searchParams } = new URL(request.url)
@@ -25,7 +34,12 @@ export async function GET(request: Request) {
   
   const skip = (page - 1) * limit
 
-  const where: any = {}
+  const where: any = {
+    // Filter sessions by trainer's organization
+    trainer: {
+      organizationId: orgId
+    }
+  }
 
   // Filter by clients (multi-select)
   if (clientIds) {
@@ -148,6 +162,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Get organization context
+  let orgId: string
+  try {
+    orgId = await getOrganizationId()
+  } catch (error) {
+    return NextResponse.json({ error: 'No organization context' }, { status: 400 })
+  }
+
   try {
     const body = await request.json()
     const {
@@ -180,14 +202,19 @@ export async function POST(request: Request) {
         )
       }
       
-      // Verify the trainer exists and is active
+      // Verify the trainer exists, is active, and belongs to the organization
       const trainer = await prisma.user.findUnique({
-        where: { id: trainerId, role: 'TRAINER', active: true }
+        where: { 
+          id: trainerId, 
+          role: 'TRAINER', 
+          active: true,
+          organizationId: orgId
+        }
       })
       
       if (!trainer) {
         return NextResponse.json(
-          { error: 'Invalid trainer selected' },
+          { error: 'Invalid trainer selected or trainer not in your organization' },
           { status: 400 }
         )
       }
@@ -252,7 +279,7 @@ export async function POST(request: Request) {
       // Check if trainer is at the same location as the client
       const trainer = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { locationId: true }
+        select: { locationId: true, organizationId: true }
       })
 
       if (trainer?.locationId !== client.locationId) {
@@ -261,6 +288,27 @@ export async function POST(request: Request) {
           { status: 403 }
         )
       }
+      
+      // Verify trainer belongs to the organization
+      if (trainer?.organizationId !== orgId) {
+        return NextResponse.json(
+          { error: 'Trainer does not belong to your organization' },
+          { status: 403 }
+        )
+      }
+    }
+
+    // Verify the actual trainer (could be different from session user) belongs to the organization
+    const actualTrainer = await prisma.user.findUnique({
+      where: { id: actualTrainerId },
+      select: { organizationId: true }
+    })
+    
+    if (actualTrainer?.organizationId !== orgId) {
+      return NextResponse.json(
+        { error: 'Selected trainer does not belong to your organization' },
+        { status: 403 }
+      )
     }
 
     // Generate validation token (only if not a no-show)

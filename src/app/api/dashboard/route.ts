@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getOrganizationId } from '@/lib/organization-context'
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions)
@@ -60,25 +61,48 @@ export async function GET(request: Request) {
       dateTo.setHours(23, 59, 59, 999)
     }
 
+    // Get organization context
+    const organizationId = await getOrganizationId()
+    
     // Build where clause based on user role
     // eslint-disable-next-line prefer-const
     let sessionsWhere: any = {
       sessionDate: {
         gte: dateFrom,
         lte: dateTo
+      },
+      trainer: {
+        organizationId // Filter sessions by organization
       }
     }
 
     // eslint-disable-next-line prefer-const
-    let clientsWhere: any = { active: true }
+    let clientsWhere: any = { 
+      active: true,
+      primaryTrainer: {
+        organizationId // Filter clients by organization
+      }
+    }
     // eslint-disable-next-line prefer-const
-    let trainersWhere: any = { role: 'TRAINER', active: true }
+    let trainersWhere: any = { 
+      role: 'TRAINER', 
+      active: true,
+      organizationId // Filter trainers by organization
+    }
 
     // Role-specific filtering
     if (session.user.role === 'TRAINER') {
       // Trainer sees only their own data
       sessionsWhere.trainerId = session.user.id
+      sessionsWhere.trainer = { 
+        id: session.user.id,
+        organizationId 
+      }
       clientsWhere.primaryTrainerId = session.user.id
+      clientsWhere.primaryTrainer = {
+        id: session.user.id,
+        organizationId
+      }
       
       // Get trainer's own stats
       const [

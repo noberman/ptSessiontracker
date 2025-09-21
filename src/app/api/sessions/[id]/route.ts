@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getOrganizationId } from '@/lib/organization-context'
 
 export async function GET(
   request: Request,
@@ -14,9 +15,23 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Get organization context
+  let orgId: string
+  try {
+    orgId = await getOrganizationId()
+  } catch (error) {
+    return NextResponse.json({ error: 'No organization context' }, { status: 400 })
+  }
+
   try {
     const trainingSession = await prisma.session.findUnique({
-      where: { id },
+      where: { 
+        id,
+        // Ensure session's trainer belongs to the organization
+        trainer: {
+          organizationId: orgId
+        }
+      },
       include: {
         client: {
           select: {
@@ -94,6 +109,14 @@ export async function PUT(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Get organization context
+  let orgId: string
+  try {
+    orgId = await getOrganizationId()
+  } catch (error) {
+    return NextResponse.json({ error: 'No organization context' }, { status: 400 })
+  }
+
   try {
     const body = await request.json()
     const {
@@ -104,9 +127,15 @@ export async function PUT(
       cancelled
     } = body
 
-    // Get the existing session
+    // Get the existing session and verify organization access
     const existingSession = await prisma.session.findUnique({
-      where: { id }
+      where: { 
+        id,
+        // Ensure session's trainer belongs to the organization
+        trainer: {
+          organizationId: orgId
+        }
+      }
     })
 
     if (!existingSession) {
@@ -242,6 +271,14 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Get organization context
+  let orgId: string
+  try {
+    orgId = await getOrganizationId()
+  } catch (error) {
+    return NextResponse.json({ error: 'No organization context' }, { status: 400 })
+  }
+
   // Only admins and PT managers can delete sessions
   if (session.user.role !== 'ADMIN' && session.user.role !== 'PT_MANAGER') {
     return NextResponse.json(
@@ -253,7 +290,13 @@ export async function DELETE(
   try {
     // Get the session to check if it exists and get package info
     const existingSession = await prisma.session.findUnique({
-      where: { id },
+      where: { 
+        id,
+        // Ensure session's trainer belongs to the organization
+        trainer: {
+          organizationId: orgId
+        }
+      },
       include: {
         package: true
       }

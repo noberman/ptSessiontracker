@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { getOrganizationId } from '@/lib/organization-context'
 
 // GET /api/users - List all users with pagination and filters
 export async function GET(request: NextRequest) {
@@ -27,8 +28,12 @@ export async function GET(request: NextRequest) {
     
     const skip = (page - 1) * limit
 
+    // Get organization context
+    const organizationId = await getOrganizationId()
+    
     const where: any = {
       active: true,
+      organizationId, // Filter by organization
     }
 
     if (search) {
@@ -149,6 +154,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Get organization context
+    const organizationId = await getOrganizationId()
+    
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
@@ -160,6 +168,7 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         role,
         locationId,
+        organizationId, // Set organization for new user
       },
       select: {
         id: true,

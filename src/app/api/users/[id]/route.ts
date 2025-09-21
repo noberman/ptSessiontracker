@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { getOrganizationId } from '@/lib/organization-context'
 
 // GET /api/users/[id] - Get single user details
 export async function GET(
@@ -17,8 +18,14 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get organization context
+    const organizationId = await getOrganizationId()
+
     const user = await prisma.user.findUnique({
-      where: { id },
+      where: { 
+        id,
+        organizationId // Ensure user belongs to same org
+      },
       select: {
         id: true,
         name: true,
@@ -78,9 +85,15 @@ export async function PUT(
     const body = await request.json()
     const { name, email, password, role, locationId, active } = body
 
+    // Get organization context
+    const organizationId = await getOrganizationId()
+
     // Get current user
     const currentUser = await prisma.user.findUnique({
-      where: { id },
+      where: { 
+        id,
+        organizationId // Ensure user belongs to same org
+      },
     })
 
     if (!currentUser) {
@@ -119,7 +132,8 @@ export async function PUT(
       const adminCount = await prisma.user.count({
         where: { 
           role: 'ADMIN',
-          active: true
+          active: true,
+          organizationId // Count admins in same org
         }
       })
       if (adminCount <= 1) {
@@ -232,9 +246,15 @@ export async function DELETE(
       )
     }
 
+    // Get organization context
+    const organizationId = await getOrganizationId()
+
     // Prevent removing last admin
     const userToDelete = await prisma.user.findUnique({
-      where: { id },
+      where: { 
+        id,
+        organizationId // Ensure user belongs to same org
+      },
       select: { role: true }
     })
     
@@ -242,7 +262,8 @@ export async function DELETE(
       const adminCount = await prisma.user.count({
         where: { 
           role: 'ADMIN',
-          active: true
+          active: true,
+          organizationId // Count admins in same org
         }
       })
       if (adminCount <= 1) {

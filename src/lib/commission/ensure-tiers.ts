@@ -20,31 +20,40 @@ export const DEFAULT_COMMISSION_TIERS: DefaultTier[] = [
 ]
 
 /**
- * Ensures commission tiers exist in the database
+ * Ensures commission tiers exist for an organization in the database
  * @returns true if tiers were created, false if they already existed
  */
-export async function ensureCommissionTiers(): Promise<boolean> {
+export async function ensureCommissionTiers(organizationId?: string): Promise<boolean> {
   try {
-    // Check if any tiers exist
-    const existingTiers = await prisma.commissionTier.count()
-    
-    if (existingTiers > 0) {
-      console.log(`✅ Commission tiers already exist (${existingTiers} tiers)`)
+    // If no organizationId provided, we can't proceed
+    if (!organizationId) {
+      console.log('⚠️  No organizationId provided, skipping tier creation')
       return false
     }
     
-    console.log('📊 No commission tiers found, creating defaults...')
+    // Check if any tiers exist for this organization
+    const existingTiers = await prisma.commissionTier.count({
+      where: { organizationId }
+    })
     
-    // Create default tiers
+    if (existingTiers > 0) {
+      console.log(`✅ Commission tiers already exist for org ${organizationId} (${existingTiers} tiers)`)
+      return false
+    }
+    
+    console.log(`📊 No commission tiers found for org ${organizationId}, creating defaults...`)
+    
+    // Create default tiers for this organization
     await prisma.commissionTier.createMany({
       data: DEFAULT_COMMISSION_TIERS.map(tier => ({
         minSessions: tier.minSessions,
         maxSessions: tier.maxSessions,
-        percentage: tier.percentage
+        percentage: tier.percentage,
+        organizationId
       }))
     })
     
-    console.log('✅ Default commission tiers created successfully')
+    console.log(`✅ Default commission tiers created successfully for org ${organizationId}`)
     return true
     
   } catch (error) {
@@ -54,15 +63,18 @@ export async function ensureCommissionTiers(): Promise<boolean> {
 }
 
 /**
- * Get commission tiers, creating defaults if none exist
+ * Get commission tiers for an organization, creating defaults if none exist
  * This ensures there are always tiers available
  */
-export async function getOrCreateCommissionTiers() {
-  // First ensure tiers exist
-  await ensureCommissionTiers()
+export async function getOrCreateCommissionTiers(organizationId?: string) {
+  // First ensure tiers exist for this organization
+  if (organizationId) {
+    await ensureCommissionTiers(organizationId)
+  }
   
   // Then return them
   const tiers = await prisma.commissionTier.findMany({
+    where: organizationId ? { organizationId } : undefined,
     orderBy: { minSessions: 'asc' }
   })
   
