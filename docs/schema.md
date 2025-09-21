@@ -13,6 +13,38 @@ This document provides comprehensive documentation of the Prisma schema for the 
 
 ## Schema Models
 
+### Organization
+Represents a fitness organization/company that can have multiple locations and users.
+
+```prisma
+model Organization {
+  id                   String             @id @default(cuid())
+  name                 String
+  email                String             @unique
+  phone                String?
+  subscriptionTier     SubscriptionTier   @default(FREE)
+  subscriptionStatus   SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  
+  // Relations
+  locations            Location[]
+  users                User[]
+  commissionTiers      CommissionTier[]
+  packageTemplates     PackageTemplate[]
+
+  @@map("organizations")
+}
+```
+
+**Business Rules:**
+- Email must be unique across organizations
+- Each organization has one subscription
+- Stripe IDs are populated when subscription is activated
+- Organizations can have multiple locations (branches)
+
 ### User
 Represents system users including trainers, managers, and administrators.
 
@@ -24,11 +56,13 @@ model User {
   name             String
   role             Role      @default(TRAINER)
   locationId       String?
+  organizationId   String?   // Multi-tenant field
   active           Boolean   @default(true)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
   // Relations
+  organization     Organization? @relation(fields: [organizationId], references: [id])
   location         Location? @relation(fields: [locationId], references: [id])
   sessions         Session[]
   assignedClients  Client[]  @relation("ClientPrimaryTrainer")
@@ -80,16 +114,18 @@ Represents physical gym locations/clubs.
 
 ```prisma
 model Location {
-  id        String   @id @default(cuid())
-  name      String
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String   @unique
+  active         Boolean  @default(true)
+  organizationId String?  // Multi-tenant field
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
-  users     User[]
-  clients   Client[]
-  sessions  Session[]
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  users          User[]
+  clients        Client[]
+  sessions       Session[]
 
   @@map("locations")
 }
@@ -191,6 +227,63 @@ See `/docs/COMMISSION_SYSTEM_DESIGN.md` for complete commission system architect
 - Detailed calculation examples
 - Migration strategy for multi-tenant
 
+### PackageTemplate
+Defines reusable package types for organizations.
+
+```prisma
+model PackageTemplate {
+  id             String    @id @default(cuid())
+  name           String    @unique
+  displayName    String
+  category       String
+  sessions       Int
+  price          Float
+  sessionValue   Float
+  organizationId String?   // Multi-tenant field
+  active         Boolean   @default(true)
+  sortOrder      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  // Relations
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  
+  @@index([category])
+  @@index([active])
+  @@map("package_templates")
+}
+```
+
+**Business Rules:**
+- Templates are organization-specific
+- Used to quickly create new packages
+- Defines standard pricing and session counts
+
+### CommissionTier
+Defines commission percentage tiers based on session counts.
+
+```prisma
+model CommissionTier {
+  id             String    @id @default(cuid())
+  minSessions    Int
+  maxSessions    Int?
+  percentage     Float
+  organizationId String?   // Multi-tenant field
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  // Relations
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  
+  @@map("commission_tiers")
+}
+```
+
+**Business Rules:**
+- Each organization can define their own tiers
+- Tiers define percentage rates for session ranges
+- Used in commission calculations
+
 ### AuditLog
 Tracks all data modifications for compliance and debugging.
 
@@ -230,6 +323,27 @@ enum Role {
   CLUB_MANAGER  // Can manage single location
   PT_MANAGER    // Can manage multiple locations
   ADMIN         // Full system access
+}
+```
+
+### SubscriptionTier
+Defines organization subscription levels.
+
+```prisma
+enum SubscriptionTier {
+  FREE  // Basic features
+  PRO   // Full features
+}
+```
+
+### SubscriptionStatus
+Defines organization subscription status.
+
+```prisma
+enum SubscriptionStatus {
+  ACTIVE    // Subscription is active
+  CANCELED  // Subscription cancelled
+  PAST_DUE  // Payment overdue
 }
 ```
 
