@@ -53,9 +53,14 @@ export async function PUT(request: NextRequest, props: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    // Only admins can update organizations
-    if (session.user.role !== 'ADMIN') {
+    // Check if user belongs to this organization
+    if (session.user.organizationId !== params.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    
+    // Only ADMIN and PT_MANAGER can update organization
+    if (!['ADMIN', 'PT_MANAGER'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
     
     const body = await request.json()

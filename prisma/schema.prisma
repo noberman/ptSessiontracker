@@ -16,40 +16,26 @@ model Organization {
   subscriptionStatus   SubscriptionStatus @default(ACTIVE)
   stripeCustomerId     String?            @unique
   stripeSubscriptionId String?
+  commissionMethod     String             @default("PROGRESSIVE")
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
-  
-  // Relations
-  locations            Location[]
-  users                User[]
   commissionTiers      CommissionTier[]
+  locations            Location[]
   packageTypes         PackageType[]
+  users                User[]
 
   @@map("organizations")
 }
 
-enum SubscriptionTier {
-  FREE
-  PRO
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  CANCELED
-  PAST_DUE
-}
-
 model Location {
-  id             String         @id @default(cuid())
-  name           String         @unique
-  active         Boolean        @default(true)
+  id             String        @id @default(cuid())
+  name           String        @unique
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   organizationId String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  
-  // Relations
-  organization   Organization?  @relation(fields: [organizationId], references: [id])
   clients        Client[]
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   sessions       Session[]
   users          User[]
 
@@ -57,22 +43,20 @@ model Location {
 }
 
 model User {
-  id              String         @id @default(cuid())
-  email           String         @unique
+  id              String        @id @default(cuid())
+  email           String        @unique
   password        String
   name            String
-  role            Role           @default(TRAINER)
+  role            Role          @default(TRAINER)
   locationId      String?
+  active          Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   organizationId  String?
-  active          Boolean        @default(true)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  
-  // Relations
-  organization    Organization?  @relation(fields: [organizationId], references: [id])
-  location        Location?      @relation(fields: [locationId], references: [id])
-  assignedClients Client[]       @relation("ClientPrimaryTrainer")
+  assignedClients Client[]      @relation("ClientPrimaryTrainer")
   sessions        Session[]
+  location        Location?     @relation(fields: [locationId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
 
   @@map("users")
 }
@@ -98,8 +82,7 @@ model Client {
 model Package {
   id                String       @id @default(cuid())
   clientId          String
-  packageType       String       @default("Custom") // Keeping for backward compatibility
-  packageTypeId     String?      // New field for PackageType relation
+  packageType       String       @default("Custom")
   name              String
   totalValue        Float
   totalSessions     Int
@@ -110,8 +93,7 @@ model Package {
   active            Boolean      @default(true)
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
-  
-  // Relations
+  packageTypeId     String?
   client            Client       @relation(fields: [clientId], references: [id])
   packageTypeModel  PackageType? @relation(fields: [packageTypeId], references: [id])
   sessions          Session[]
@@ -131,11 +113,11 @@ model Session {
   validatedAt      DateTime?
   validationToken  String?   @unique
   validationExpiry DateTime?
-  cancelled        Boolean   @default(false)
-  cancelledAt      DateTime?
   notes            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  cancelled        Boolean   @default(false)
+  cancelledAt      DateTime?
   client           Client    @relation(fields: [clientId], references: [id])
   location         Location  @relation(fields: [locationId], references: [id])
   package          Package?  @relation(fields: [packageId], references: [id])
@@ -146,22 +128,19 @@ model Session {
   @@map("sessions")
 }
 
-
 model PackageType {
-  id              String        @id @default(cuid())
+  id              String       @id @default(cuid())
   organizationId  String
-  name            String        // User-friendly name like "Elite 12 Sessions"
-  defaultSessions Int?          // Default session count for this type
-  defaultPrice    Float?        // Default price for this type
-  isActive        Boolean       @default(true)
-  sortOrder       Int           @default(0)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  // Relations
-  organization    Organization  @relation(fields: [organizationId], references: [id])
-  packages        Package[]     // Packages using this type
-  
+  name            String
+  defaultSessions Int?
+  defaultPrice    Float?
+  isActive        Boolean      @default(true)
+  sortOrder       Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  packages        Package[]
+
   @@unique([organizationId, name])
   @@index([organizationId])
   @@map("package_types")
@@ -172,11 +151,9 @@ model CommissionTier {
   minSessions    Int
   maxSessions    Int?
   percentage     Float
-  organizationId String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  
-  // Relations
+  organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
   @@map("commission_tiers")
@@ -217,6 +194,17 @@ model AuditLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
 }
 
 enum Role {

@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { CommissionDashboard } from '@/components/commission/CommissionDashboard'
-import { calculateMonthlyCommissions, getCommissionMethod } from '@/lib/commission/calculator'
+import { CommissionDashboard } from '@/components/commission/CommissionDashboardSimple'
+import { calculateMonthlyCommissions } from '@/lib/commission/calculator'
 import { prisma } from '@/lib/prisma'
 import { ensureCommissionTiers } from '@/lib/commission/ensure-tiers'
 
@@ -11,7 +11,6 @@ export default async function CommissionPage({
 }: {
   searchParams: Promise<{ 
     month?: string
-    method?: 'PROGRESSIVE' | 'GRADUATED'
     locationId?: string
   }>
 }) {
@@ -27,8 +26,13 @@ export default async function CommissionPage({
     redirect('/my-commission')
   }
   
+  // Get organization ID
+  const organizationId = session.user.organizationId
+  
   // Ensure commission tiers exist (creates defaults if empty)
-  await ensureCommissionTiers()
+  if (organizationId) {
+    await ensureCommissionTiers(organizationId)
+  }
   
   // Get current month or from params
   const currentDate = new Date()
@@ -36,8 +40,16 @@ export default async function CommissionPage({
   const [year, month] = monthParam.split('-').map(Number)
   const selectedMonth = new Date(year, month - 1)
   
-  // Get commission method
-  const method = params.method || await getCommissionMethod()
+  // Get commission method from organization settings
+  let method: 'PROGRESSIVE' | 'GRADUATED' = 'PROGRESSIVE'
+  
+  if (organizationId) {
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { commissionMethod: true }
+    })
+    method = (organization?.commissionMethod || 'PROGRESSIVE') as 'PROGRESSIVE' | 'GRADUATED'
+  }
   
   // Get location filter for club managers
   let locationId = params.locationId
@@ -51,11 +63,6 @@ export default async function CommissionPage({
     locationId,
     method
   )
-  
-  // Get commission tiers for display
-  const tiers = await prisma.commissionTier.findMany({
-    orderBy: { minSessions: 'asc' }
-  })
   
   // Get locations for filter (admins and PT managers only)
   let locations: Array<{ id: string; name: string }> = []
@@ -89,12 +96,6 @@ export default async function CommissionPage({
         commissions={commissions}
         totals={totals}
         month={monthParam}
-        method={method}
-        tiers={tiers.map(t => ({
-          minSessions: t.minSessions,
-          maxSessions: t.maxSessions,
-          percentage: t.percentage
-        }))}
         locations={locations}
         selectedLocationId={locationId}
         currentUserRole={session.user.role}

@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   MapPin,
   DollarSign,
+  Settings,
 } from 'lucide-react'
 import Image from 'next/image'
 import { useState } from 'react'
@@ -83,6 +84,12 @@ const navItems: NavItem[] = [
     title: 'Users',
     href: '/users',
     icon: Users,
+    roles: ['PT_MANAGER', 'ADMIN', 'CLUB_MANAGER'],
+  },
+  {
+    title: 'Settings',
+    href: '/settings',
+    icon: Settings,
     roles: ['PT_MANAGER', 'ADMIN', 'CLUB_MANAGER'],
   },
   {

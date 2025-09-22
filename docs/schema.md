@@ -227,62 +227,37 @@ See `/docs/COMMISSION_SYSTEM_DESIGN.md` for complete commission system architect
 - Detailed calculation examples
 - Migration strategy for multi-tenant
 
-### PackageTemplate
-Defines reusable package types for organizations.
+### PackageType
+Defines package types available for an organization (e.g., "12 Prime PT Sessions", "3 Session Intro Pack").
 
 ```prisma
-model PackageTemplate {
-  id             String    @id @default(cuid())
-  name           String    @unique
-  displayName    String
-  category       String
-  sessions       Int
-  price          Float
-  sessionValue   Float
-  organizationId String?   // Multi-tenant field
-  active         Boolean   @default(true)
-  sortOrder      Int       @default(0)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+model PackageType {
+  id              String        @id @default(cuid())
+  organizationId  String
+  name            String        // User-friendly name like "Elite 12 Sessions"
+  defaultSessions Int?          // Default session count for this type
+  defaultPrice    Float?        // Default price for this type
+  isActive        Boolean       @default(true)
+  sortOrder       Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   
   // Relations
-  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+  packages        Package[]     // Packages using this type
   
-  @@index([category])
-  @@index([active])
-  @@map("package_templates")
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("package_types")
 }
 ```
 
 **Business Rules:**
-- Templates are organization-specific
-- Used to quickly create new packages
-- Defines standard pricing and session counts
+- Each organization defines their own package types
+- Name is user-friendly and fully editable (no internal/display split)
+- Used to categorize packages and set defaults
+- Required organizationId (multi-tenant)
 
-### CommissionTier
-Defines commission percentage tiers based on session counts.
-
-```prisma
-model CommissionTier {
-  id             String    @id @default(cuid())
-  minSessions    Int
-  maxSessions    Int?
-  percentage     Float
-  organizationId String?   // Multi-tenant field
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  
-  // Relations
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  
-  @@map("commission_tiers")
-}
-```
-
-**Business Rules:**
-- Each organization can define their own tiers
-- Tiers define percentage rates for session ranges
-- Used in commission calculations
 
 ### AuditLog
 Tracks all data modifications for compliance and debugging.
@@ -445,9 +420,10 @@ enum SubscriptionStatus {
 
 ## Schema Versioning
 
-Current Version: **1.0.0**
+Current Version: **2.0.0**
 
 ### Version History
+- 2.0.0: Simplified package system - removed PackageTemplate, consolidated PackageType with single name field
 - 1.0.0: Initial schema with primary trainer support
 
 ### Breaking Changes Policy
