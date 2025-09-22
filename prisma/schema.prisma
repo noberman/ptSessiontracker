@@ -24,6 +24,7 @@ model Organization {
   users                User[]
   commissionTiers      CommissionTier[]
   packageTemplates     PackageTemplate[]
+  packageTypes         PackageType[]
 
   @@map("organizations")
 }
@@ -96,20 +97,24 @@ model Client {
 }
 
 model Package {
-  id                String    @id @default(cuid())
+  id                String       @id @default(cuid())
   clientId          String
-  packageType       String    @default("Custom")
+  packageType       String       @default("Custom") // Keeping for backward compatibility
+  packageTypeId     String?      // New field for PackageType relation
   name              String
   totalValue        Float
   totalSessions     Int
-  remainingSessions Int       @default(0)
+  remainingSessions Int          @default(0)
   sessionValue      Float
   startDate         DateTime?
   expiresAt         DateTime?
-  active            Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  client            Client    @relation(fields: [clientId], references: [id])
+  active            Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  // Relations
+  client            Client       @relation(fields: [clientId], references: [id])
+  packageTypeModel  PackageType? @relation(fields: [packageTypeId], references: [id])
   sessions          Session[]
 
   @@map("packages")
@@ -162,6 +167,28 @@ model PackageTemplate {
   @@index([category])
   @@index([active])
   @@map("package_templates")
+}
+
+model PackageType {
+  id              String        @id @default(cuid())
+  organizationId  String
+  name            String        // "basic", "standard", "premium", "elite", etc.
+  displayName     String        // User-friendly name
+  description     String?
+  defaultSessions Int?          // Default session count for this type
+  defaultPrice    Float?        // Default price for this type
+  isActive        Boolean       @default(true)
+  sortOrder       Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+  packages        Package[]     // Packages using this type
+  
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("package_types")
 }
 
 model CommissionTier {
