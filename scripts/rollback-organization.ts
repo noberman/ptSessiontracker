@@ -31,11 +31,9 @@ async function rollbackOrganization() {
     })
     console.log(`✅ Cleared organizationId from ${tiersResult.count} commission tiers`)
     
-    const templatesResult = await prisma.packageTemplate.updateMany({
-      where: { organizationId: { not: null } },
-      data: { organizationId: null }
-    })
-    console.log(`✅ Cleared organizationId from ${templatesResult.count} package templates`)
+    // Note: PackageTypes require organizationId, so we can't set them to null
+    // They would need to be deleted if a full rollback is needed
+    console.log(`⚠️  PackageTypes require organizationId and cannot be set to null`)
     
     console.log('\n⚠️  Rollback completed. organizationId fields have been set to null.')
     console.log('Note: Organization records themselves were NOT deleted.')
