@@ -1,13 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
-import { PackageFilters } from '@/components/packages/PackageFilters'
-import { PackageTable } from '@/components/packages/PackageTable'
+import { PackagesPageClient } from '@/components/packages/PackagesPageClient'
+import { getOrganizationId } from '@/lib/organization-context'
 
 export default async function PackagesPage({
   searchParams,
@@ -104,6 +100,9 @@ export default async function PackagesPage({
       where.createdAt.lte = endDateTime
     }
   }
+
+  // Get organization context
+  const organizationId = await getOrganizationId()
 
   // Restrict based on user role
   if (session.user.role === 'TRAINER') {
@@ -218,37 +217,19 @@ export default async function PackagesPage({
   const canCreate = session.user.role !== 'TRAINER'
   const canEdit = session.user.role !== 'TRAINER'
   const canDelete = session.user.role === 'ADMIN'
+  const canManageTypes = ['PT_MANAGER', 'ADMIN'].includes(session.user.role)
 
   return (
-    <div className="min-h-screen bg-background-secondary">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Packages</h1>
-            <p className="text-sm text-text-secondary mt-1">
-              Manage client training packages
-            </p>
-          </div>
-          {canCreate && (
-            <Link href="/packages/new">
-              <Button>Add New Package</Button>
-            </Link>
-          )}
-        </div>
-
-        <PackageFilters
-          clients={availableClients}
-          locations={availableLocations}
-          currentUserRole={session.user.role}
-        />
-
-        <PackageTable 
-          initialPackages={packages}
-          pagination={pagination}
-          canEdit={canEdit}
-          canDelete={canDelete}
-        />
-      </div>
-    </div>
+    <PackagesPageClient
+      packages={packages}
+      pagination={pagination}
+      availableClients={availableClients}
+      availableLocations={availableLocations}
+      currentUserRole={session.user.role}
+      canCreate={canCreate}
+      canEdit={canEdit}
+      canDelete={canDelete}
+      canManageTypes={canManageTypes}
+    />
   )
 }

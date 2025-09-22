@@ -97,6 +97,7 @@ export async function PUT(
     const body = await request.json()
     const { 
       name, 
+      packageTypeId,
       totalValue, 
       totalSessions,
       remainingSessions,
@@ -131,6 +132,7 @@ export async function PUT(
     const updateData: any = {}
     
     if (name !== undefined) updateData.name = name
+    if (packageTypeId !== undefined) updateData.packageTypeId = packageTypeId || null
     if (active !== undefined) updateData.active = active
     if (startDate !== undefined) updateData.startDate = new Date(startDate)
     if (expiresAt !== undefined) updateData.expiresAt = expiresAt ? new Date(expiresAt) : null
@@ -157,6 +159,7 @@ export async function PUT(
       select: {
         id: true,
         packageType: true,
+        packageTypeId: true,
         name: true,
         totalValue: true,
         totalSessions: true,

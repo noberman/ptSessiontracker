@@ -36,7 +36,6 @@ export function middleware(request: NextRequest) {
     '/admin',
     '/profile',
     '/locations',
-    '/package-templates',
     '/commission',
     '/my-commission',
   ]
