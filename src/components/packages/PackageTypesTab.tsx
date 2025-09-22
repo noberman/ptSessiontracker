@@ -209,15 +209,14 @@ export function PackageTypesTab() {
   }
 
   const handleClone = (type: PackageType) => {
-    // Create a clone with modified name
+    // Create a clone with modified name, excluding id and _count
+    const { id, _count, ...typeWithoutId } = type
     const clonedType = {
-      ...type,
-      id: undefined, // Remove ID so it creates new
+      ...typeWithoutId,
       name: `${type.name} (Copy)`,
       sortOrder: packageTypes.length, // Put at end
-      _count: undefined // Remove usage count
     }
-    setEditingType(clonedType)
+    setEditingType(clonedType as PackageType)
     setShowForm(true)
   }
 
@@ -330,7 +329,7 @@ export function PackageTypesTab() {
 
       {packageTypes.length === 0 && (
         <Card className="p-6 text-center text-text-secondary">
-          No package types defined yet. Click "Add Package Type" to create your first one.
+          No package types defined yet. Click &quot;Add Package Type&quot; to create your first one.
         </Card>
       )}
     </div>

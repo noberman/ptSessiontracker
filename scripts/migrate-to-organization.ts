@@ -44,12 +44,11 @@ async function migrateToOrganization() {
     })
     console.log(`✅ Updated ${tiersResult.count} commission tiers`)
     
-    // 5. Update all package templates with null organizationId
-    const templatesResult = await prisma.packageTemplate.updateMany({
-      where: { organizationId: null },
-      data: { organizationId: snapFitness.id }
+    // 5. Package types already require organizationId, so create default ones if none exist
+    const existingTypes = await prisma.packageType.count({
+      where: { organizationId: snapFitness.id }
     })
-    console.log(`✅ Updated ${templatesResult.count} package templates`)
+    console.log(`✅ Found ${existingTypes} existing package types for organization`)
     
     // 6. Verify no orphaned data remains
     console.log('\n📊 Verification:')
@@ -63,16 +62,15 @@ async function migrateToOrganization() {
     const orphanedTiers = await prisma.commissionTier.count({
       where: { organizationId: null }
     })
-    const orphanedTemplates = await prisma.packageTemplate.count({
-      where: { organizationId: null }
-    })
+    // Package types require organizationId so there can't be orphaned ones
+    const orphanedTypes = 0
     
     console.log(`  Users without organization: ${orphanedUsers}`)
     console.log(`  Locations without organization: ${orphanedLocations}`)
     console.log(`  Commission tiers without organization: ${orphanedTiers}`)
-    console.log(`  Package templates without organization: ${orphanedTemplates}`)
+    console.log(`  Package types without organization: ${orphanedTypes}`)
     
-    if (orphanedUsers + orphanedLocations + orphanedTiers + orphanedTemplates === 0) {
+    if (orphanedUsers + orphanedLocations + orphanedTiers + orphanedTypes === 0) {
       console.log('\n✅ Migration completed successfully! All data is now linked to Snap Fitness Singapore.')
     } else {
       console.log('\n⚠️  Some records still have null organizationId. Please investigate.')

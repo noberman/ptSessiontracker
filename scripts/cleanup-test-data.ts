@@ -50,14 +50,14 @@ async function cleanupTestData() {
       prisma.client.count(),
       prisma.user.count(),
       prisma.location.count(),
-      prisma.packageTemplate.count(),
+      prisma.packageType.count(),
     ])
     
     console.log('\n📊 Remaining data:')
     console.log(`  - Clients: ${clientCount}`)
     console.log(`  - Users: ${userCount}`)
     console.log(`  - Locations: ${locationCount}`)
-    console.log(`  - Package Templates: ${templateCount}`)
+    console.log(`  - Package Types: ${templateCount}`)
     
   } catch (error) {
     console.error('❌ Cleanup failed:', error)
