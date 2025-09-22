@@ -67,8 +67,6 @@ export async function PUT(
     const body = await request.json()
     const { 
       name, 
-      displayName, 
-      description, 
       defaultSessions, 
       defaultPrice, 
       sortOrder,
@@ -96,7 +94,7 @@ export async function PUT(
         where: {
           organizationId_name: {
             organizationId,
-            name: name.toLowerCase()
+            name: name.trim()
           }
         }
       })
@@ -110,9 +108,7 @@ export async function PUT(
     }
     
     const updateData: any = {}
-    if (name !== undefined) updateData.name = name.toLowerCase()
-    if (displayName !== undefined) updateData.displayName = displayName
-    if (description !== undefined) updateData.description = description
+    if (name !== undefined) updateData.name = name.trim()
     if (defaultSessions !== undefined) updateData.defaultSessions = defaultSessions
     if (defaultPrice !== undefined) updateData.defaultPrice = defaultPrice
     if (sortOrder !== undefined) updateData.sortOrder = sortOrder

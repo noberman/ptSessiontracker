@@ -6,20 +6,20 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 
-interface PackageTemplate {
+interface PackageType {
   id: string
   name: string
-  displayName: string
-  category: string
-  sessions: number
-  price: number
-  sessionValue: number
+  defaultSessions?: number | null
+  defaultPrice?: number | null
+  isActive: boolean
+  sortOrder: number
 }
 
 interface PackageFormProps {
   packageData?: {
     id: string
     packageType: string
+    packageTypeId?: string | null
     name: string
     totalValue: number
     totalSessions: number
@@ -47,14 +47,14 @@ export function PackageForm({
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [templates, setTemplates] = useState<PackageTemplate[]>([])
-  const [loadingTemplates, setLoadingTemplates] = useState(true)
+  const [packageTypes, setPackageTypes] = useState<PackageType[]>([])
+  const [loadingPackageTypes, setLoadingPackageTypes] = useState(true)
   
   const isEdit = !!packageData
   
   const [formData, setFormData] = useState<{
     clientId: string
-    packageType: string
+    packageTypeId: string
     name: string
     totalValue: number | string
     totalSessions: number | string
@@ -64,7 +64,7 @@ export function PackageForm({
     active: boolean
   }>({
     clientId: packageData?.clientId || preselectedClientId || '',
-    packageType: packageData?.packageType || 'Custom',
+    packageTypeId: packageData?.packageTypeId || '',
     name: packageData?.name || '',
     totalValue: packageData?.totalValue || 0,
     totalSessions: packageData?.totalSessions || 0,
@@ -80,22 +80,22 @@ export function PackageForm({
 
   const [sessionValue, setSessionValue] = useState(0)
 
-  // Fetch package templates
+  // Fetch package types
   useEffect(() => {
-    const fetchTemplates = async () => {
+    const fetchPackageTypes = async () => {
       try {
-        const response = await fetch('/api/package-templates')
+        const response = await fetch('/api/package-types')
         if (response.ok) {
           const data = await response.json()
-          setTemplates(data)
+          setPackageTypes(data)
         }
       } catch (error) {
-        console.error('Failed to fetch templates:', error)
+        console.error('Failed to fetch package types:', error)
       } finally {
-        setLoadingTemplates(false)
+        setLoadingPackageTypes(false)
       }
     }
-    fetchTemplates()
+    fetchPackageTypes()
   }, [])
 
   // Calculate session value when total value or sessions change
@@ -110,14 +110,14 @@ export function PackageForm({
     }
   }, [formData.totalValue, formData.totalSessions])
 
-  // Handle package template selection
-  const handleTemplateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const templateId = e.target.value
+  // Handle package type selection
+  const handlePackageTypeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const typeId = e.target.value
     
-    if (templateId === 'custom') {
+    if (!typeId || typeId === 'custom') {
       setFormData({
         ...formData,
-        packageType: 'Custom',
+        packageTypeId: '',
         name: '',
         totalValue: 0,
         totalSessions: 0,
@@ -126,15 +126,19 @@ export function PackageForm({
       return
     }
     
-    const template = templates.find(t => t.id === templateId)
-    if (template) {
+    const packageType = packageTypes.find(t => t.id === typeId)
+    if (packageType) {
+      const defaultName = packageType.name || ''
+      const defaultSessions = packageType.defaultSessions || 0
+      const defaultPrice = packageType.defaultPrice || 0
+      
       setFormData({
         ...formData,
-        packageType: template.category,
-        name: template.displayName,
-        totalValue: template.price,
-        totalSessions: template.sessions,
-        remainingSessions: isEdit ? formData.remainingSessions : template.sessions,
+        packageTypeId: typeId,
+        name: defaultName,
+        totalValue: defaultPrice,
+        totalSessions: defaultSessions,
+        remainingSessions: isEdit ? formData.remainingSessions : defaultSessions,
       })
     }
   }
@@ -187,7 +191,7 @@ export function PackageForm({
       
       const body: any = {
         clientId: formData.clientId,
-        packageType: formData.packageType,
+        packageTypeId: formData.packageTypeId || null,
         name: formData.name,
         totalValue: totalValue,
         totalSessions: totalSessions,
@@ -268,53 +272,26 @@ export function PackageForm({
 
           {!isEdit && (
             <div>
-              <label htmlFor="template" className="block text-sm font-medium text-text-primary mb-1">
-                Package Template
+              <label htmlFor="packageType" className="block text-sm font-medium text-text-primary mb-1">
+                Package Type
               </label>
               <select
-                id="template"
-                onChange={handleTemplateSelect}
+                id="packageType"
+                value={formData.packageTypeId}
+                onChange={handlePackageTypeSelect}
                 className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                disabled={loadingTemplates}
+                disabled={loadingPackageTypes}
               >
-                <option value="">Select a template</option>
+                <option value="">Select a package type</option>
                 <option value="custom">Custom Package</option>
-                {templates.length > 0 && (
-                  <optgroup label="Prime Packages">
-                    {templates.filter(t => t.category === 'Prime').map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.displayName} ({template.sessions} sessions - ${template.price})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {templates.length > 0 && (
-                  <optgroup label="Elite Packages">
-                    {templates.filter(t => t.category === 'Elite').map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.displayName} ({template.sessions} sessions - ${template.price})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {templates.length > 0 && (
-                  <optgroup label="Transformation Packages">
-                    {templates.filter(t => t.category === 'Transformation').map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.displayName} ({template.sessions} credits - ${template.price})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {templates.length > 0 && (
-                  <optgroup label="Intro Packages">
-                    {templates.filter(t => t.category === 'Intro').map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.displayName} ({template.sessions} sessions - ${template.price})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
+                {packageTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                    {type.defaultSessions && type.defaultPrice && (
+                      <> ({type.defaultSessions} sessions - ${type.defaultPrice})</>
+                    )}
+                  </option>
+                ))}
               </select>
             </div>
           )}
@@ -329,9 +306,7 @@ export function PackageForm({
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder={formData.packageType === 'Custom' ? "Enter package name" : "Name set by template"}
-              readOnly={formData.packageType !== 'Custom'}
-              className={formData.packageType !== 'Custom' ? 'bg-gray-50 cursor-not-allowed' : ''}
+              placeholder={!formData.packageTypeId || formData.packageTypeId === 'custom' ? "Enter package name" : "Name set by package type"}
             />
           </div>
 

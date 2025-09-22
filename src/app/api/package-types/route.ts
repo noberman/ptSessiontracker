@@ -68,17 +68,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { 
       name, 
-      displayName, 
-      description, 
       defaultSessions, 
       defaultPrice, 
       sortOrder 
     } = body
 
     // Validate required fields
-    if (!name || !displayName) {
+    if (!name) {
       return NextResponse.json(
-        { error: 'Name and display name are required' },
+        { error: 'Name is required' },
         { status: 400 }
       )
     }
@@ -91,7 +89,7 @@ export async function POST(request: NextRequest) {
       where: {
         organizationId_name: {
           organizationId,
-          name: name.toLowerCase()
+          name: name.trim()
         }
       }
     })
@@ -107,9 +105,7 @@ export async function POST(request: NextRequest) {
     const packageType = await prisma.packageType.create({
       data: {
         organizationId,
-        name: name.toLowerCase(),
-        displayName,
-        description,
+        name: name.trim(),
         defaultSessions,
         defaultPrice,
         sortOrder: sortOrder || 0
@@ -124,8 +120,7 @@ export async function POST(request: NextRequest) {
         entityType: 'PackageType',
         entityId: packageType.id,
         newValue: {
-          name: packageType.name,
-          displayName: packageType.displayName
+          name: packageType.name
         }
       }
     })

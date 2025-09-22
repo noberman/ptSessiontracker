@@ -23,7 +23,6 @@ model Organization {
   locations            Location[]
   users                User[]
   commissionTiers      CommissionTier[]
-  packageTemplates     PackageTemplate[]
   packageTypes         PackageType[]
 
   @@map("organizations")
@@ -147,34 +146,11 @@ model Session {
   @@map("sessions")
 }
 
-model PackageTemplate {
-  id             String        @id @default(cuid())
-  name           String        @unique
-  displayName    String
-  category       String
-  sessions       Int
-  price          Float
-  sessionValue   Float
-  organizationId String?
-  active         Boolean       @default(true)
-  sortOrder      Int           @default(0)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  
-  // Relations
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-
-  @@index([category])
-  @@index([active])
-  @@map("package_templates")
-}
 
 model PackageType {
   id              String        @id @default(cuid())
   organizationId  String
-  name            String        // "basic", "standard", "premium", "elite", etc.
-  displayName     String        // User-friendly name
-  description     String?
+  name            String        // User-friendly name like "Elite 12 Sessions"
   defaultSessions Int?          // Default session count for this type
   defaultPrice    Float?        // Default price for this type
   isActive        Boolean       @default(true)

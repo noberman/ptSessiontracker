@@ -58,6 +58,15 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           packageType: true,
+          packageTypeId: true,
+          packageTypeModel: {
+            select: {
+              id: true,
+              name: true,
+              displayName: true,
+              description: true,
+            },
+          },
           name: true,
           totalValue: true,
           totalSessions: true,
@@ -125,6 +134,7 @@ export async function POST(request: NextRequest) {
     const { 
       clientId, 
       packageType, 
+      packageTypeId,
       name, 
       totalValue, 
       totalSessions,
@@ -183,6 +193,7 @@ export async function POST(request: NextRequest) {
       data: {
         clientId,
         packageType: packageType || 'Custom',
+        packageTypeId: packageTypeId || null,
         name,
         totalValue,
         totalSessions,
@@ -194,6 +205,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         packageType: true,
+        packageTypeId: true,
         name: true,
         totalValue: true,
         totalSessions: true,
