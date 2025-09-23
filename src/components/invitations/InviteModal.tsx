@@ -7,11 +7,16 @@ import { useRouter } from 'next/navigation'
 
 interface InviteModalProps {
   organizationId: string
+  isOpen?: boolean
+  onClose?: () => void
 }
 
-export default function InviteModal({ organizationId }: InviteModalProps) {
+export default function InviteModal({ 
+  organizationId, 
+  isOpen = false,
+  onClose 
+}: InviteModalProps) {
   const router = useRouter()
-  const [isOpen, setIsOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<'TRAINER' | 'PT_MANAGER' | 'CLUB_MANAGER'>('TRAINER')
   const [loading, setLoading] = useState(false)
@@ -19,24 +24,6 @@ export default function InviteModal({ organizationId }: InviteModalProps) {
   const [success, setSuccess] = useState(false)
   const [bulkEmails, setBulkEmails] = useState<string[]>([])
   const [bulkMode, setBulkMode] = useState(false)
-
-  useEffect(() => {
-    // Listen for modal open events
-    const handleOpenModal = () => setIsOpen(true)
-    const modal = document.getElementById('invite-modal')
-    if (modal) {
-      modal.addEventListener('click', handleOpenModal)
-      // Remove the hidden class if it was added
-      modal.classList.remove('hidden')
-      // Hide the modal element itself
-      modal.style.display = 'none'
-    }
-    return () => {
-      if (modal) {
-        modal.removeEventListener('click', handleOpenModal)
-      }
-    }
-  }, [])
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -116,10 +103,10 @@ export default function InviteModal({ organizationId }: InviteModalProps) {
           setEmail('')
         }
         
-        // Refresh the page after a short delay
+        // Close modal after a short delay
         setTimeout(() => {
           router.refresh()
-          setIsOpen(false)
+          if (onClose) onClose()
         }, 2000)
       }
 
@@ -142,13 +129,15 @@ export default function InviteModal({ organizationId }: InviteModalProps) {
   }
 
   if (!isOpen) {
-    return <div id="invite-modal" style={{ display: 'none' }} />
+    return null
+  }
+
+  const handleClose = () => {
+    if (onClose) onClose()
   }
 
   return (
-    <>
-      <div id="invite-modal" style={{ display: 'none' }} />
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg max-w-md w-full mx-4 relative">
           <div className="p-6">
             {/* Header */}
@@ -160,7 +149,7 @@ export default function InviteModal({ organizationId }: InviteModalProps) {
                 </h2>
               </div>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="text-text-secondary hover:text-text-primary"
               >
                 <X className="w-5 h-5" />
@@ -264,7 +253,7 @@ export default function InviteModal({ organizationId }: InviteModalProps) {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleClose}
                   disabled={loading}
                 >
                   Cancel

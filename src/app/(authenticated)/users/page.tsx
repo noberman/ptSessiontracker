@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { checkInvitationLimit } from '@/lib/invitation-service'
 import UsersPageClient from './UsersPageClient'
-import InviteModal from '@/components/invitations/InviteModal'
 
 export default async function UsersPage({
   searchParams,
@@ -125,19 +124,16 @@ export default async function UsersPage({
   const usageLimits = await checkInvitationLimit(currentUser.organizationId)
 
   return (
-    <>
-      <UsersPageClient
-        initialUsers={users}
-        pagination={pagination}
-        locations={locations}
-        currentUserRole={session.user.role}
-        currentUserLocationId={currentUser.locationId}
-        canEdit={canEdit}
-        canDelete={canDelete}
-        organizationId={currentUser.organizationId}
-        usageLimits={usageLimits}
-      />
-      {canEdit && <InviteModal organizationId={currentUser.organizationId} />}
-    </>
+    <UsersPageClient
+      initialUsers={users}
+      pagination={pagination}
+      locations={locations}
+      currentUserRole={session.user.role}
+      currentUserLocationId={currentUser.locationId}
+      canEdit={canEdit}
+      canDelete={canDelete}
+      organizationId={currentUser.organizationId}
+      usageLimits={usageLimits}
+    />
   )
 }

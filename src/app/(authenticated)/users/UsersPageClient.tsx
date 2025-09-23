@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { UserTable } from '@/components/users/UserTable'
 import { InvitationsTable } from '@/components/invitations/InvitationsTable'
+import InviteModal from '@/components/invitations/InviteModal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { UserSearch } from '@/components/users/UserSearch'
@@ -49,6 +50,7 @@ export default function UsersPageClient({
     expired: 0,
   })
   const [loading, setLoading] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
 
   // Fetch invitations when tab changes
   useEffect(() => {
@@ -183,10 +185,7 @@ export default function UsersPageClient({
                     <Button variant="outline">Add Manually</Button>
                   </Link>
                   <Button
-                    onClick={() => {
-                      const modal = document.getElementById('invite-modal')
-                      if (modal) modal.classList.remove('hidden')
-                    }}
+                    onClick={() => setShowInviteModal(true)}
                     disabled={usageLimits?.allowed === false}
                     title={usageLimits?.reason}
                   >
@@ -230,6 +229,18 @@ export default function UsersPageClient({
           />
         )}
       </div>
+      
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <InviteModal 
+          organizationId={organizationId}
+          isOpen={showInviteModal}
+          onClose={() => {
+            setShowInviteModal(false)
+            fetchInvitations() // Refresh after modal closes
+          }}
+        />
+      )}
     </div>
   )
 }
