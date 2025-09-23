@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { getOrganizationId } from '@/lib/organization-context'
+import { canAddTrainer } from '@/lib/usage-limits'
 
 // GET /api/users - List all users with pagination and filters
 export async function GET(request: NextRequest) {
@@ -136,6 +137,29 @@ export async function POST(request: NextRequest) {
         { error: 'Email already exists' },
         { status: 400 }
       )
+    }
+
+    // Check usage limits if creating a trainer
+    if (role === 'TRAINER') {
+      const organizationId = await getOrganizationId()
+      if (!organizationId) {
+        return NextResponse.json(
+          { error: 'Organization not found' },
+          { status: 400 }
+        )
+      }
+
+      const canAdd = await canAddTrainer(organizationId)
+      if (!canAdd.allowed) {
+        return NextResponse.json(
+          { 
+            error: canAdd.reason,
+            needsUpgrade: true,
+            usage: canAdd.usage 
+          },
+          { status: 403 }
+        )
+      }
     }
 
     // Club managers can only create trainers in their location

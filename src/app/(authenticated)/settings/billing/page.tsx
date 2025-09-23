@@ -161,11 +161,11 @@ export default async function BillingPage({ searchParams }: PageProps) {
           <CardTitle>Plan Features</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Free Plan */}
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-lg">Free</h3>
+                <h3 className="font-semibold text-lg">{SUBSCRIPTION_TIERS.FREE.name}</h3>
                 <p className="text-2xl font-bold mt-1">$0<span className="text-sm font-normal text-text-secondary">/month</span></p>
               </div>
               <ul className="space-y-2">
@@ -181,10 +181,36 @@ export default async function BillingPage({ searchParams }: PageProps) {
               )}
             </div>
 
+            {/* Basic Plan */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg">{SUBSCRIPTION_TIERS.BASIC.name}</h3>
+                <p className="text-2xl font-bold mt-1">
+                  ${SUBSCRIPTION_TIERS.BASIC.price}
+                  <span className="text-sm font-normal text-text-secondary">/month</span>
+                </p>
+              </div>
+              <ul className="space-y-2">
+                {SUBSCRIPTION_TIERS.BASIC.features.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-success-500 mt-0.5" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              {currentTier === 'BASIC' ? (
+                <Badge variant="success" size="sm">Current Plan</Badge>
+              ) : currentTier === 'FREE' ? (
+                <UpgradeButton className="w-full" size="sm" tier="BASIC">
+                  Upgrade to {SUBSCRIPTION_TIERS.BASIC.name}
+                </UpgradeButton>
+              ) : null}
+            </div>
+
             {/* Pro Plan */}
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-lg">Professional</h3>
+                <h3 className="font-semibold text-lg">{SUBSCRIPTION_TIERS.PRO.name}</h3>
                 <p className="text-2xl font-bold mt-1">
                   ${SUBSCRIPTION_TIERS.PRO.price}
                   <span className="text-sm font-normal text-text-secondary">/month</span>
@@ -201,8 +227,8 @@ export default async function BillingPage({ searchParams }: PageProps) {
               {currentTier === 'PRO' ? (
                 <Badge variant="success" size="sm">Current Plan</Badge>
               ) : (
-                <UpgradeButton className="w-full" size="sm">
-                  Upgrade to Professional
+                <UpgradeButton className="w-full" size="sm" tier="PRO">
+                  Upgrade to {SUBSCRIPTION_TIERS.PRO.name}
                 </UpgradeButton>
               )}
             </div>

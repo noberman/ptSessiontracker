@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getOrganizationId } from '@/lib/organization-context'
+import { canAddLocation } from '@/lib/usage-limits'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -105,6 +106,21 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Get organization context
+    const orgId = await getOrganizationId()
+    
+    // Check usage limits for location creation
+    const canAdd = await canAddLocation(orgId)
+    if (!canAdd.allowed) {
+      return NextResponse.json(
+        { 
+          error: canAdd.reason,
+          needsUpgrade: true,
+          usage: canAdd.usage 
+        },
+        { status: 403 }
+      )
+    }
     const body = await request.json()
     const { name } = body
 

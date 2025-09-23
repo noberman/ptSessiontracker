@@ -16,6 +16,18 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    // Get request body
+    const body = await request.json()
+    const { tier = 'PRO' } = body
+    
+    // Validate tier
+    if (!['BASIC', 'PRO'].includes(tier)) {
+      return NextResponse.json(
+        { error: 'Invalid subscription tier' },
+        { status: 400 }
+      )
+    }
+    
     // Get organization
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -37,10 +49,11 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Check if already on PRO
-    if (user.organization.subscriptionTier === 'PRO') {
+    // Check if already on requested tier or higher
+    const currentTier = user.organization.subscriptionTier
+    if (currentTier === 'PRO' || (currentTier === 'BASIC' && tier === 'BASIC')) {
       return NextResponse.json(
-        { error: 'Already subscribed to Professional plan' },
+        { error: `Already subscribed to ${currentTier} plan` },
         { status: 400 }
       )
     }
@@ -48,10 +61,13 @@ export async function POST(request: NextRequest) {
     // Ensure organization has a Stripe customer
     const customerId = await ensureStripeCustomer(user.organizationId)
     
-    // Get the price ID from environment
-    const priceId = process.env.STRIPE_PRO_PRICE_ID
+    // Get the price ID based on tier
+    const priceId = tier === 'BASIC' 
+      ? process.env.STRIPE_BASIC_PRICE_ID 
+      : process.env.STRIPE_PRO_PRICE_ID
+      
     if (!priceId) {
-      console.error('STRIPE_PRO_PRICE_ID not configured')
+      console.error(`STRIPE_${tier}_PRICE_ID not configured`)
       return NextResponse.json(
         { error: 'Subscription price not configured' },
         { status: 500 }

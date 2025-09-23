@@ -10,13 +10,15 @@ interface UpgradeButtonProps {
   variant?: 'primary' | 'outline' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   children?: React.ReactNode
+  tier?: 'BASIC' | 'PRO'
 }
 
 export function UpgradeButton({ 
   className,
   variant = 'primary',
   size = 'md',
-  children
+  children,
+  tier = 'PRO'
 }: UpgradeButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -32,6 +34,7 @@ export function UpgradeButton({
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ tier }),
       })
 
       const data = await response.json()

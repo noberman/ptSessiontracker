@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { EmailService } from '@/lib/email/sender'
 import { renderSessionValidationEmail } from '@/lib/email/render'
 import { getOrganizationId } from '@/lib/organization-context'
+import { canCreateSession } from '@/lib/usage-limits'
 import crypto from 'crypto'
 
 export async function GET(request: Request) {
@@ -168,6 +169,19 @@ export async function POST(request: Request) {
     orgId = await getOrganizationId()
   } catch (error) {
     return NextResponse.json({ error: 'No organization context' }, { status: 400 })
+  }
+
+  // Check usage limits for session creation
+  const canCreate = await canCreateSession(orgId)
+  if (!canCreate.allowed) {
+    return NextResponse.json(
+      { 
+        error: canCreate.reason,
+        needsUpgrade: true,
+        usage: canCreate.usage 
+      },
+      { status: 403 }
+    )
   }
 
   try {

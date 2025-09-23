@@ -27,7 +27,7 @@ export const stripe = new Proxy({} as Stripe, {
 // Subscription configuration
 export const SUBSCRIPTION_TIERS = {
   FREE: {
-    name: 'Free',
+    name: 'Starter',
     price: 0,
     limits: {
       trainers: 2,
@@ -42,9 +42,28 @@ export const SUBSCRIPTION_TIERS = {
       'Email support',
     ],
   },
+  BASIC: {
+    name: 'Growth',
+    price: 17,
+    priceId: process.env.STRIPE_BASIC_PRICE_ID,
+    limits: {
+      trainers: 10,
+      sessionsPerMonth: 500,
+      locations: 3,
+    },
+    features: [
+      'Up to 10 trainers',
+      '500 sessions per month',
+      'Up to 3 locations',
+      'Advanced reports',
+      'Priority email support',
+      'Commission calculations',
+      'Excel exports',
+    ],
+  },
   PRO: {
-    name: 'Professional',
-    price: 15,
+    name: 'Scale',
+    price: 37,
     priceId: process.env.STRIPE_PRO_PRICE_ID,
     limits: {
       trainers: -1, // unlimited
@@ -55,10 +74,11 @@ export const SUBSCRIPTION_TIERS = {
       'Unlimited trainers',
       'Unlimited sessions',
       'Unlimited locations',
-      'Advanced reports',
-      'Priority support',
+      'Advanced analytics',
+      'Priority phone support',
       'Commission calculations',
       'Excel exports',
+      'API access (coming soon)',
       'Custom branding (coming soon)',
     ],
   },
