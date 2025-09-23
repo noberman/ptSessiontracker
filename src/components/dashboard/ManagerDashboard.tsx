@@ -611,7 +611,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
       </div>
 
       {/* Alerts Section */}
-      {data.stats.unassignedClients > 0 && (
+      {data.stats.unassignedClients && data.stats.unassignedClients > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Unassigned Clients Alert */}
           <Card className="border-orange-200 bg-orange-50">
@@ -621,7 +621,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
                   <div>
                     <p className="text-sm font-medium text-orange-900">Unassigned Clients</p>
                     <p className="text-sm text-orange-700 mt-1">
-                      {data.stats.unassignedClients} client{data.stats.unassignedClients > 1 ? 's' : ''} need trainer assignment
+                      {data.stats.unassignedClients || 0} client{(data.stats.unassignedClients || 0) > 1 ? 's' : ''} need trainer assignment
                     </p>
                     <a href="/clients?filter=unassigned" className="text-sm text-orange-600 hover:text-orange-800 mt-2 inline-block">
                       View unassigned clients →
