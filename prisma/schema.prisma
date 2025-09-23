@@ -23,6 +23,7 @@ model Organization {
   locations            Location[]
   packageTypes         PackageType[]
   users                User[]
+  invitations          Invitation[]
 
   @@map("organizations")
 }
@@ -55,6 +56,7 @@ model User {
   organizationId  String?
   assignedClients Client[]      @relation("ClientPrimaryTrainer")
   sessions        Session[]
+  sentInvitations Invitation[]  @relation("UserInvitations")
   location        Location?     @relation(fields: [locationId], references: [id])
   organization    Organization? @relation(fields: [organizationId], references: [id])
 
@@ -196,6 +198,28 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model Invitation {
+  id             String           @id @default(cuid())
+  email          String
+  role           Role             @default(TRAINER)
+  organizationId String
+  invitedById    String
+  status         InvitationStatus @default(PENDING)
+  token          String           @unique @default(cuid())
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  invitedBy      User        @relation("UserInvitations", fields: [invitedById], references: [id])
+  
+  @@unique([email, organizationId])
+  @@index([token])
+  @@index([status])
+  @@map("invitations")
+}
+
 enum SubscriptionTier {
   FREE
   GROWTH
@@ -213,4 +237,11 @@ enum Role {
   CLUB_MANAGER
   PT_MANAGER
   ADMIN
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
 }

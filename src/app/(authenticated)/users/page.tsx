@@ -1,12 +1,10 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { UserTable } from '@/components/users/UserTable'
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import { UserSearch } from '@/components/users/UserSearch'
+import { checkInvitationLimit } from '@/lib/invitation-service'
+import UsersPageClient from './UsersPageClient'
+import InviteModal from '@/components/invitations/InviteModal'
 
 export default async function UsersPage({
   searchParams,
@@ -25,6 +23,21 @@ export default async function UsersPage({
     redirect('/dashboard')
   }
 
+  // Get user with organization
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      role: true,
+      locationId: true,
+      organizationId: true,
+    },
+  })
+
+  if (!currentUser?.organizationId) {
+    redirect('/dashboard')
+  }
+
   const page = parseInt(params.page || '1')
   const limit = parseInt(params.limit || '10')
   const search = params.search || ''
@@ -35,6 +48,7 @@ export default async function UsersPage({
 
   const where: any = {
     active: true,
+    organizationId: currentUser.organizationId,
   }
 
   if (search) {
@@ -83,6 +97,9 @@ export default async function UsersPage({
     }),
     prisma.user.count({ where }),
     prisma.location.findMany({
+      where: {
+        organizationId: currentUser.organizationId,
+      },
       select: {
         id: true,
         name: true,
@@ -104,37 +121,23 @@ export default async function UsersPage({
                   session.user.role === 'CLUB_MANAGER'
   const canDelete = session.user.role === 'ADMIN'
 
+  // Check invitation limits
+  const usageLimits = await checkInvitationLimit(currentUser.organizationId)
+
   return (
-    <div className="min-h-screen bg-background-secondary">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Users</h1>
-            <p className="text-sm text-text-secondary mt-1">
-              Manage trainers and staff members
-            </p>
-          </div>
-          {canEdit && (
-            <Link href="/users/new">
-              <Button>Add New User</Button>
-            </Link>
-          )}
-        </div>
-
-        <div className="mb-6">
-          <UserSearch 
-            locations={session.user.role === 'CLUB_MANAGER' ? [] : locations}
-            currentRole={session.user.role}
-          />
-        </div>
-
-        <UserTable
-          initialUsers={users}
-          pagination={pagination}
-          canEdit={canEdit}
-          canDelete={canDelete}
-        />
-      </div>
-    </div>
+    <>
+      <UsersPageClient
+        initialUsers={users}
+        pagination={pagination}
+        locations={locations}
+        currentUserRole={session.user.role}
+        currentUserLocationId={currentUser.locationId}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        organizationId={currentUser.organizationId}
+        usageLimits={usageLimits}
+      />
+      {canEdit && <InviteModal organizationId={currentUser.organizationId} />}
+    </>
   )
 }
