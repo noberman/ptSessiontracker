@@ -198,7 +198,7 @@ model AuditLog {
 
 enum SubscriptionTier {
   FREE
-  BASIC
+  GROWTH
   PRO
 }
 

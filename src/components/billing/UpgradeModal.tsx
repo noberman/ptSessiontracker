@@ -24,7 +24,7 @@ export function UpgradeModal({
   isOpen,
   onClose,
   currentTier,
-  recommendedTier = 'BASIC',
+  recommendedTier = 'GROWTH',
   limitType,
   currentUsage,
 }: UpgradeModalProps) {
@@ -41,7 +41,7 @@ export function UpgradeModal({
 
   const getRecommendedTiers = () => {
     if (currentTier === 'FREE') {
-      return ['BASIC', 'PRO'] as const
+      return ['GROWTH', 'PRO'] as const
     }
     return ['PRO'] as const
   }
@@ -70,7 +70,7 @@ export function UpgradeModal({
             </div>
             <div>
               <h2 className="text-xl font-bold text-text-primary">
-                You've reached your limit
+                You&apos;ve reached your limit
               </h2>
               <p className="text-sm text-text-secondary">
                 Upgrade to add more {limitLabels[limitType]}

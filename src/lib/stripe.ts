@@ -42,10 +42,10 @@ export const SUBSCRIPTION_TIERS = {
       'Email support',
     ],
   },
-  BASIC: {
+  GROWTH: {
     name: 'Growth',
     price: 17,
-    priceId: process.env.STRIPE_BASIC_PRICE_ID,
+    priceId: process.env.STRIPE_GROWTH_PRICE_ID,
     limits: {
       trainers: 10,
       sessionsPerMonth: 500,

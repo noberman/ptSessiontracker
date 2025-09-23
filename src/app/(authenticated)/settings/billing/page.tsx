@@ -181,28 +181,28 @@ export default async function BillingPage({ searchParams }: PageProps) {
               )}
             </div>
 
-            {/* Basic Plan */}
+            {/* Growth Plan */}
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-lg">{SUBSCRIPTION_TIERS.BASIC.name}</h3>
+                <h3 className="font-semibold text-lg">{SUBSCRIPTION_TIERS.GROWTH.name}</h3>
                 <p className="text-2xl font-bold mt-1">
-                  ${SUBSCRIPTION_TIERS.BASIC.price}
+                  ${SUBSCRIPTION_TIERS.GROWTH.price}
                   <span className="text-sm font-normal text-text-secondary">/month</span>
                 </p>
               </div>
               <ul className="space-y-2">
-                {SUBSCRIPTION_TIERS.BASIC.features.map((feature, index) => (
+                {SUBSCRIPTION_TIERS.GROWTH.features.map((feature, index) => (
                   <li key={index} className="flex items-start gap-2 text-sm">
                     <CheckCircle className="w-4 h-4 text-success-500 mt-0.5" />
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
-              {currentTier === 'BASIC' ? (
+              {currentTier === 'GROWTH' ? (
                 <Badge variant="success" size="sm">Current Plan</Badge>
               ) : currentTier === 'FREE' ? (
-                <UpgradeButton className="w-full" size="sm" tier="BASIC">
-                  Upgrade to {SUBSCRIPTION_TIERS.BASIC.name}
+                <UpgradeButton className="w-full" size="sm" tier="GROWTH">
+                  Upgrade to {SUBSCRIPTION_TIERS.GROWTH.name}
                 </UpgradeButton>
               ) : null}
             </div>

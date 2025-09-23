@@ -10,7 +10,7 @@ interface UpgradeButtonProps {
   variant?: 'primary' | 'outline' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   children?: React.ReactNode
-  tier?: 'BASIC' | 'PRO'
+  tier?: 'GROWTH' | 'PRO'
 }
 
 export function UpgradeButton({ 

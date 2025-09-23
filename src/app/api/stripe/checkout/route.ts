@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const { tier = 'PRO' } = body
     
     // Validate tier
-    if (!['BASIC', 'PRO'].includes(tier)) {
+    if (!['GROWTH', 'PRO'].includes(tier)) {
       return NextResponse.json(
         { error: 'Invalid subscription tier' },
         { status: 400 }
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     
     // Check if already on requested tier or higher
     const currentTier = user.organization.subscriptionTier
-    if (currentTier === 'PRO' || (currentTier === 'BASIC' && tier === 'BASIC')) {
+    if (currentTier === 'PRO' || (currentTier === 'GROWTH' && tier === 'GROWTH')) {
       return NextResponse.json(
         { error: `Already subscribed to ${currentTier} plan` },
         { status: 400 }
@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
     const customerId = await ensureStripeCustomer(user.organizationId)
     
     // Get the price ID based on tier
-    const priceId = tier === 'BASIC' 
-      ? process.env.STRIPE_BASIC_PRICE_ID 
+    const priceId = tier === 'GROWTH' 
+      ? process.env.STRIPE_GROWTH_PRICE_ID 
       : process.env.STRIPE_PRO_PRICE_ID
       
     if (!priceId) {

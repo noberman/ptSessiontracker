@@ -191,16 +191,16 @@ export function getUpgradeRecommendation(
 
   // Recommend next tier up
   if (currentTier === 'FREE') {
-    // Check if BASIC would be sufficient
-    const basicTier = SUBSCRIPTION_TIERS.BASIC
+    // Check if GROWTH would be sufficient
+    const growthTier = SUBSCRIPTION_TIERS.GROWTH
     const needsPro = 
-      usage.trainers.current > basicTier.limits.trainers ||
-      usage.sessions.current > basicTier.limits.sessionsPerMonth ||
-      usage.locations.current > basicTier.limits.locations
+      usage.trainers.current > growthTier.limits.trainers ||
+      usage.sessions.current > growthTier.limits.sessionsPerMonth ||
+      usage.locations.current > growthTier.limits.locations
 
-    return needsPro ? 'PRO' : 'BASIC'
+    return needsPro ? 'PRO' : 'GROWTH'
   }
 
-  // If on BASIC, recommend PRO
+  // If on GROWTH, recommend PRO
   return 'PRO'
 }
