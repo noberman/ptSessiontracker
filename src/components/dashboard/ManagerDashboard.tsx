@@ -611,7 +611,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
       </div>
 
       {/* Alerts Section */}
-      {data.stats.unassignedClients > 0 && (
+      {data.stats.unassignedClients && data.stats.unassignedClients > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Unassigned Clients Alert */}
           <Card className="border-orange-200 bg-orange-50">
@@ -631,7 +631,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
               </CardContent>
             </Card>
         </div>
-      )}
+      ) : null}
 
       {/* Cumulative Sessions Chart - Full width */}
       <Card>
