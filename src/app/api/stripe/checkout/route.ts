@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { stripe } from '@/lib/stripe'
-import { ensureStripeCustomer, getStatementDescriptor } from '@/lib/stripe-utils'
+import { ensureStripeCustomer } from '@/lib/stripe-utils'
 
 export async function POST(request: NextRequest) {
   try {

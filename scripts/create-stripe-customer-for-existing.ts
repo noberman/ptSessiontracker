@@ -18,8 +18,8 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const prisma = new PrismaClient()
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-11-20.acacia',
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-08-27.basil',
   typescript: true,
 })
 
