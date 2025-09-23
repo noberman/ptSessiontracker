@@ -235,9 +235,14 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log('💰 Payment succeeded for invoice:', invoice.id)
   
   // If this is a subscription invoice, update the status to active
-  if (invoice.subscription) {
+  // Check if subscription exists on the invoice (it's an optional field)
+  if ('subscription' in invoice && invoice.subscription) {
+    const subscriptionId = typeof invoice.subscription === 'string' 
+      ? invoice.subscription 
+      : (invoice.subscription as any).id
+      
     const org = await prisma.organization.findFirst({
-      where: { stripeSubscriptionId: invoice.subscription as string },
+      where: { stripeSubscriptionId: subscriptionId },
     })
 
     if (org && org.subscriptionStatus === 'PAST_DUE') {
