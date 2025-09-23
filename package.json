@@ -7,7 +7,7 @@
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "build:migrate": "prisma migrate deploy",
-    "start": "next start",
+    "start": "node scripts/start-with-migrate.js",
     "start:app": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
