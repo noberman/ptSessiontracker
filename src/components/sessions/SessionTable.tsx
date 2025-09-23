@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
+import { Mail, RefreshCw } from 'lucide-react'
 
 interface Session {
   id: string
@@ -46,17 +47,20 @@ interface SessionTableProps {
   }
   canEdit?: boolean
   userRole?: string
+  currentUserId?: string
 }
 
 export function SessionTable({ 
   initialSessions, 
   pagination: initialPagination,
   canEdit = false,
-  userRole
+  userRole,
+  currentUserId
 }: SessionTableProps) {
   const [sessions, setSessions] = useState(initialSessions)
   const [pagination, setPagination] = useState(initialPagination)
   const [loading, setLoading] = useState(false)
+  const [resendingIds, setResendingIds] = useState<Set<string>>(new Set())
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -91,6 +95,34 @@ export function SessionTable({
     fetchSessions(1, newLimit)
   }
 
+  const handleResendValidation = async (sessionId: string, clientEmail: string) => {
+    setResendingIds(prev => new Set(prev).add(sessionId))
+    
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/resend-validation`, {
+        method: 'POST',
+      })
+      
+      if (response.ok) {
+        alert(`Validation email sent successfully to ${clientEmail}!`)
+        // Optionally refresh the sessions to update any status
+        const currentParams = new URLSearchParams(searchParams.toString())
+        fetchSessions(pagination.page)
+      } else {
+        const data = await response.json()
+        alert(`Error: ${data.error}`)
+      }
+    } catch (error) {
+      alert('Failed to resend validation email')
+    } finally {
+      setResendingIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(sessionId)
+        return newSet
+      })
+    }
+  }
+
   const formatDate = (date: string | Date) => {
     return new Date(date).toLocaleDateString()
   }
@@ -110,6 +142,23 @@ export function SessionTable({
       return <Badge variant="success" size="sm">Validated</Badge>
     }
     return <Badge variant="warning" size="sm">Pending</Badge>
+  }
+
+  // Check if user can resend validation for a specific session
+  const canResendValidation = (session: Session) => {
+    if (!userRole || !currentUserId) return false
+    
+    // Admins and PT Managers can resend for any session
+    if (userRole === 'ADMIN' || userRole === 'PT_MANAGER') return true
+    
+    // Trainers can resend for their own sessions
+    if (userRole === 'TRAINER' && session.trainer.id === currentUserId) return true
+    
+    // Club managers would need location check but we don't have location in session here
+    // For now, we'll rely on backend to check this permission
+    if (userRole === 'CLUB_MANAGER') return true
+    
+    return false
   }
 
   return (
@@ -194,11 +243,28 @@ export function SessionTable({
                         </Button>
                       </Link>
                       {!session.validated && !session.cancelled && (
-                        <Link href={`/sessions/${session.id}/edit`}>
-                          <Button variant="outline" size="sm">
-                            Edit
-                          </Button>
-                        </Link>
+                        <>
+                          <Link href={`/sessions/${session.id}/edit`}>
+                            <Button variant="outline" size="sm">
+                              Edit
+                            </Button>
+                          </Link>
+                          {canResendValidation(session) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResendValidation(session.id, session.client.email)}
+                              disabled={resendingIds.has(session.id)}
+                              title="Resend validation email"
+                            >
+                              {resendingIds.has(session.id) ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Mail className="w-4 h-4" />
+                              )}
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </td>
