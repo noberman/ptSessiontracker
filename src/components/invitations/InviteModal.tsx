@@ -88,7 +88,7 @@ export default function InviteModal({
 
     try {
       let successCount = 0
-      let failedEmails: string[] = []
+      const failedEmails: string[] = []
 
       for (const emailToInvite of emailsToInvite) {
         const response = await fetch('/api/invitations', {

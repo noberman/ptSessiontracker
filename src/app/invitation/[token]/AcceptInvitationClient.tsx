@@ -148,7 +148,7 @@ export default function AcceptInvitationClient({
                 {wrongAccount && (
                   <div className="mb-6 p-4 bg-warning-50 border border-warning-200 rounded-lg">
                     <p className="text-sm text-warning-800">
-                      You're currently logged in as <strong>{currentUserEmail}</strong>.
+                      You&apos;re currently logged in as <strong>{currentUserEmail}</strong>.
                       This invitation was sent to <strong>{invitation.email}</strong>.
                       Please log out and log in with the correct account.
                     </p>
