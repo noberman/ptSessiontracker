@@ -259,6 +259,67 @@ model PackageType {
 - Required organizationId (multi-tenant)
 
 
+### Invitation
+Manages team member invitations via email.
+
+```prisma
+model Invitation {
+  id             String           @id @default(cuid())
+  email          String
+  role           Role             @default(TRAINER)
+  organizationId String
+  invitedById    String
+  status         InvitationStatus @default(PENDING)
+  token          String           @unique @default(cuid())
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  invitedBy      User        @relation("UserInvitations", fields: [invitedById], references: [id])
+  
+  @@unique([email, organizationId])
+  @@index([token])
+  @@index([status])
+  @@map("invitations")
+}
+```
+
+**Business Rules:**
+- Secure token generated for each invitation
+- Expires after 7 days by default
+- Cannot have duplicate pending invitations for same email/org
+- Status transitions: PENDING -> ACCEPTED/EXPIRED/CANCELLED
+- Resend has 5-minute cooldown period
+- Only admins and PT managers can send invitations
+- Email sent via Resend API with retry logic
+
+### EmailLog
+Tracks all email communications for audit trail.
+
+```prisma
+model EmailLog {
+  id         String   @id @default(cuid())
+  to         String
+  subject    String
+  template   String
+  status     String   // 'sent' | 'failed'
+  sentAt     DateTime
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("email_logs")
+}
+```
+
+**Business Rules:**
+- Records all email attempts (success and failure)
+- Stores template type for analytics
+- Metadata includes relevant IDs and error messages
+- Used for debugging delivery issues
+
 ### AuditLog
 Tracks all data modifications for compliance and debugging.
 
@@ -306,8 +367,9 @@ Defines organization subscription levels.
 
 ```prisma
 enum SubscriptionTier {
-  FREE  // Basic features
-  PRO   // Full features
+  FREE    // Basic features (10 trainers, 50 clients)
+  GROWTH  // Mid-tier (25 trainers, 250 clients)
+  SCALE   // Enterprise (unlimited)
 }
 ```
 
@@ -319,6 +381,18 @@ enum SubscriptionStatus {
   ACTIVE    // Subscription is active
   CANCELED  // Subscription cancelled
   PAST_DUE  // Payment overdue
+}
+```
+
+### InvitationStatus
+Defines invitation states.
+
+```prisma
+enum InvitationStatus {
+  PENDING    // Invitation sent, awaiting response
+  ACCEPTED   // Invitation accepted by user
+  EXPIRED    // Invitation expired (7 days)
+  CANCELLED  // Manually cancelled by sender
 }
 ```
 
