@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       description: invoice.description || 'FitSync Professional Subscription',
       pdfUrl: invoice.invoice_pdf,
       hostedUrl: invoice.hosted_invoice_url,
-      paid: invoice.paid,
+      paid: invoice.status === 'paid',
       periodStart: invoice.period_start ? new Date(invoice.period_start * 1000).toISOString() : null,
       periodEnd: invoice.period_end ? new Date(invoice.period_end * 1000).toISOString() : null,
     }))
