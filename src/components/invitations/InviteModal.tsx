@@ -266,6 +266,5 @@ export default function InviteModal({
           </div>
         </div>
       </div>
-    </>
   )
 }
