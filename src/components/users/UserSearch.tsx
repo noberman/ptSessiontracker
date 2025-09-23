@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 
 interface UserSearchProps {
   locations?: Array<{
@@ -55,65 +54,55 @@ export function UserSearch({ locations = [], currentRole }: UserSearchProps) {
   const roleOptions = getRoleOptions()
 
   return (
-    <Card>
-      <form onSubmit={handleSearch} className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <Input
-              type="text"
-              placeholder="Search by name or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          
-          <div>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-            >
-              <option value="">All Roles</option>
-              {roleOptions.map((r) => (
-                <option key={r} value={r}>
-                  {r.replace('_', ' ')}
-                </option>
-              ))}
-            </select>
-          </div>
+    <form onSubmit={handleSearch}>
+      <div className="flex gap-3 items-center">
+        <Input
+          type="text"
+          placeholder="Search by name"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-64"
+        />
+        
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          className="rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white"
+        >
+          <option value="">All Roles</option>
+          {roleOptions.map((r) => (
+            <option key={r} value={r}>
+              {r.replace('_', ' ')}
+            </option>
+          ))}
+        </select>
 
-          {locations.length > 0 && (
-            <div>
-              <select
-                value={locationId}
-                onChange={(e) => setLocationId(e.target.value)}
-                className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              >
-                <option value="">All Locations</option>
-                {locations.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+        {locations.length > 0 && (
+          <select
+            value={locationId}
+            onChange={(e) => setLocationId(e.target.value)}
+            className="rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white"
+          >
+            <option value="">All Locations</option>
+            {locations.map((location) => (
+              <option key={location.id} value={location.id}>
+                {location.name}
+              </option>
+            ))}
+          </select>
+        )}
 
-          <div className="flex space-x-2">
-            <Button type="submit" className="flex-1">
-              Search
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleReset}
-              className="flex-1"
-            >
-              Reset
-            </Button>
-          </div>
-        </div>
-      </form>
-    </Card>
+        <Button type="submit">
+          Search
+        </Button>
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={handleReset}
+        >
+          Reset
+        </Button>
+      </div>
+    </form>
   )
 }
