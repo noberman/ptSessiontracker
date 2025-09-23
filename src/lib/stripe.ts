@@ -64,7 +64,7 @@ export const SUBSCRIPTION_TIERS = {
   PRO: {
     name: 'Scale',
     price: 37,
-    priceId: process.env.STRIPE_PRO_PRICE_ID,
+    priceId: process.env.STRIPE_SCALE_PRICE_ID,
     limits: {
       trainers: -1, // unlimited
       sessionsPerMonth: -1, // unlimited

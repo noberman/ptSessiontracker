@@ -64,10 +64,10 @@ export async function POST(request: NextRequest) {
     // Get the price ID based on tier
     const priceId = tier === 'GROWTH' 
       ? process.env.STRIPE_GROWTH_PRICE_ID 
-      : process.env.STRIPE_PRO_PRICE_ID
+      : process.env.STRIPE_SCALE_PRICE_ID
       
     if (!priceId) {
-      console.error(`STRIPE_${tier}_PRICE_ID not configured`)
+      console.error(`STRIPE_${tier === 'GROWTH' ? 'GROWTH' : 'SCALE'}_PRICE_ID not configured`)
       return NextResponse.json(
         { error: 'Subscription price not configured' },
         { status: 500 }
