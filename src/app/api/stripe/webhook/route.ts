@@ -106,8 +106,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       entityType: 'Organization',
       entityId: organizationId,
       newValue: {
-        subscriptionId: session.subscription,
-        customerId: session.customer,
+        subscriptionId: session.subscription as string,
+        customerId: session.customer as string,
         amount: session.amount_total,
         timestamp: new Date().toISOString(),
       },
