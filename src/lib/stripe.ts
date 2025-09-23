@@ -39,6 +39,8 @@ export const SUBSCRIPTION_TIERS = {
       '50 sessions per month',
       '1 location',
       'Basic reports',
+      'Commission calculations',
+      'Excel exports',
       'Email support',
     ],
   },
@@ -78,8 +80,6 @@ export const SUBSCRIPTION_TIERS = {
       'Priority phone support',
       'Commission calculations',
       'Excel exports',
-      'API access (coming soon)',
-      'Custom branding (coming soon)',
     ],
   },
 } as const
