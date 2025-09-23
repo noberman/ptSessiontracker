@@ -282,14 +282,14 @@ export async function resendInvitation(invitationId: string) {
     throw new Error('Can only resend pending invitations')
   }
 
-  // Check cooldown period (24 hours)
+  // Check cooldown period (5 minutes for testing, can be adjusted)
   const lastSent = invitation.updatedAt
-  const cooldownHours = 24
-  const cooldownExpiry = new Date(lastSent.getTime() + cooldownHours * 60 * 60 * 1000)
+  const cooldownMinutes = 5 // Changed from 24 hours to 5 minutes for easier testing
+  const cooldownExpiry = new Date(lastSent.getTime() + cooldownMinutes * 60 * 1000)
   
   if (new Date() < cooldownExpiry) {
-    const hoursRemaining = Math.ceil((cooldownExpiry.getTime() - Date.now()) / (60 * 60 * 1000))
-    throw new Error(`Please wait ${hoursRemaining} hours before resending`)
+    const minutesRemaining = Math.ceil((cooldownExpiry.getTime() - Date.now()) / (60 * 1000))
+    throw new Error(`Please wait ${minutesRemaining} minutes before resending`)
   }
 
   // Generate new token and extend expiration

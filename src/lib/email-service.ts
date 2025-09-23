@@ -1,4 +1,8 @@
 import { prisma } from '@/lib/prisma'
+import { Resend } from 'resend'
+
+// Initialize Resend client
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 interface InvitationEmailData {
   id: string
@@ -78,41 +82,86 @@ The FitSync Team
     `,
   }
 
-  // Log email for now (replace with actual email service)
-  await prisma.emailLog.create({
-    data: {
-      to: invitation.email,
+  try {
+    // Send email via Resend
+    const { data, error } = await resend.emails.send({
+      from: `${process.env.RESEND_FROM_NAME || 'FitSync'} <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
+      to: [invitation.email],
       subject: emailContent.subject,
-      template: 'invitation',
-      status: 'sent',
-      sentAt: new Date(),
-      metadata: {
-        invitationId: invitation.id,
-        organizationName: invitation.organization.name,
-        invitedBy: invitation.invitedBy.name,
+      html: emailContent.html,
+      text: emailContent.text,
+    })
+
+    if (error) {
+      console.error('❌ Failed to send invitation email:', error)
+      
+      // Log failed attempt
+      await prisma.emailLog.create({
+        data: {
+          to: invitation.email,
+          subject: emailContent.subject,
+          template: 'invitation',
+          status: 'failed',
+          sentAt: new Date(),
+          metadata: {
+            invitationId: invitation.id,
+            organizationName: invitation.organization.name,
+            invitedBy: invitation.invitedBy.name,
+            error: error.message,
+          },
+        },
+      })
+      
+      return false
+    }
+
+    // Log successful email
+    await prisma.emailLog.create({
+      data: {
+        to: invitation.email,
+        subject: emailContent.subject,
+        template: 'invitation',
+        status: 'sent',
+        sentAt: new Date(),
+        metadata: {
+          invitationId: invitation.id,
+          organizationName: invitation.organization.name,
+          invitedBy: invitation.invitedBy.name,
+          resendId: data?.id,
+        },
       },
-    },
-  })
+    })
 
-  console.log('📧 Invitation email would be sent:', {
-    to: invitation.email,
-    invitationUrl,
-    expiresIn: `${daysUntilExpiry} days`,
-  })
+    console.log('✅ Invitation email sent successfully:', {
+      to: invitation.email,
+      invitationUrl,
+      expiresIn: `${daysUntilExpiry} days`,
+      resendId: data?.id,
+    })
 
-  // TODO: Implement actual email sending with SendGrid/Resend
-  // Example with SendGrid:
-  // const sgMail = require('@sendgrid/mail')
-  // sgMail.setApiKey(process.env.SENDGRID_API_KEY)
-  // await sgMail.send({
-  //   to: emailContent.to,
-  //   from: process.env.EMAIL_FROM,
-  //   subject: emailContent.subject,
-  //   html: emailContent.html,
-  //   text: emailContent.text,
-  // })
-
-  return true
+    return true
+  } catch (error: any) {
+    console.error('❌ Error sending invitation email:', error)
+    
+    // Log error
+    await prisma.emailLog.create({
+      data: {
+        to: invitation.email,
+        subject: emailContent.subject,
+        template: 'invitation',
+        status: 'failed',
+        sentAt: new Date(),
+        metadata: {
+          invitationId: invitation.id,
+          organizationName: invitation.organization.name,
+          invitedBy: invitation.invitedBy.name,
+          error: error.message || 'Unknown error',
+        },
+      },
+    })
+    
+    return false
+  }
 }
 
 /**
@@ -173,24 +222,79 @@ The FitSync Team
     `,
   }
 
-  // Log email
-  await prisma.emailLog.create({
-    data: {
-      to: user.email,
+  try {
+    // Send email via Resend
+    const { data, error } = await resend.emails.send({
+      from: `${process.env.RESEND_FROM_NAME || 'FitSync'} <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
+      to: [user.email],
       subject: emailContent.subject,
-      template: 'welcome',
-      status: 'sent',
-      sentAt: new Date(),
-      metadata: {
-        userName: user.name,
-        organizationName: user.organization?.name,
+      html: emailContent.html,
+      text: emailContent.text,
+    })
+
+    if (error) {
+      console.error('❌ Failed to send welcome email:', error)
+      
+      // Log failed attempt
+      await prisma.emailLog.create({
+        data: {
+          to: user.email,
+          subject: emailContent.subject,
+          template: 'welcome',
+          status: 'failed',
+          sentAt: new Date(),
+          metadata: {
+            userName: user.name,
+            organizationName: user.organization?.name,
+            error: error.message,
+          },
+        },
+      })
+      
+      return false
+    }
+
+    // Log successful email
+    await prisma.emailLog.create({
+      data: {
+        to: user.email,
+        subject: emailContent.subject,
+        template: 'welcome',
+        status: 'sent',
+        sentAt: new Date(),
+        metadata: {
+          userName: user.name,
+          organizationName: user.organization?.name,
+          resendId: data?.id,
+        },
       },
-    },
-  })
+    })
 
-  console.log('📧 Welcome email would be sent:', {
-    to: user.email,
-  })
+    console.log('✅ Welcome email sent successfully:', {
+      to: user.email,
+      resendId: data?.id,
+    })
 
-  return true
+    return true
+  } catch (error: any) {
+    console.error('❌ Error sending welcome email:', error)
+    
+    // Log error
+    await prisma.emailLog.create({
+      data: {
+        to: user.email,
+        subject: emailContent.subject,
+        template: 'welcome',
+        status: 'failed',
+        sentAt: new Date(),
+        metadata: {
+          userName: user.name,
+          organizationName: user.organization?.name,
+          error: error.message || 'Unknown error',
+        },
+      },
+    })
+    
+    return false
+  }
 }

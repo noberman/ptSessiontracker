@@ -31,24 +31,41 @@ export default function InviteModal({
   }
 
   const detectBulkPaste = (value: string) => {
+    console.log('🔍 detectBulkPaste called with:', value)
+    
     // Check if the pasted content has multiple emails
     const potentialEmails = value.split(/[\n,;|\t]+/).map(e => e.trim()).filter(Boolean)
+    console.log('📧 Potential emails found:', potentialEmails)
+    
     if (potentialEmails.length > 1) {
+      console.log('✅ Multiple items detected:', potentialEmails.length)
       const validEmails = potentialEmails.filter(validateEmail)
+      console.log('✉️ Valid emails:', validEmails)
+      
       if (validEmails.length > 0) {
+        console.log('🎯 Setting bulk mode with', validEmails.length, 'emails')
         setBulkEmails(validEmails)
         setBulkMode(true)
         setEmail('')
         return true
+      } else {
+        console.log('❌ No valid emails found in the list')
       }
+    } else {
+      console.log('ℹ️ Only one item detected, not switching to bulk mode')
     }
     return false
   }
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const pastedText = e.clipboardData.getData('text')
+    console.log('📋 Paste event detected. Text:', pastedText)
+    
     if (detectBulkPaste(pastedText)) {
+      console.log('🚫 Preventing default paste behavior')
       e.preventDefault()
+    } else {
+      console.log('➡️ Allowing normal paste')
     }
   }
 

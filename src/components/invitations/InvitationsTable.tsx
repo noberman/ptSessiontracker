@@ -103,7 +103,7 @@ export function InvitationsTable({
 
     switch (status) {
       case 'PENDING':
-        return <Badge variant="info" size="sm">Pending</Badge>
+        return <Badge variant="default" size="sm">Pending</Badge>
       case 'ACCEPTED':
         return <Badge variant="success" size="sm">Accepted</Badge>
       case 'EXPIRED':
@@ -122,7 +122,7 @@ export function InvitationsTable({
       CLUB_MANAGER: 'Club Manager',
       ADMIN: 'Admin',
     }
-    return <Badge variant="outline" size="sm">{roleLabels[role] || role}</Badge>
+    return <Badge variant="default" size="sm">{roleLabels[role] || role}</Badge>
   }
 
   if (loading) {
