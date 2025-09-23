@@ -48,8 +48,7 @@ const settingsLinks = [
     href: '/settings/billing',
     label: 'Billing',
     icon: CreditCard,
-    description: 'Subscription and payments',
-    comingSoon: true
+    description: 'Subscription and payments'
   }
 ]
 

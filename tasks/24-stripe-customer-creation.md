@@ -2,7 +2,7 @@
 
 **Complexity: 3/10**  
 **Priority: CRITICAL (SaaS Revenue)**  
-**Status: Not Started**  
+**Status: ✅ COMPLETED**  
 **Dependencies: Task 23 (Stripe Setup), Task 14 (Onboarding)**  
 **Estimated Time: 2 hours**
 
@@ -12,7 +12,7 @@ Automatically create Stripe customer when organization signs up and store custom
 ## Implementation Checklist
 
 ### Update Organization Creation
-- [ ] Modify organization creation in onboarding:
+- [x] Modify organization creation in onboarding:
 ```typescript
 // In signup/organization creation API
 const organization = await prisma.organization.create({
@@ -38,7 +38,7 @@ await prisma.organization.update({
 ```
 
 ### Create Customer Management Functions
-- [ ] Update `/src/lib/stripe-utils.ts`:
+- [x] Update `/src/lib/stripe-utils.ts`:
 ```typescript
 export async function createStripeCustomer(
   email: string,
@@ -74,7 +74,7 @@ export async function getStripeCustomer(customerId: string) {
 ```
 
 ### Handle Existing Organizations
-- [ ] Create migration script for Wood Square:
+- [x] Create migration script for Wood Square:
 ```typescript
 // /scripts/create-stripe-customers.ts
 async function createStripeCustomersForExisting() {
@@ -98,7 +98,7 @@ async function createStripeCustomersForExisting() {
 ```
 
 ### Update Organization Settings
-- [ ] Add ability to update billing email:
+- [x] Add ability to update billing email:
 ```typescript
 // When org updates email
 if (emailChanged && organization.stripeCustomerId) {
@@ -109,14 +109,14 @@ if (emailChanged && organization.stripeCustomerId) {
 ```
 
 ### Error Handling
-- [ ] Handle Stripe API failures gracefully:
-  - [ ] Log errors but don't block signup
-  - [ ] Set up retry mechanism
-  - [ ] Alert admin of failures
-  - [ ] Allow manual customer creation
+- [x] Handle Stripe API failures gracefully:
+  - [x] Log errors but don't block signup
+  - [x] Set up retry mechanism
+  - [x] Alert admin of failures
+  - [x] Allow manual customer creation
 
 ### Add Customer Portal Access
-- [ ] Create `/api/stripe/portal` endpoint:
+- [x] Create `/api/stripe/portal` endpoint:
 ```typescript
 export async function POST(req: Request) {
   const orgId = await getOrganizationId()
@@ -138,19 +138,19 @@ export async function POST(req: Request) {
 ```
 
 ## Acceptance Criteria
-- [ ] New orgs get Stripe customer ID
-- [ ] Customer created with correct metadata
-- [ ] Existing orgs migrated
-- [ ] Can update customer info
-- [ ] Portal link works
-- [ ] Errors handled gracefully
+- [x] New orgs get Stripe customer ID
+- [x] Customer created with correct metadata
+- [x] Existing orgs migrated
+- [x] Can update customer info
+- [x] Portal link works
+- [x] Errors handled gracefully
 
 ## Testing
-- [ ] Sign up new organization
-- [ ] Verify customer in Stripe dashboard
-- [ ] Check metadata is correct
-- [ ] Test portal access
-- [ ] Test error scenarios
+- [x] Sign up new organization
+- [x] Verify customer in Stripe dashboard
+- [x] Check metadata is correct
+- [x] Test portal access
+- [x] Test error scenarios
 
 ## Notes
 - Use test mode initially

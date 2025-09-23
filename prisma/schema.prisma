@@ -16,9 +16,9 @@ model Organization {
   subscriptionStatus   SubscriptionStatus @default(ACTIVE)
   stripeCustomerId     String?            @unique
   stripeSubscriptionId String?
-  commissionMethod     String             @default("PROGRESSIVE")
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+  commissionMethod     String             @default("PROGRESSIVE")
   commissionTiers      CommissionTier[]
   locations            Location[]
   packageTypes         PackageType[]

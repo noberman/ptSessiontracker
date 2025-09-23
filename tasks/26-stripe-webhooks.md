@@ -2,7 +2,7 @@
 
 **Complexity: 4/10**  
 **Priority: CRITICAL (SaaS Revenue)**  
-**Status: Not Started**  
+**Status: ✅ COMPLETED**  
 **Dependencies: Task 25 (Checkout)**  
 **Estimated Time: 2 hours**
 
@@ -12,7 +12,7 @@ Handle Stripe webhooks to keep subscription status synchronized.
 ## Implementation Checklist
 
 ### Create Webhook Endpoint
-- [ ] Create `/src/app/api/stripe/webhook/route.ts`:
+- [x] Create `/src/app/api/stripe/webhook/route.ts`:
 ```typescript
 import { headers } from 'next/headers'
 
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 ```
 
 ### Event Handlers
-- [ ] Checkout completed:
+- [x] Checkout completed:
 ```typescript
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const orgId = session.metadata?.organizationId
@@ -79,7 +79,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 ```
 
-- [ ] Subscription updated:
+- [x] Subscription updated:
 ```typescript
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const org = await prisma.organization.findFirst({
@@ -101,7 +101,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 }
 ```
 
-- [ ] Subscription deleted:
+- [x] Subscription deleted:
 ```typescript
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const org = await prisma.organization.findFirst({
@@ -124,7 +124,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 }
 ```
 
-- [ ] Payment failed:
+- [x] Payment failed:
 ```typescript
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
   const org = await prisma.organization.findFirst({
@@ -144,20 +144,20 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 ```
 
 ### Configure Webhook in Stripe
-- [ ] Add endpoint URL in Stripe Dashboard:
+- [x] Add endpoint URL in Stripe Dashboard:
   - Development: `https://[your-domain]/api/stripe/webhook`
   - Use ngrok for local testing
-- [ ] Select events to listen for:
-  - [ ] checkout.session.completed
-  - [ ] customer.subscription.created
-  - [ ] customer.subscription.updated
-  - [ ] customer.subscription.deleted
-  - [ ] invoice.payment_failed
-  - [ ] invoice.payment_succeeded
+- [x] Select events to listen for:
+  - [x] checkout.session.completed
+  - [x] customer.subscription.created
+  - [x] customer.subscription.updated
+  - [x] customer.subscription.deleted
+  - [x] invoice.payment_failed
+  - [x] invoice.payment_succeeded
 
 ### Add Webhook Secret
-- [ ] Get webhook secret from Stripe
-- [ ] Add to environment variables:
+- [x] Get webhook secret from Stripe
+- [x] Add to environment variables:
 ```env
 STRIPE_WEBHOOK_SECRET=whsec_...
 ```
