@@ -42,10 +42,10 @@ export async function POST(request: Request) {
       const organization = await tx.organization.create({
         data: {
           name: organizationName,
+          email: session.user.email!,  // We checked for email existence above
           subscriptionTier: 'FREE',
           subscriptionStatus: 'ACTIVE',
           commissionMethod: 'PROGRESSIVE',
-          defaultCommissionRate: 0.5,
         },
       })
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
       // Update user with organization and make them admin
       const user = await tx.user.update({
-        where: { email: session.user.email },
+        where: { email: session.user.email! },  // We checked for email existence above
         data: {
           organizationId: organization.id,
           locationId: location.id,
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       if (process.env.NODE_ENV === 'production' && process.env.STRIPE_SECRET_KEY) {
         try {
           const customer = await stripe.customers.create({
-            email: session.user.email,
+            email: session.user.email!,  // We checked for email existence above
             name: session.user.name || organizationName,
             metadata: {
               organizationId: organization.id,
