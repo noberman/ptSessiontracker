@@ -63,6 +63,9 @@ export default async function EditUserPage({
     })
   } else if (session.user.role !== 'TRAINER') {
     locations = await prisma.location.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+      },
       select: {
         id: true,
         name: true,

@@ -31,6 +31,49 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST /api/commission/method - Set calculation method (for onboarding)
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { method, defaultRate } = body
+
+    // Validate method
+    if (!['FLAT', 'PROGRESSIVE', 'GRADUATED', 'CUSTOM'].includes(method)) {
+      return NextResponse.json(
+        { error: 'Invalid calculation method' },
+        { status: 400 }
+      )
+    }
+
+    // Update organization's commission method
+    const updateData: any = { commissionMethod: method }
+    
+    // For FLAT method, also save the default rate
+    if (method === 'FLAT' && typeof defaultRate === 'number') {
+      updateData.defaultCommissionRate = defaultRate
+    }
+
+    await prisma.organization.update({
+      where: { id: session.user.organizationId },
+      data: updateData
+    })
+
+    return NextResponse.json({ method, defaultRate, message: 'Commission method set successfully' })
+  } catch (error: any) {
+    console.error('Failed to set commission method:', error)
+    return NextResponse.json(
+      { error: 'Failed to set commission method' },
+      { status: 500 }
+    )
+  }
+}
+
 // PUT /api/commission/method - Update calculation method
 export async function PUT(request: NextRequest) {
   try {
@@ -46,10 +89,10 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { method } = body
+    const { method, defaultRate } = body
 
     // Validate method
-    if (!['PROGRESSIVE', 'GRADUATED'].includes(method)) {
+    if (!['FLAT', 'PROGRESSIVE', 'GRADUATED', 'CUSTOM'].includes(method)) {
       return NextResponse.json(
         { error: 'Invalid calculation method' },
         { status: 400 }
@@ -57,12 +100,19 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update organization's commission method
+    const updateData: any = { commissionMethod: method }
+    
+    // For FLAT method, also save the default rate
+    if (method === 'FLAT' && typeof defaultRate === 'number') {
+      updateData.defaultCommissionRate = defaultRate
+    }
+
     await prisma.organization.update({
       where: { id: session.user.organizationId },
-      data: { commissionMethod: method }
+      data: updateData
     })
 
-    return NextResponse.json({ method, message: 'Commission method updated successfully' })
+    return NextResponse.json({ method, defaultRate, message: 'Commission method updated successfully' })
   } catch (error: any) {
     console.error('Failed to update commission method:', error)
     return NextResponse.json(

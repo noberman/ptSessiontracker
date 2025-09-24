@@ -27,6 +27,70 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    const { tiers } = await request.json()
+    
+    if (!tiers || !Array.isArray(tiers)) {
+      return NextResponse.json({ error: 'Invalid tiers data' }, { status: 400 })
+    }
+    
+    // Validate tiers
+    for (let i = 0; i < tiers.length; i++) {
+      const tier = tiers[i]
+      if (typeof tier.minSessions !== 'number' || tier.minSessions < 0) {
+        return NextResponse.json({ error: `Invalid minSessions for tier ${i + 1}` }, { status: 400 })
+      }
+      if (tier.maxSessions !== null && (typeof tier.maxSessions !== 'number' || tier.maxSessions <= tier.minSessions)) {
+        return NextResponse.json({ error: `Invalid maxSessions for tier ${i + 1}` }, { status: 400 })
+      }
+      if (typeof tier.percentage !== 'number' || tier.percentage < 0 || tier.percentage > 1) {
+        return NextResponse.json({ error: `Invalid percentage for tier ${i + 1}` }, { status: 400 })
+      }
+    }
+    
+    // Delete existing tiers and create new ones in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Delete all existing tiers
+      await tx.commissionTier.deleteMany({})
+      
+      // Create new tiers
+      const createdTiers = await tx.commissionTier.createMany({
+        data: tiers.map(tier => ({
+          minSessions: tier.minSessions,
+          maxSessions: tier.maxSessions || null,
+          percentage: tier.percentage
+        }))
+      })
+      
+      // Fetch and return the created tiers
+      const newTiers = await tx.commissionTier.findMany({
+        orderBy: { minSessions: 'asc' }
+      })
+      
+      return newTiers
+    })
+    
+    return NextResponse.json({ 
+      message: 'Commission tiers set successfully',
+      tiers: result 
+    })
+    
+  } catch (error: any) {
+    console.error('Failed to set commission tiers:', error)
+    return NextResponse.json(
+      { error: error.message || 'Failed to set tiers' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)

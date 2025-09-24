@@ -24,6 +24,9 @@ model Organization {
   packageTypes         PackageType[]
   users                User[]
   invitations          Invitation[]
+  clients              Client[]
+  packages             Package[]
+  sessions             Session[]
 
   @@map("organizations")
 }
@@ -64,42 +67,48 @@ model User {
 }
 
 model Client {
-  id               String    @id @default(cuid())
+  id               String        @id @default(cuid())
   name             String
-  email            String    @unique
+  email            String        @unique
   phone            String?
   locationId       String
   primaryTrainerId String?
-  active           Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  location         Location  @relation(fields: [locationId], references: [id])
-  primaryTrainer   User?     @relation("ClientPrimaryTrainer", fields: [primaryTrainerId], references: [id])
+  active           Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  organizationId   String?       // Nullable initially for migration
+  location         Location      @relation(fields: [locationId], references: [id])
+  primaryTrainer   User?         @relation("ClientPrimaryTrainer", fields: [primaryTrainerId], references: [id])
+  organization     Organization? @relation(fields: [organizationId], references: [id])
   packages         Package[]
   sessions         Session[]
 
+  @@index([organizationId])
   @@map("clients")
 }
 
 model Package {
-  id                String       @id @default(cuid())
+  id                String        @id @default(cuid())
   clientId          String
-  packageType       String       @default("Custom")
+  packageType       String        @default("Custom")
   name              String
   totalValue        Float
   totalSessions     Int
-  remainingSessions Int          @default(0)
+  remainingSessions Int           @default(0)
   sessionValue      Float
   startDate         DateTime?
   expiresAt         DateTime?
-  active            Boolean      @default(true)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  active            Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   packageTypeId     String?
-  client            Client       @relation(fields: [clientId], references: [id])
-  packageTypeModel  PackageType? @relation(fields: [packageTypeId], references: [id])
+  organizationId    String?       // Nullable initially for migration
+  client            Client        @relation(fields: [clientId], references: [id])
+  packageTypeModel  PackageType?  @relation(fields: [packageTypeId], references: [id])
+  organization      Organization? @relation(fields: [organizationId], references: [id])
   sessions          Session[]
 
+  @@index([organizationId])
   @@map("packages")
 }
 
@@ -118,15 +127,19 @@ model Session {
   notes            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
-  cancelled        Boolean   @default(false)
+  cancelled        Boolean       @default(false)
   cancelledAt      DateTime?
-  client           Client    @relation(fields: [clientId], references: [id])
-  location         Location  @relation(fields: [locationId], references: [id])
-  package          Package?  @relation(fields: [packageId], references: [id])
-  trainer          User      @relation(fields: [trainerId], references: [id])
+  organizationId   String?       // Nullable initially for migration
+  client           Client        @relation(fields: [clientId], references: [id])
+  location         Location      @relation(fields: [locationId], references: [id])
+  package          Package?      @relation(fields: [packageId], references: [id])
+  trainer          User          @relation(fields: [trainerId], references: [id])
+  organization     Organization? @relation(fields: [organizationId], references: [id])
 
   @@index([trainerId, sessionDate])
   @@index([validationToken])
+  @@index([organizationId])
+  @@index([organizationId, sessionDate])
   @@map("sessions")
 }
 

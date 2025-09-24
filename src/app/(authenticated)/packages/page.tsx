@@ -30,7 +30,10 @@ export default async function PackagesPage({
   const limit = parseInt(params.limit || '10')
   const skip = (page - 1) * limit
 
-  const where: any = {}
+  const where: any = {
+    // CRITICAL: Filter by organization to prevent data leaks
+    organizationId: session.user.organizationId
+  }
 
   // Filter by clients (multi-select)
   if (params.clientIds) {
@@ -146,10 +149,11 @@ export default async function PackagesPage({
       orderBy: { name: 'asc' },
     })
   } else {
-    // Admin and PT Manager can see all
+    // Admin and PT Manager can see all in their organization
     availableClients = await prisma.client.findMany({
       where: {
         active: true,
+        organizationId: session.user.organizationId // Direct filter!
       },
       select: {
         id: true,
@@ -159,8 +163,11 @@ export default async function PackagesPage({
       orderBy: { name: 'asc' },
     })
     
-    // Also get locations for admins/PT managers
+    // Also get locations for admins/PT managers in their organization
     availableLocations = await prisma.location.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+      },
       select: {
         id: true,
         name: true,

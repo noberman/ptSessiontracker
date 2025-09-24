@@ -35,7 +35,10 @@ export default async function SessionsPage({
   const limit = parseInt(params.limit || '10')
   const skip = (page - 1) * limit
 
-  const where: any = {}
+  const where: any = {
+    // CRITICAL: Filter by organization to prevent data leaks
+    organizationId: session.user.organizationId
+  }
 
   // Filter by clients (multi-select)
   if (params.clientIds) {
@@ -144,10 +147,14 @@ export default async function SessionsPage({
     })
     filterLocations = location ? [location] : []
   } else {
-    // Admins and PT Managers see everything
+    // Admins and PT Managers see everything in their organization
+    // Now using direct organizationId - no JOINs needed!
     const [clients, trainers, locations] = await Promise.all([
       prisma.client.findMany({
-        where: { active: true },
+        where: { 
+          active: true,
+          organizationId: session.user.organizationId // Direct filter!
+        },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),
@@ -155,11 +162,13 @@ export default async function SessionsPage({
         where: {
           role: 'TRAINER',
           active: true,
+          organizationId: session.user.organizationId,
         },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),
       prisma.location.findMany({
+        where: { organizationId: session.user.organizationId },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),

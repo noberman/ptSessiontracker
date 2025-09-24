@@ -190,11 +190,6 @@ export default function UsersPageClient({
                     title={usageLimits?.reason}
                   >
                     Invite Team Member
-                    {usageLimits?.remaining !== undefined && usageLimits.remaining > 0 && (
-                      <Badge variant="gray" size="sm" className="ml-2">
-                        {usageLimits.remaining} left
-                      </Badge>
-                    )}
                   </Button>
                 </div>
               )}
@@ -239,6 +234,7 @@ export default function UsersPageClient({
             setShowInviteModal(false)
             fetchInvitations() // Refresh after modal closes
           }}
+          usageLimits={usageLimits}
         />
       )}
     </div>

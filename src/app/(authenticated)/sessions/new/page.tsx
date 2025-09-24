@@ -104,10 +104,11 @@ export default async function NewSessionPage({
       orderBy: { name: 'asc' },
     })
   } else {
-    // Admins and PT Managers can see all clients
+    // Admins and PT Managers can see all clients in their organization
     clients = await prisma.client.findMany({
       where: {
         active: true,
+        organizationId: session.user.organizationId // Direct filter - much faster!
       },
       select: {
         id: true,
@@ -139,8 +140,8 @@ export default async function NewSessionPage({
   let trainers: any[] = []
   if (session.user.role !== 'TRAINER') {
     const trainerQuery = session.user.role === 'CLUB_MANAGER' && session.user.locationId
-      ? { role: 'TRAINER' as const, locationId: session.user.locationId, active: true }
-      : { role: 'TRAINER' as const, active: true }
+      ? { role: 'TRAINER' as const, locationId: session.user.locationId, active: true, organizationId: session.user.organizationId }
+      : { role: 'TRAINER' as const, active: true, organizationId: session.user.organizationId }
     
     trainers = await prisma.user.findMany({
       where: trainerQuery,

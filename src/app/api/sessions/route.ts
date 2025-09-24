@@ -36,10 +36,8 @@ export async function GET(request: Request) {
   const skip = (page - 1) * limit
 
   const where: any = {
-    // Filter sessions by trainer's organization
-    trainer: {
-      organizationId: orgId
-    }
+    // Filter sessions by organization directly
+    organizationId: orgId
   }
 
   // Filter by clients (multi-select)
@@ -102,7 +100,23 @@ export async function GET(request: Request) {
         where,
         skip,
         take: limit,
-        include: {
+        select: {
+          id: true,
+          clientId: true,
+          trainerId: true,
+          packageId: true,
+          locationId: true,
+          sessionDate: true,
+          sessionValue: true,
+          notes: true,
+          validated: true,
+          cancelled: true,
+          cancelledAt: true,
+          validationToken: true,
+          validationExpiry: true,
+          organizationId: true,
+          createdAt: true,
+          updatedAt: true,
           client: {
             select: {
               id: true,
@@ -342,7 +356,7 @@ export async function POST(request: Request) {
 
     // Create the session in a transaction
     const newSession = await prisma.$transaction(async (tx) => {
-      // Create the session
+      // Create the session with organizationId for direct filtering
       const createdSession = await tx.session.create({
         data: {
           clientId,
@@ -357,6 +371,7 @@ export async function POST(request: Request) {
           cancelledAt: isNoShow ? new Date() : null,
           validationToken,
           validationExpiry,
+          organizationId: orgId, // Set organizationId directly for O(log n) queries
         },
         include: {
           client: {

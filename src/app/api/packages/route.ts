@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
+    
     const searchParams = request.nextUrl.searchParams
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
@@ -37,7 +37,10 @@ export async function GET(request: NextRequest) {
       where.remainingSessions = { gt: 0 }
     }
 
-    // Restrict based on user role
+    // Filter by organization
+    where.organizationId = session.user.organizationId
+    
+    // Additional role-based restrictions
     if (session.user.role === 'TRAINER') {
       // Trainers can only see packages for their assigned clients
       where.client = {
@@ -74,6 +77,7 @@ export async function GET(request: NextRequest) {
           expiresAt: true,
           active: true,
           clientId: true,
+          organizationId: true,
           client: {
             select: {
               id: true,
@@ -186,7 +190,7 @@ export async function POST(request: NextRequest) {
     // Calculate session value (0 if package is free)
     const sessionValue = totalSessions > 0 ? totalValue / totalSessions : 0
 
-    // Create package
+    // Create package with organizationId for direct filtering
     const newPackage = await prisma.package.create({
       data: {
         clientId,
@@ -199,6 +203,7 @@ export async function POST(request: NextRequest) {
         sessionValue,
         startDate: startDate ? new Date(startDate) : new Date(),
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        organizationId: session.user.organizationId, // Set organizationId directly
       },
       select: {
         id: true,

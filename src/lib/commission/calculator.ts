@@ -243,14 +243,16 @@ export async function calculateTrainerCommission(
 export async function calculateMonthlyCommissions(
   month: Date,
   locationId?: string,
-  method: CommissionMethod = 'PROGRESSIVE'
+  method: CommissionMethod = 'PROGRESSIVE',
+  organizationId?: string
 ): Promise<TrainerCommission[]> {
-  // Get all active trainers (optionally filtered by location)
+  // Get all active trainers (optionally filtered by location and organization)
   const trainers = await prisma.user.findMany({
     where: {
       role: 'TRAINER',
       active: true,
-      ...(locationId && { locationId })
+      ...(locationId && { locationId }),
+      ...(organizationId && { organizationId })
     }
   })
   

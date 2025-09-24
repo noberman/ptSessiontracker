@@ -49,7 +49,10 @@ export default async function ClientsPage({
   
   const skip = (page - 1) * limit
 
-  const where: any = {}
+  const where: any = {
+    // CRITICAL: Filter by organization to prevent data leaks
+    organizationId: session.user.organizationId
+  }
 
   // Default to active clients unless explicitly requested
   if (params.active !== undefined) {
@@ -124,6 +127,9 @@ export default async function ClientsPage({
     }
     // If location filter is applied, let them see only clients from their location
     // that match the filter (intersection of filtered locations and their location)
+  } else {
+    // Admins and PT Managers - filter by organization directly
+    where.organizationId = session.user.organizationId // Direct filter - no JOIN needed!
   }
 
   const [clients, total, locations, trainers] = await Promise.all([
@@ -170,6 +176,7 @@ export default async function ClientsPage({
           select: { id: true, name: true },
         })
       : prisma.location.findMany({
+          where: { organizationId: session.user.organizationId },
           select: { id: true, name: true },
           orderBy: { name: 'asc' },
         }),
@@ -178,6 +185,7 @@ export default async function ClientsPage({
       where: {
         role: 'TRAINER',
         active: true,
+        organizationId: session.user.organizationId,
         ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId
           ? { locationId: session.user.locationId }
           : {}),

@@ -9,12 +9,18 @@ interface InviteModalProps {
   organizationId: string
   isOpen?: boolean
   onClose?: () => void
+  usageLimits?: {
+    allowed: boolean
+    remaining?: number
+    reason?: string
+  }
 }
 
 export default function InviteModal({ 
   organizationId, 
   isOpen = false,
-  onClose 
+  onClose,
+  usageLimits 
 }: InviteModalProps) {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -74,7 +80,19 @@ export default function InviteModal({
     setError('')
     setSuccess(false)
 
-    const emailsToInvite = bulkMode ? bulkEmails : [email]
+    let emailsToInvite = bulkMode ? bulkEmails : [email]
+
+    // Check against usage limits
+    if (usageLimits?.remaining !== undefined && usageLimits.remaining !== -1) {
+      if (emailsToInvite.length > usageLimits.remaining) {
+        if (usageLimits.remaining === 0) {
+          setError('No invitations remaining. Please upgrade your plan.')
+          return
+        }
+        // Trim to the allowed number
+        emailsToInvite = emailsToInvite.slice(0, usageLimits.remaining)
+      }
+    }
 
     // Validate emails
     for (const emailToCheck of emailsToInvite) {
@@ -172,6 +190,36 @@ export default function InviteModal({
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Usage Limit Info */}
+            {usageLimits?.remaining !== undefined && usageLimits.remaining !== -1 && (
+              <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-primary mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-primary-900">
+                      {usageLimits.remaining === 0 ? (
+                        'No invitations remaining'
+                      ) : (
+                        <>You have {usageLimits.remaining} invitation{usageLimits.remaining !== 1 ? 's' : ''} remaining</>
+                      )}
+                    </p>
+                    {usageLimits.remaining > 0 && (
+                      <p className="text-primary-700 mt-1">
+                        {bulkMode && bulkEmails.length > usageLimits.remaining && (
+                          <>Only the first {usageLimits.remaining} email{usageLimits.remaining !== 1 ? 's' : ''} will be invited.</>
+                        )}
+                      </p>
+                    )}
+                    {usageLimits.remaining === 0 && (
+                      <p className="text-primary-700 mt-1">
+                        Upgrade your plan to invite more team members.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Form */}
             <form onSubmit={handleSubmit}>

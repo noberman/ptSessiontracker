@@ -63,7 +63,8 @@ export async function GET(request: NextRequest) {
       const commissions = await calculateMonthlyCommissions(
         month, 
         userLocationId,
-        method
+        method,
+        session.user.organizationId
       )
       
       return NextResponse.json({
@@ -86,11 +87,12 @@ export async function GET(request: NextRequest) {
         })
       }
       
-      // Otherwise get all trainers
+      // Otherwise get all trainers in the organization
       const commissions = await calculateMonthlyCommissions(
         month,
         locationId || undefined,
-        method
+        method,
+        session.user.organizationId
       )
       
       // Calculate totals

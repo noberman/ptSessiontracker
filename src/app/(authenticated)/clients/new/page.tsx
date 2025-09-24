@@ -42,9 +42,10 @@ export default async function NewClientPage() {
       orderBy: { name: 'asc' },
     })
   } else {
-    // Admins and PT Managers can see all locations and trainers
+    // Admins and PT Managers can see all locations and trainers in their organization
     [locations, trainers] = await Promise.all([
       prisma.location.findMany({
+        where: { organizationId: session.user.organizationId },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),
@@ -52,6 +53,7 @@ export default async function NewClientPage() {
         where: {
           role: 'TRAINER',
           active: true,
+          organizationId: session.user.organizationId,
         },
         select: {
           id: true,

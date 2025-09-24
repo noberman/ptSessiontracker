@@ -61,13 +61,15 @@ export default async function CommissionPage({
   const commissions = await calculateMonthlyCommissions(
     selectedMonth,
     locationId,
-    method
+    method,
+    organizationId // Pass organizationId to filter trainers
   )
   
   // Get locations for filter (admins and PT managers only)
   let locations: Array<{ id: string; name: string }> = []
   if (session.user.role === 'ADMIN' || session.user.role === 'PT_MANAGER') {
     locations = await prisma.location.findMany({
+      where: { organizationId }, // Filter locations by organization
       select: { id: true, name: true },
       orderBy: { name: 'asc' }
     })

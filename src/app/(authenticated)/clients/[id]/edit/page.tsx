@@ -73,6 +73,7 @@ export default async function EditClientPage({
   } else {
     [locations, trainers] = await Promise.all([
       prisma.location.findMany({
+        where: { organizationId: session.user.organizationId },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),
@@ -80,6 +81,7 @@ export default async function EditClientPage({
         where: {
           role: 'TRAINER',
           active: true,
+          organizationId: session.user.organizationId,
         },
         select: {
           id: true,
