@@ -187,7 +187,7 @@ export default function BillingPage() {
 
               {/* Action Button */}
               <Button
-                variant={plan.recommended ? 'default' : 'outline'}
+                variant={plan.recommended ? 'primary' : 'outline'}
                 className="w-full"
                 onClick={() => handleSelectPlan(plan.tier)}
                 disabled={isLoading && selectedPlan === plan.tier}

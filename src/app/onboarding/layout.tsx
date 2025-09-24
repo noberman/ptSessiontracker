@@ -14,8 +14,8 @@ export default async function OnboardingLayout({
     redirect('/login')
   }
 
-  // If user has an organization and isn't in onboarding, redirect to dashboard
-  if (session.user.organizationId && !session.user.needsOnboarding) {
+  // If user has an organization already, redirect to dashboard
+  if (session.user.organizationId) {
     redirect('/dashboard')
   }
 
