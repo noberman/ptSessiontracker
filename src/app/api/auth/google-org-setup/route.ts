@@ -38,15 +38,15 @@ export async function POST(request: Request) {
 
     // Create everything in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create organization
+      // Create new organization for the user
       const organization = await tx.organization.create({
         data: {
           name: organizationName,
-          email: session.user.email!,  // We checked for email existence above
+          email: session.user.email!,
           subscriptionTier: 'FREE',
           subscriptionStatus: 'ACTIVE',
-          commissionMethod: 'PROGRESSIVE',
-        },
+          commissionMethod: 'PROGRESSIVE'
+        }
       })
 
       // Create location
