@@ -11,7 +11,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const packageTypes = await prisma.packageTemplate.findMany({
+    const packageTypes = await prisma.packageType.findMany({
       where: { organizationId: session.user.organizationId },
       orderBy: { createdAt: 'desc' }
     })
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const packageType = await prisma.packageTemplate.create({
+    const packageType = await prisma.packageType.create({
       data: {
         organizationId: session.user.organizationId,
         name,
