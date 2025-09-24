@@ -49,7 +49,7 @@ export default function CommissionsPage() {
 
     try {
       // Save commission configuration
-      let commissionData: any = {
+      const commissionData: any = {
         method: method === 'CUSTOM' ? 'CUSTOM' : method,
       }
 

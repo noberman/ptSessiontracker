@@ -146,7 +146,7 @@ export default function TeamPage() {
               Invite your team members
             </h2>
             <p className="text-text-secondary">
-              They'll receive an email invitation to join your organization
+              They&apos;ll receive an email invitation to join your organization
             </p>
             <p className="text-sm text-primary mt-2">
               Free plan includes 2 team members

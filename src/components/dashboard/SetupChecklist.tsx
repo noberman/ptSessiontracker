@@ -162,7 +162,7 @@ export function SetupChecklist() {
       {completedCount === totalCount && (
         <div className="mt-4 p-3 bg-success-50 rounded-lg text-center">
           <p className="text-sm text-success-700 font-medium">
-            🎉 Congratulations! You've completed all setup steps!
+            🎉 Congratulations! You&apos;ve completed all setup steps!
           </p>
         </div>
       )}

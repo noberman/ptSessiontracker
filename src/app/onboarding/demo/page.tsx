@@ -140,7 +140,7 @@ export default function DemoPage() {
                 <Sparkles className="w-8 h-8 text-primary" />
               </div>
               <h2 className="text-2xl font-bold text-text-primary mb-2">
-                Let's see FitSync in action!
+                Let&apos;s see FitSync in action!
               </h2>
               <p className="text-text-secondary">
                 How would you like to experience FitSync?
@@ -371,7 +371,7 @@ export default function DemoPage() {
                   variant="outline"
                   className="w-full"
                 >
-                  I've validated the session
+                  I&apos;ve validated the session
                 </Button>
               </div>
             )}

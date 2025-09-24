@@ -52,7 +52,7 @@ export default function WelcomePage() {
               Welcome to FitSync, {session?.user?.name?.split(' ')[0]}! 👋
             </h1>
             <p className="text-text-secondary">
-              Let's get your organization set up in just a few minutes
+              Let&apos;s get your organization set up in just a few minutes
             </p>
           </div>
 
@@ -66,7 +66,7 @@ export default function WelcomePage() {
               </div>
               <div className="flex-1">
                 <p className="text-text-primary mb-3">
-                  Hi, I'm Noah - I built FitSync because I saw how broken commission tracking was in gyms. 
+                  Hi, I&apos;m Noah - I built FitSync because I saw how broken commission tracking was in gyms. 
                   As a trainer/manager myself, I experienced the spreadsheet nightmare firsthand.
                 </p>
                 <p className="text-text-primary mb-3">

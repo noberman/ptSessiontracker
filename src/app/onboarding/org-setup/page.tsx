@@ -80,7 +80,7 @@ export default function OrgSetupPage() {
             Welcome to FitSync!
           </h1>
           <p className="text-text-secondary">
-            Let's set up your organization
+            Let&apos;s set up your organization
           </p>
         </div>
 
