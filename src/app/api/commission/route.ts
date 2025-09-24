@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
         month, 
         userLocationId,
         method,
-        session.user.organizationId
+        session.user.organizationId ?? undefined
       )
       
       return NextResponse.json({
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
         month,
         locationId || undefined,
         method,
-        session.user.organizationId
+        session.user.organizationId ?? undefined
       )
       
       // Calculate totals

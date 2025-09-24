@@ -62,7 +62,7 @@ export default async function CommissionPage({
     selectedMonth,
     locationId,
     method,
-    organizationId // Pass organizationId to filter trainers
+    organizationId ?? undefined // Convert null to undefined
   )
   
   // Get locations for filter (admins and PT managers only)
