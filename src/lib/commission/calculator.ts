@@ -74,8 +74,8 @@ function calculateProgressiveTier(
   
   return {
     tierAchieved,
-    commissionRate,
-    commissionAmount
+    commissionRate: Math.round(commissionRate * 10) / 10, // Round to 1 decimal place
+    commissionAmount: Math.round(commissionAmount * 100) / 100 // Round to 2 decimal places
   }
 }
 
@@ -149,8 +149,8 @@ function calculateGraduatedTier(
   
   return {
     tiersApplied,
-    commissionRate: effectiveRate,
-    commissionAmount: totalCommission
+    commissionRate: Math.round(effectiveRate * 10) / 10, // Round to 1 decimal place
+    commissionAmount: Math.round(totalCommission * 100) / 100 // Round to 2 decimal places
   }
 }
 
