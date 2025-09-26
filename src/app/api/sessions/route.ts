@@ -207,7 +207,8 @@ export async function POST(request: Request) {
       sessionDate,
       sessionTime,
       notes,
-      isNoShow
+      isNoShow,
+      isDemo = false
     } = body
 
     // Validate required fields
@@ -372,6 +373,7 @@ export async function POST(request: Request) {
           validationToken,
           validationExpiry,
           organizationId: orgId, // Set organizationId directly for O(log n) queries
+          isDemo, // Add isDemo flag
         },
         include: {
           client: {

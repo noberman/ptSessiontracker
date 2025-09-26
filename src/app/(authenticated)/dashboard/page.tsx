@@ -10,6 +10,8 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
+  // The middleware handles onboarding redirect, so if we're here, user can see dashboard
+  
   return (
     <DashboardWrapper 
       userId={session.user.id}

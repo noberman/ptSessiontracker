@@ -42,9 +42,9 @@ export default function SignupPage() {
   const handleGoogleSignup = async () => {
     setIsLoading(true)
     try {
-      // Sign in with Google, then redirect to org setup
+      // Sign in with Google, then redirect to onboarding
       await signIn('google', { 
-        callbackUrl: '/onboarding/org-setup' 
+        callbackUrl: '/onboarding' 
       })
     } catch (error) {
       console.error('Google signup failed:', error)
@@ -104,7 +104,7 @@ export default function SignupPage() {
       }
 
       // Redirect to onboarding
-      router.push('/onboarding/welcome')
+      router.push('/onboarding')
     } catch (err: any) {
       setError(err.message || 'An error occurred during signup')
     } finally {

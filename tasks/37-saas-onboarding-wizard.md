@@ -2,56 +2,206 @@
 
 **Complexity: 8/10**  
 **Priority: HIGH (Critical for self-service growth)**  
-**Status: Not Started**  
+**Status: In Progress**  
 **Dependencies: Task 36 (Email Invitation System), Stripe integration, NextAuth**  
 **Estimated Time: 10-12 hours**
 
 ## Objective
-Create a smooth, self-service onboarding flow for new organizations to sign up, set up their team, and start using FitSync immediately with instant value demonstration.
+Create a full-screen, immersive onboarding wizard that guides new organizations through essential setup BEFORE accessing the dashboard. This is NOT a checklist on the dashboard, but a dedicated canvas experience that blocks dashboard access until core steps are completed.
 
-## Onboarding Flow (7 Steps)
+## Architecture: Full-Screen Wizard Approach
 
-### Step 1: Organization Signup
-**Route: `/signup`**
+### Core Concept
+- **Single Route**: `/onboarding` - One unified wizard experience
+- **Step Components**: Each step is a component, not a separate page
+- **Full Canvas**: Takes over entire screen, no dashboard navigation visible
+- **Progressive Disclosure**: Can't skip to dashboard until essential steps done
+- **Smooth Transitions**: Steps slide/fade between each other
+- **Persistent Progress**: Progress bar always visible at top
 
+### Implementation Structure
 ```typescript
-// Google OAuth Option (Primary)
-[Continue with Google]
---- or ---
-[Sign up with email]
-
-// Email Signup Form
-interface SignupForm {
-  // Organization Info
-  organizationName: string
+// /app/onboarding/page.tsx - Main wizard container
+export default function OnboardingWizard() {
+  const [currentStep, setCurrentStep] = useState(1)
+  const [wizardData, setWizardData] = useState<OnboardingData>({})
   
-  // Admin Account
-  adminName: string
-  adminEmail: string
-  adminPassword: string
+  // Block dashboard access until essentials complete
+  const essentialStepsComplete = currentStep > 5 // After commission setup
   
-  // Auto-generated
-  locationName: string // Defaults to organizationName
+  return (
+    <div className="fixed inset-0 bg-gradient-to-br from-primary-50 to-white">
+      <OnboardingProgress currentStep={currentStep} totalSteps={7} />
+      
+      <div className="h-full overflow-y-auto">
+        <AnimatePresence mode="wait">
+          {currentStep === 1 && <OrgSetupStep onNext={handleNext} />}
+          {currentStep === 2 && <WelcomeStep onNext={handleNext} />}
+          {currentStep === 3 && <TeamInviteStep onNext={handleNext} onSkip={handleSkip} />}
+          {currentStep === 4 && <PackageSetupStep onNext={handleNext} onSkip={handleSkip} />}
+          {currentStep === 5 && <CommissionSetupStep onNext={handleNext} />}
+          {currentStep === 6 && <BillingStep onNext={handleNext} />}
+          {currentStep === 7 && <DemoStep onComplete={handleComplete} />}
+        </AnimatePresence>
+      </div>
+      
+      {/* Navigation controls */}
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t">
+        {currentStep > 1 && (
+          <Button variant="ghost" onClick={handleBack}>
+            ← Back
+          </Button>
+        )}
+        {!essentialStepsComplete && (
+          <p className="text-sm text-gray-500">
+            Complete setup to access your dashboard
+          </p>
+        )}
+      </div>
+    </div>
+  )
 }
 ```
 
-**Google OAuth Flow:**
-1. User clicks "Continue with Google"
-2. Authenticate with Google
-3. Collect only organizationName
-4. Auto-populate name and email from Google
-5. Create Organization + Admin + Location
+### Key Differences from Current Implementation
+1. **Single unified route** instead of multiple `/onboarding/*` pages
+2. **Components, not pages** for each step
+3. **Shared state** across all steps in parent wizard
+4. **Can't navigate away** until essentials done
+5. **Smooth animations** between steps
+6. **Consistent layout** with progress always visible
 
-**Email Flow Actions:**
-1. Create Organization (default to FREE tier)
-2. Create Admin user (role: ADMIN)
-3. Create first Location
-4. Generate Stripe customer ID
-5. Send welcome email
-6. Auto-login and redirect to `/onboarding/welcome`
+## Wizard Eligibility & User Flows
+
+### Who Gets the Wizard
+
+**ELIGIBLE for wizard (ADMIN users only):**
+- New Google sign-in users with NO organization (become ADMIN after org creation)
+- New email signup users who just created their org (already ADMIN)
+- Must be FIRST LOGIN as admin
+
+**NOT ELIGIBLE (skip to dashboard):**
+- Invited users (TRAINER, PT_MANAGER, CLUB_MANAGER) - join existing org
+- Existing users logging in
+- Any non-ADMIN role
+- Admins who have already completed onboarding
+
+### Detailed User Flows
+
+```typescript
+1. NEW GOOGLE SIGN-IN FLOW:
+   Google Auth → No Org → Redirect to /onboarding → 
+   Step 1: CREATE ORG (org name, location) → 
+   Step 2: Welcome → 
+   Steps 3-7: Complete wizard → 
+   Mark onboarding complete →
+   Dashboard
+
+2. NEW EMAIL SIGNUP FLOW:
+   /signup (creates org during signup) → 
+   Auto-login → Has Org but needs onboarding → /onboarding →
+   Step 1: SKIP (org already exists) →
+   Step 2: Welcome →
+   Steps 3-7: Complete wizard →
+   Mark onboarding complete →
+   Dashboard
+
+3. INVITED USER FLOW:
+   Accept invite → Login/Signup → 
+   Already has Org + Non-admin role → 
+   Skip wizard entirely → 
+   Dashboard
+
+4. EXISTING USER FLOW:
+   Login → Has completed onboarding →
+   Dashboard
+```
+
+### Implementation Logic
+
+```typescript
+// Add to User model
+model User {
+  // ... existing fields
+  onboardingCompletedAt DateTime? // Track wizard completion
+}
+
+// Middleware check
+export function needsOnboarding(user: User): boolean {
+  // Only admins can see onboarding
+  if (user.role !== 'ADMIN') return false
+  
+  // Already completed onboarding
+  if (user.onboardingCompletedAt) return false
+  
+  // Google users without org need onboarding
+  if (!user.organizationId) return true
+  
+  // Email signup users (have org but not completed)
+  if (user.organizationId && !user.onboardingCompletedAt) {
+    // Check if they just signed up (within last 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+    return user.createdAt > fiveMinutesAgo
+  }
+  
+  return false
+}
+
+// In /app/onboarding/page.tsx
+export default function OnboardingWizard() {
+  const { data: session } = useSession()
+  const [currentStep, setCurrentStep] = useState(() => {
+    // Google users without org start at step 1
+    // Email signup users (with org) start at step 2
+    return session?.user?.organizationId ? 2 : 1
+  })
+  
+  // ... rest of wizard logic
+}
+
+// On completion
+async function completeOnboarding() {
+  await fetch('/api/onboarding/complete', { method: 'POST' })
+  // Updates user.onboardingCompletedAt = new Date()
+  router.push('/dashboard')
+}
+```
+
+## Onboarding Flow (7 Steps)
+
+### Step 1: Organization Setup (Google Users Only)
+**Component: `OrgSetupStep`**
+**Skipped for email signup users (they already have an org)**
+
+```typescript
+// Only shown to Google sign-in users without organization
+interface OrgSetupForm {
+  organizationName: string
+  locationName: string // Default: "Main Location"
+}
+
+"Let's set up your organization"
+
+Organization Name *
+[____________________]
+
+Primary Location Name *
+[Main Location_______]
+
+[Create Organization →]
+```
+
+**Actions:**
+1. Create Organization (FREE tier)
+2. Create first Location
+3. Update user with organizationId and locationId
+4. Set user role to ADMIN
+5. Generate Stripe customer ID (if production)
+6. Move to Step 2
 
 ### Step 2: Personal Welcome
-**Route: `/onboarding/welcome`**
+**Component: `WelcomeStep`**
+**First real step for email signup users**
 
 ```typescript
 "Welcome to FitSync, {adminName}! 👋"
@@ -80,7 +230,7 @@ Let's get {organizationName} set up!"
 ```
 
 ### Step 3: Invite Your Team
-**Route: `/onboarding/team`**
+**Component: `TeamInviteStep`**
 
 ```typescript
 "Invite your team members"
@@ -102,7 +252,7 @@ Remaining slots: 2 (Free plan)
 - Uses existing invitation system
 
 ### Step 4: Package Setup
-**Route: `/onboarding/packages`**
+**Component: `PackageSetupStep`**
 
 ```typescript
 "What training packages are you selling?"
@@ -123,7 +273,7 @@ Quick add templates:
 **Note:** Client import removed from onboarding - moved to post-onboarding
 
 ### Step 5: Configure Commissions
-**Route: `/onboarding/commissions`**
+**Component: `CommissionSetupStep`**
 
 ```typescript
 "How do you calculate trainer commissions?"
@@ -139,7 +289,7 @@ Quick add templates:
 ```
 
 ### Step 6: Choose Your Plan
-**Route: `/onboarding/billing`**
+**Component: `BillingStep`**
 
 ```typescript
 "Choose your plan"
@@ -158,7 +308,7 @@ Quick add templates:
 ```
 
 ### Step 7: See the Magic! ✨
-**Route: `/onboarding/demo`**
+**Component: `DemoStep`**
 
 ```typescript
 "Let's see FitSync in action!"

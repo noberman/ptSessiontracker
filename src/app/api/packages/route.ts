@@ -141,7 +141,8 @@ export async function POST(request: NextRequest) {
       totalValue, 
       totalSessions,
       startDate,
-      expiresAt 
+      expiresAt,
+      isDemo = false 
     } = body
 
     // Validate required fields
@@ -204,6 +205,7 @@ export async function POST(request: NextRequest) {
         startDate: startDate ? new Date(startDate) : new Date(),
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         organizationId: session.user.organizationId, // Set organizationId directly
+        isDemo, // Add isDemo flag
       },
       select: {
         id: true,

@@ -7,6 +7,8 @@ declare module 'next-auth' {
       role: string
       locationId: string | null
       organizationId: string | null
+      organizationName?: string | null
+      onboardingCompletedAt?: Date | null
     } & DefaultSession['user']
   }
 
@@ -14,6 +16,8 @@ declare module 'next-auth' {
     role: string
     locationId: string | null
     organizationId: string | null
+    organizationName?: string | null
+    onboardingCompletedAt?: Date | null
   }
 }
 
@@ -23,5 +27,7 @@ declare module 'next-auth/jwt' {
     role: string
     locationId: string | null
     organizationId: string | null
+    organizationName?: string | null
+    onboardingCompletedAt?: Date | null
   }
 }

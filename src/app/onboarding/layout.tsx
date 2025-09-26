@@ -14,14 +14,9 @@ export default async function OnboardingLayout({
     redirect('/login')
   }
 
-  // If user already has an organization, they shouldn't be in onboarding
-  // This prevents invited users or existing users from accessing onboarding
-  if (session.user.organizationId) {
-    redirect('/dashboard')
-  }
-  
-  // Only users without an organization should reach onboarding
-  // This is for new sign-ups or Google sign-in first-time users
+  // The middleware handles all onboarding logic
+  // This layout just provides the wrapper
+  // Don't do any redirects here - let middleware handle it
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-white">

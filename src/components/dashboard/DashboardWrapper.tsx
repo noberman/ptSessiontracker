@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { TrainerDashboard } from './TrainerDashboard'
 import { ManagerDashboard } from './ManagerDashboard'
 import { AdminDashboard } from './AdminDashboard'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Eye, ChevronDown } from 'lucide-react'
+import { CompletionModal } from '@/components/onboarding/CompletionModal'
 
 interface DashboardWrapperProps {
   userId: string
@@ -19,8 +21,32 @@ export function DashboardWrapper({ userId, userName, actualRole, locationId }: D
   // For development, allow switching between views
   const [viewRole, setViewRole] = useState(actualRole)
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false)
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const searchParams = useSearchParams()
 
   const isDevelopment = process.env.NODE_ENV === 'development'
+
+  // Check if user just completed onboarding
+  useEffect(() => {
+    if (searchParams.get('onboarding') === 'complete') {
+      setShowCompletionModal(true)
+      // Clear the query param to prevent showing again on refresh
+      const url = new URL(window.location.href)
+      url.searchParams.delete('onboarding')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [searchParams])
+
+  const handleClearDemoData = async () => {
+    try {
+      const response = await fetch('/api/demo/cleanup', { method: 'DELETE' })
+      if (!response.ok) {
+        console.error('Failed to clear demo data')
+      }
+    } catch (error) {
+      console.error('Error clearing demo data:', error)
+    }
+  }
 
   const renderDashboard = () => {
     switch (viewRole) {
@@ -178,6 +204,19 @@ export function DashboardWrapper({ userId, userName, actualRole, locationId }: D
       <div>
         {renderDashboard()}
       </div>
+
+      {/* Onboarding Completion Modal */}
+      {showCompletionModal && (
+        <CompletionModal
+          demoData={{
+            clientName: `${userName} (Demo)`,
+            packageName: 'Demo Package - 10 Sessions',
+            sessionCount: 1
+          }}
+          onClearData={handleClearDemoData}
+          onClose={() => setShowCompletionModal(false)}
+        />
+      )}
     </div>
   )
 }

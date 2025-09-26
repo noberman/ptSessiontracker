@@ -72,7 +72,39 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
+      console.log('🔐 JWT Callback:', {
+        trigger,
+        hasUser: !!user,
+        hasToken: !!token,
+        provider: account?.provider,
+        tokenEmail: token.email
+      })
+      
+      // Always refresh user data when needed
+      if (trigger === 'update' || (token && token.email)) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email as string },
+          include: { organization: true }
+        })
+        
+        if (dbUser) {
+          console.log('🔄 Refreshing token data for:', dbUser.email, {
+            onboardingCompletedAt: dbUser.onboardingCompletedAt
+          })
+          
+          return {
+            ...token,
+            id: dbUser.id,
+            role: dbUser.role,
+            locationId: dbUser.locationId,
+            organizationId: dbUser.organizationId,
+            organizationName: dbUser.organization?.name || null,
+            onboardingCompletedAt: dbUser.onboardingCompletedAt,
+          }
+        }
+      }
+      
       if (user) {
         // For Google OAuth, we need to check if user exists in DB
         if (account?.provider === 'google') {
@@ -82,6 +114,7 @@ export const authOptions: NextAuthOptions = {
           })
           
           if (dbUser) {
+            console.log('✅ Google user found in DB:', dbUser.email)
             // Existing user logging in with Google
             return {
               ...token,
@@ -89,8 +122,11 @@ export const authOptions: NextAuthOptions = {
               role: dbUser.role,
               locationId: dbUser.locationId,
               organizationId: dbUser.organizationId,
+              organizationName: dbUser.organization?.name || null,
+              onboardingCompletedAt: dbUser.onboardingCompletedAt,
             }
           } else {
+            console.log('🆕 New Google user:', user.email)
             // New user - they'll need to complete signup
             return {
               ...token,
@@ -101,20 +137,31 @@ export const authOptions: NextAuthOptions = {
             }
           }
         } else {
-          // Credentials login
+          // Credentials login - fetch full user data
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            include: { organization: true }
+          })
+          
+          console.log('📧 Credentials login for:', dbUser?.email, {
+            onboardingCompletedAt: dbUser?.onboardingCompletedAt
+          })
+          
           return {
             ...token,
             id: user.id,
             role: (user as any).role,
             locationId: (user as any).locationId,
             organizationId: (user as any).organizationId,
+            organizationName: dbUser?.organization?.name || null,
+            onboardingCompletedAt: dbUser?.onboardingCompletedAt || null,
           }
         }
       }
       return token
     },
     async session({ session, token }) {
-      return {
+      const enrichedSession = {
         ...session,
         user: {
           ...session.user,
@@ -122,9 +169,20 @@ export const authOptions: NextAuthOptions = {
           role: token.role as string,
           locationId: token.locationId as string | null,
           organizationId: token.organizationId as string | null,
+          organizationName: token.organizationName as string | null | undefined,
+          onboardingCompletedAt: token.onboardingCompletedAt as Date | null | undefined,
           needsOnboarding: token.needsOnboarding as boolean | undefined,
         },
       }
+      
+      console.log('📋 Session Callback:', {
+        email: enrichedSession.user.email,
+        role: enrichedSession.user.role,
+        onboardingCompletedAt: enrichedSession.user.onboardingCompletedAt,
+        organizationId: enrichedSession.user.organizationId
+      })
+      
+      return enrichedSession
     },
   },
 }

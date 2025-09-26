@@ -79,10 +79,10 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // 2. Create default location
+      // 2. Create default location with org-specific name
       const location = await tx.location.create({
         data: {
-          name: 'Main Location', // Default location name
+          name: `${organizationName} - Main Location`, // Make it unique per org
           organizationId: organization.id,
           active: true,
         }
@@ -101,29 +101,8 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // 4. Create default commission tiers
-      await tx.commissionTier.createMany({
-        data: [
-          {
-            organizationId: organization.id,
-            minSessions: 1,
-            maxSessions: 10,
-            percentage: 0.4, // 40%
-          },
-          {
-            organizationId: organization.id,
-            minSessions: 11,
-            maxSessions: 20,
-            percentage: 0.5, // 50%
-          },
-          {
-            organizationId: organization.id,
-            minSessions: 21,
-            maxSessions: null, // No upper limit
-            percentage: 0.6, // 60%
-          },
-        ]
-      })
+      // Don't create commission tiers - let onboarding handle it
+      // This ensures users go through the proper onboarding flow
 
       return { organization, user, location }
     })

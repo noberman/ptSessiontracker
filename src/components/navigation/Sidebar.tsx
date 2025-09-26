@@ -10,7 +10,6 @@ import {
   Users,
   Package,
   UserPlus,
-  Wrench,
   Menu,
   X,
   ChevronLeft,
@@ -91,12 +90,6 @@ const navItems: NavItem[] = [
     href: '/settings',
     icon: Settings,
     roles: ['PT_MANAGER', 'ADMIN', 'CLUB_MANAGER'],
-  },
-  {
-    title: 'Admin Tools',
-    href: '/admin/email-test',
-    icon: Wrench,
-    roles: ['ADMIN'],
   },
 ]
 

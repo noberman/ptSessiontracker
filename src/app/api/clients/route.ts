@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, email, phone, locationId, primaryTrainerId } = body
+    const { name, email, phone, locationId, primaryTrainerId, isDemo = false } = body
 
     // Validate required fields
     if (!name || !email) {
@@ -190,9 +190,10 @@ export async function POST(request: NextRequest) {
         name,
         email,
         phone: phone || null,
-        locationId: locationId || null,
+        locationId: locationId || session.user.locationId || null, // Default to user's location
         primaryTrainerId: primaryTrainerId || null,
         organizationId: session.user.organizationId, // Set organizationId directly
+        isDemo, // Add isDemo flag
       },
       select: {
         id: true,

@@ -57,6 +57,7 @@ model User {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   organizationId  String?
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
   assignedClients Client[]      @relation("ClientPrimaryTrainer")
   sessions        Session[]
   sentInvitations Invitation[]  @relation("UserInvitations")
@@ -77,6 +78,7 @@ model Client {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   organizationId   String?       // Nullable initially for migration
+  isDemo           Boolean       @default(false) // Flag for demo/test data
   location         Location      @relation(fields: [locationId], references: [id])
   primaryTrainer   User?         @relation("ClientPrimaryTrainer", fields: [primaryTrainerId], references: [id])
   organization     Organization? @relation(fields: [organizationId], references: [id])
@@ -103,6 +105,7 @@ model Package {
   updatedAt         DateTime      @updatedAt
   packageTypeId     String?
   organizationId    String?       // Nullable initially for migration
+  isDemo            Boolean       @default(false) // Flag for demo/test data
   client            Client        @relation(fields: [clientId], references: [id])
   packageTypeModel  PackageType?  @relation(fields: [packageTypeId], references: [id])
   organization      Organization? @relation(fields: [organizationId], references: [id])
@@ -130,6 +133,7 @@ model Session {
   cancelled        Boolean       @default(false)
   cancelledAt      DateTime?
   organizationId   String?       // Nullable initially for migration
+  isDemo           Boolean       @default(false) // Flag for demo/test data
   client           Client        @relation(fields: [clientId], references: [id])
   location         Location      @relation(fields: [locationId], references: [id])
   package          Package?      @relation(fields: [packageId], references: [id])
