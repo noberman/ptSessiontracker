@@ -2,11 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil'
-})
+import { getStripe } from '@/lib/stripe'
 
 export async function POST(request: Request) {
   try {
@@ -79,6 +75,7 @@ export async function POST(request: Request) {
       // Create Stripe customer if in production
       if (process.env.NODE_ENV === 'production' && process.env.STRIPE_SECRET_KEY) {
         try {
+          const stripe = getStripe()
           const customer = await stripe.customers.create({
             email: session.user.email!,  // We checked for email existence above
             name: session.user.name || organizationName,
