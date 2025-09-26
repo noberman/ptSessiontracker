@@ -60,7 +60,7 @@ export function DemoCommissionReport({ commissions, highlightedEmail }: DemoComm
                 <td className="px-4 py-3">
                   <Badge variant={
                     data.currentTier === 'Tier 3' ? 'success' : 
-                    data.currentTier === 'Tier 2' ? 'primary' : 
+                    data.currentTier === 'Tier 2' ? 'secondary' : 
                     'default'
                   }>
                     {data.currentTier}
