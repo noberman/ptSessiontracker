@@ -46,7 +46,7 @@ export function CompletionModal({ demoData, onClearData, onClose }: CompletionMo
             </h2>
             
             <p className="text-gray-600 mb-6">
-              You've successfully experienced the FitSync workflow
+              You&apos;ve successfully experienced the FitSync workflow
             </p>
 
             {/* Demo data summary */}

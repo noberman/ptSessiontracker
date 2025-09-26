@@ -269,12 +269,12 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
             See FitSync in Action
           </h2>
           <p className="text-text-secondary">
-            Let's walk through creating and validating a real session
+            Let&apos;s walk through creating and validating a real session
           </p>
         </div>
 
         <div className="bg-primary-50 border border-primary-200 rounded-lg p-6 mb-6">
-          <h3 className="font-semibold mb-3">What you'll experience:</h3>
+          <h3 className="font-semibold mb-3">What you&apos;ll experience:</h3>
           <ol className="space-y-2 text-sm">
             <li className="flex items-start gap-2">
               <span className="text-primary font-bold">1.</span>
@@ -318,7 +318,7 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
             <div>
               <h2 className="text-2xl font-bold">Sessions</h2>
               <p className="text-sm text-text-secondary">
-                This is where you'll manage all training sessions
+                This is where you&apos;ll manage all training sessions
               </p>
             </div>
             <div className="relative">
@@ -348,7 +348,7 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
           {createdSession && (
             <div className="mt-4 p-3 bg-primary-50 border border-primary-200 rounded-lg">
               <p className="text-sm text-primary-800">
-                <span className="font-semibold">📍 Your session:</span> The highlighted row shows the session you'll create
+                <span className="font-semibold">📍 Your session:</span> The highlighted row shows the session you&apos;ll create
               </p>
             </div>
           )}
@@ -369,7 +369,7 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
             <div>
               <h3 className="font-semibold">Create a Test Client</h3>
               <p className="text-sm text-text-secondary">
-                First, let's create a client using your email address
+                First, let&apos;s create a client using your email address
               </p>
             </div>
           </div>
@@ -384,7 +384,7 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
                   placeholder="Client name"
                 />
                 <p className="text-xs text-text-secondary mt-1">
-                  We've added "(Demo)" to identify this as test data
+                  We&apos;ve added &quot;(Demo)&quot; to identify this as test data
                 </p>
               </div>
               
@@ -444,7 +444,7 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
             <div>
               <h3 className="font-semibold">Log a Training Session</h3>
               <p className="text-sm text-text-secondary">
-                Now let's log a session for your test client
+                Now let&apos;s log a session for your test client
               </p>
             </div>
           </div>
@@ -533,7 +533,7 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
             <div>
               <h3 className="font-semibold">Check Your Email</h3>
               <p className="text-sm text-text-secondary">
-                We've sent a validation request to your email
+                We&apos;ve sent a validation request to your email
               </p>
             </div>
           </div>
@@ -554,7 +554,7 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
               size="lg"
               className="min-w-[200px]"
             >
-              I've Validated the Session
+              I&apos;ve Validated the Session
             </Button>
           </div>
         </Card>
@@ -574,7 +574,7 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
             <div>
               <h3 className="font-semibold">Session Validated!</h3>
               <p className="text-sm text-text-secondary">
-                Here's your commission report showing all trainer earnings
+                Here&apos;s your commission report showing all trainer earnings
               </p>
             </div>
           </div>
