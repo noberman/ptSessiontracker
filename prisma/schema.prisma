@@ -19,6 +19,12 @@ model Organization {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   commissionMethod     String             @default("PROGRESSIVE")
+  adminNotes           String?            @db.Text
+  lastIssue            String?
+  lastIssueDate        DateTime?
+  isClone              Boolean            @default(false)
+  clonedFrom           String?
+  clonedAt             DateTime?
   commissionTiers      CommissionTier[]
   locations            Location[]
   packageTypes         PackageType[]
@@ -61,6 +67,9 @@ model User {
   assignedClients Client[]      @relation("ClientPrimaryTrainer")
   sessions        Session[]
   sentInvitations Invitation[]  @relation("UserInvitations")
+  adminAuditLogs  AdminAuditLog[] @relation("AdminAuditLogs")
+  createdTokens   TempAuthToken[] @relation("TokenAdmin")
+  usedTokens      TempAuthToken[] @relation("TokenUser")
   location        Location?     @relation(fields: [locationId], references: [id])
   organization    Organization? @relation(fields: [organizationId], references: [id])
 
@@ -254,6 +263,7 @@ enum Role {
   CLUB_MANAGER
   PT_MANAGER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum InvitationStatus {
@@ -261,4 +271,37 @@ enum InvitationStatus {
   ACCEPTED
   EXPIRED
   CANCELLED
+}
+
+model AdminAuditLog {
+  id            String    @id @default(cuid())
+  adminId       String
+  action        String    // LOGIN_AS_START, LOGIN_AS_END, EXPORT_DATA, etc.
+  targetUserId  String?
+  targetOrgId   String?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+  
+  admin         User      @relation("AdminAuditLogs", fields: [adminId], references: [id])
+  
+  @@map("admin_audit_logs")
+}
+
+model TempAuthToken {
+  id            String    @id @default(cuid())
+  token         String    @unique @default(cuid())
+  userId        String    // User being impersonated
+  adminId       String    // Super admin who created it
+  expiresAt     DateTime  // Auto-expire after 1 hour
+  usedAt        DateTime? // When first used
+  revokedAt     DateTime? // When tab closed or manually revoked
+  metadata      Json?     // Store org info, reason, etc.
+  createdAt     DateTime  @default(now())
+  
+  user          User      @relation("TokenUser", fields: [userId], references: [id])
+  admin         User      @relation("TokenAdmin", fields: [adminId], references: [id])
+  
+  @@index([token])
+  @@index([expiresAt])
+  @@map("temp_auth_tokens")
 }
