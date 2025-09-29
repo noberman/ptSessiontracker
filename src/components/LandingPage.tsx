@@ -63,7 +63,7 @@ export default function LandingPage() {
               <Link href="/login">
                 <Button variant="ghost">Sign In</Button>
               </Link>
-              <Link href="/login">
+              <Link href="/signup">
                 <Button>Get Started</Button>
               </Link>
             </div>
@@ -83,7 +83,7 @@ export default function LandingPage() {
               automates client validation, and streamlines commission payouts for personal trainers.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/login">
+              <Link href="/signup">
                 <Button size="xl" className="min-w-[200px]">
                   Start Free Trial
                 </Button>
@@ -291,7 +291,7 @@ export default function LandingPage() {
             Join fitness clubs that have already eliminated paper tracking
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/login">
+            <Link href="/signup">
               <Button size="xl" variant="secondary" className="min-w-[200px]">
                 Start Free Trial
               </Button>
