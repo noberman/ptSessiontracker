@@ -28,12 +28,25 @@ model Organization {
   stripeSubscriptionId String?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+  commissionMethod     String             @default("PROGRESSIVE")
+  
+  // Super Admin Features (Added Sept 2025)
+  adminNotes           String?            @db.Text  // Notes for super admin tracking
+  lastIssue            String?            // Last reported issue description
+  lastIssueDate        DateTime?          // When last issue was reported
+  isClone              Boolean            @default(false) // Marks cloned orgs for debugging
+  clonedFrom           String?            // Original org ID if this is a clone
+  clonedAt             DateTime?          // When this clone was created
   
   // Relations
   locations            Location[]
   users                User[]
   commissionTiers      CommissionTier[]
-  packageTemplates     PackageTemplate[]
+  packageTypes         PackageType[]
+  clients              Client[]
+  packages             Package[]
+  sessions             Session[]
+  invitations          Invitation[]
 
   @@map("organizations")
 }
@@ -348,6 +361,61 @@ model AuditLog {
 - Required for all data modifications
 - Retained for minimum 13 months
 
+### AdminAuditLog (Added Sept 2025)
+Tracks all super admin actions for security and debugging.
+
+```prisma
+model AdminAuditLog {
+  id            String   @id @default(cuid())
+  adminId       String   // Super admin who performed action
+  action        String   // LOGIN_AS, EXPORT_DATA, DELETE_CLONES, etc.
+  targetUserId  String?  // User affected by action
+  targetOrgId   String?  // Organization affected by action
+  metadata      Json?    // Additional context data
+  createdAt     DateTime @default(now())
+  
+  admin         User     @relation(fields: [adminId], references: [id])
+  
+  @@map("admin_audit_logs")
+}
+```
+
+**Business Rules:**
+- Created for every super admin action
+- Never deleted (permanent audit trail)
+- Includes LOGIN_AS start/end tracking
+- Stores reason and context in metadata
+
+### TempAuthToken (Added Sept 2025)
+Temporary authentication tokens for super admin "Login As" feature.
+
+```prisma
+model TempAuthToken {
+  id            String    @id @default(cuid())
+  token         String    @unique @default(cuid())
+  userId        String    // User being impersonated
+  adminId       String    // Super admin who created token
+  expiresAt     DateTime  // Auto-expire after 1 hour
+  usedAt        DateTime? // When first used
+  revokedAt     DateTime? // When manually revoked
+  metadata      Json?     // Context (org, reason, etc.)
+  createdAt     DateTime  @default(now())
+  
+  user          User      @relation("TokenUser", fields: [userId], references: [id])
+  admin         User      @relation("TokenAdmin", fields: [adminId], references: [id])
+  
+  @@index([token])
+  @@index([expiresAt])
+  @@map("temp_auth_tokens")
+}
+```
+
+**Business Rules:**
+- Expires after 1 hour maximum
+- Single use (tracked via usedAt)
+- Can be manually revoked
+- Used for debugging beta issues safely
+
 ## Enums
 
 ### Role
@@ -358,7 +426,8 @@ enum Role {
   TRAINER       // Can manage own sessions
   CLUB_MANAGER  // Can manage single location
   PT_MANAGER    // Can manage multiple locations
-  ADMIN         // Full system access
+  ADMIN         // Full organization access
+  SUPER_ADMIN   // Platform-wide admin for beta support (Added Sept 2025)
 }
 ```
 

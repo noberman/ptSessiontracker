@@ -9,6 +9,9 @@ declare module 'next-auth' {
       organizationId: string | null
       organizationName?: string | null
       onboardingCompletedAt?: Date | null
+      isImpersonating?: boolean
+      impersonatedBy?: string
+      tempToken?: string
     } & DefaultSession['user']
   }
 
@@ -18,6 +21,9 @@ declare module 'next-auth' {
     organizationId: string | null
     organizationName?: string | null
     onboardingCompletedAt?: Date | null
+    isImpersonating?: boolean
+    impersonatedBy?: string
+    tempToken?: string
   }
 }
 
@@ -29,5 +35,8 @@ declare module 'next-auth/jwt' {
     organizationId: string | null
     organizationName?: string | null
     onboardingCompletedAt?: Date | null
+    isImpersonating?: boolean
+    impersonatedBy?: string
+    tempToken?: string
   }
 }

@@ -3,7 +3,8 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { compare } from 'bcryptjs'
-import { prisma } from '@/lib/db/prisma'
+import { prisma } from '@/lib/prisma'
+import { validateTempToken } from '@/lib/auth/super-admin'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -33,40 +34,92 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        console.log('🔐 Credentials login attempt for:', credentials?.email)
+        
         if (!credentials?.email || !credentials?.password) {
+          console.log('❌ Missing credentials')
           return null
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-          include: {
-            location: true,
-            organization: true,
-          },
-        })
+        try {
+          const user = await prisma.user.findUnique({
+            where: {
+              email: credentials.email,
+            },
+            include: {
+              location: true,
+              organization: true,
+            },
+          })
 
-        if (!user || !user.active) {
+          console.log('👤 User found:', user ? {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            active: user.active,
+            hasOrg: !!user.organizationId
+          } : 'Not found')
+
+          if (!user || !user.active) {
+            console.log('❌ User not found or inactive')
+            return null
+          }
+
+          const isPasswordValid = await compare(
+            credentials.password,
+            user.password
+          )
+
+          console.log('🔑 Password valid:', isPasswordValid)
+
+          if (!isPasswordValid) {
+            console.log('❌ Invalid password')
+            return null
+          }
+
+          console.log('✅ Login successful for:', user.email, 'Role:', user.role)
+          
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            locationId: user.locationId,
+            organizationId: user.organizationId,
+          }
+        } catch (error) {
+          console.error('❌ Auth error:', error)
+          throw error
+        }
+      },
+    }),
+    // Temporary token provider for super admin Login As feature
+    CredentialsProvider({
+      id: 'temp-token',
+      name: 'temp-token',
+      credentials: {
+        token: { label: 'Token', type: 'text' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.token) {
           return null
         }
 
-        const isPasswordValid = await compare(
-          credentials.password,
-          user.password
-        )
-
-        if (!isPasswordValid) {
+        try {
+          const { user, admin, metadata } = await validateTempToken(credentials.token)
+          
+          // Return user data for temporary login
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            locationId: user.locationId,
+            organizationId: user.organizationId,
+          } as any
+        } catch (error) {
+          console.error('Temp token validation error:', error)
           return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          locationId: user.locationId,
-          organizationId: user.organizationId,
         }
       },
     }),
@@ -78,7 +131,9 @@ export const authOptions: NextAuthOptions = {
         hasUser: !!user,
         hasToken: !!token,
         provider: account?.provider,
-        tokenEmail: token.email
+        tokenEmail: token.email,
+        isImpersonating: token.isImpersonating,
+        impersonatedBy: token.impersonatedBy
       })
       
       // Always refresh user data when needed

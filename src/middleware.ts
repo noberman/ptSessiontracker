@@ -11,7 +11,23 @@ export default withAuth(
       role: token?.role,
       hasOnboardingCompletedAt: !!token?.onboardingCompletedAt,
       onboardingCompletedAt: token?.onboardingCompletedAt,
+      isImpersonating: token?.isImpersonating,
     })
+
+    // Super admin routes
+    if (token?.role === 'SUPER_ADMIN' && !token?.isImpersonating) {
+      // Redirect super admins to their dashboard
+      if (path === '/dashboard') {
+        return NextResponse.redirect(new URL('/super-admin', req.url))
+      }
+    }
+
+    // Protect super admin routes
+    if (path.startsWith('/super-admin')) {
+      if (token?.role !== 'SUPER_ADMIN' || token?.isImpersonating) {
+        return NextResponse.redirect(new URL('/dashboard', req.url))
+      }
+    }
 
     // Check if admin needs onboarding
     if (token?.role === 'ADMIN' && !token?.onboardingCompletedAt) {
@@ -54,6 +70,7 @@ export default withAuth(
             path === '/signup' ||
             path === '/' || 
             path.startsWith('/validate/') ||
+            path.startsWith('/auth/temp-login') ||
             path.startsWith('/_next/') ||
             path.includes('.')) {
           return true
