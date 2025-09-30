@@ -13,7 +13,8 @@ export async function POST(request: Request) {
     }
 
     // Check if user already has an organization
-    const existingUser = await prisma.user.findUnique({
+    // Using findFirst since email is not globally unique
+    const existingUser = await prisma.user.findFirst({
       where: { email: session.user.email },
       include: { organization: true }
     })

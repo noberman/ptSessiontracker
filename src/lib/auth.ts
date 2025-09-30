@@ -42,7 +42,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const user = await prisma.user.findUnique({
+          const user = await prisma.user.findFirst({
             where: {
               email: credentials.email,
             },
@@ -138,7 +138,7 @@ export const authOptions: NextAuthOptions = {
       
       // Always refresh user data when needed
       if (trigger === 'update' || (token && token.email)) {
-        const dbUser = await prisma.user.findUnique({
+        const dbUser = await prisma.user.findFirst({
           where: { email: token.email as string },
           include: { organization: true }
         })
@@ -163,7 +163,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         // For Google OAuth, we need to check if user exists in DB
         if (account?.provider === 'google') {
-          const dbUser = await prisma.user.findUnique({
+          const dbUser = await prisma.user.findFirst({
             where: { email: user.email! },
             include: { organization: true }
           })
@@ -193,7 +193,7 @@ export const authOptions: NextAuthOptions = {
           }
         } else {
           // Credentials login - fetch full user data
-          const dbUser = await prisma.user.findUnique({
+          const dbUser = await prisma.user.findFirst({
             where: { id: user.id },
             include: { organization: true }
           })
