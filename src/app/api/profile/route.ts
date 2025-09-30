@@ -48,15 +48,18 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Check if email is being changed and if it's already taken
+    // Check if email is being changed and if it's already taken in the same organization
     if (email !== user.email) {
-      const existingUser = await prisma.user.findUnique({
-        where: { email }
+      const existingUser = await prisma.user.findFirst({
+        where: { 
+          email,
+          organizationId: user.organizationId
+        }
       })
 
       if (existingUser) {
         return NextResponse.json(
-          { error: 'Email is already in use' },
+          { error: 'Email is already in use in this organization' },
           { status: 400 }
         )
       }

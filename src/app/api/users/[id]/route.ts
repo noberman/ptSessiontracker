@@ -158,14 +158,17 @@ export async function PUT(
       }
     }
 
-    // Check if email is being changed and if it's unique
+    // Check if email is being changed and if it's unique within the organization
     if (email && email !== currentUser.email) {
-      const existingUser = await prisma.user.findUnique({
-        where: { email },
+      const existingUser = await prisma.user.findFirst({
+        where: { 
+          email,
+          organizationId: currentUser.organizationId
+        },
       })
       if (existingUser) {
         return NextResponse.json(
-          { error: 'Email already exists' },
+          { error: 'Email already exists in this organization' },
           { status: 400 }
         )
       }

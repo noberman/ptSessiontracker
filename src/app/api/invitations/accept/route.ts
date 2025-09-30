@@ -94,14 +94,17 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Check if email already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { email: invitation.email },
+      // Check if email already exists in this organization
+      const existingUser = await prisma.user.findFirst({
+        where: { 
+          email: invitation.email,
+          organizationId: invitation.organizationId
+        },
       })
 
       if (existingUser) {
         return NextResponse.json(
-          { error: 'An account with this email already exists. Please log in first.' },
+          { error: 'An account with this email already exists in this organization. Please log in first.' },
           { status: 400 }
         )
       }
@@ -164,9 +167,12 @@ export async function GET(request: NextRequest) {
     // Check if user is logged in
     const session = await getServerSession(authOptions)
     
-    // Check if user with this email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: invitation.email },
+    // Check if user with this email already exists in this organization
+    const existingUser = await prisma.user.findFirst({
+      where: { 
+        email: invitation.email,
+        organizationId: invitation.organizationId
+      },
       select: {
         id: true,
         email: true,

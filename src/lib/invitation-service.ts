@@ -37,13 +37,16 @@ export async function createInvitation({
   organizationId,
   invitedById,
 }: CreateInvitationParams) {
-  // Check if user already exists in organization
-  const existingUser = await prisma.user.findUnique({
-    where: { email },
+  // Check if user already exists in this organization
+  const existingUser = await prisma.user.findFirst({
+    where: { 
+      email,
+      organizationId 
+    },
     include: { organization: true },
   })
 
-  if (existingUser?.organizationId === organizationId) {
+  if (existingUser) {
     throw new Error('User is already a member of this organization')
   }
 
