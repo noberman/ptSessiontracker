@@ -50,12 +50,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate role
-    const validRoles: Role[] = ['TRAINER', 'PT_MANAGER', 'CLUB_MANAGER']
+    // Validate role - admins can now invite other admins
+    const validRoles: Role[] = ['TRAINER', 'PT_MANAGER', 'CLUB_MANAGER', 'ADMIN']
     if (!validRoles.includes(role)) {
       return NextResponse.json(
         { error: 'Invalid role' },
         { status: 400 }
+      )
+    }
+    
+    // Only admins can invite other admins
+    if (role === 'ADMIN' && user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Only admins can invite other admins' },
+        { status: 403 }
       )
     }
 

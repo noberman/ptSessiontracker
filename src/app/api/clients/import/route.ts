@@ -145,7 +145,24 @@ export async function POST(request: Request) {
           const cleanValue = value ? (value as string).replace(/[$,]/g, '').trim() : undefined
           normalized.sessionValue = cleanValue ? parseFloat(cleanValue) : undefined
         }
-        else if (lowerKey === 'expiry date') normalized.expiryDate = value ? new Date(value as string) : undefined
+        else if (lowerKey === 'expiry date') {
+          if (value) {
+            // Handle DD/MM/YYYY format
+            const dateStr = value as string
+            if (dateStr.includes('/')) {
+              const [day, month, year] = dateStr.split('/')
+              // Create date as YYYY-MM-DD to avoid ambiguity
+              const parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
+              normalized.expiryDate = isNaN(parsedDate.getTime()) ? undefined : parsedDate
+            } else {
+              // Try standard date parsing for other formats
+              const parsedDate = new Date(dateStr)
+              normalized.expiryDate = isNaN(parsedDate.getTime()) ? undefined : parsedDate
+            }
+          } else {
+            normalized.expiryDate = undefined
+          }
+        }
       })
       
       return normalized as ImportRow & { rowNumber: number }

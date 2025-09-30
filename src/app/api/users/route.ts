@@ -35,6 +35,10 @@ export async function GET(request: NextRequest) {
     const where: any = {
       active: true,
       organizationId, // Filter by organization
+      // Hide super admin from regular users table
+      NOT: {
+        role: 'SUPER_ADMIN'
+      }
     }
 
     if (search) {

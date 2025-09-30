@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { X, Mail, UserPlus, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 interface InviteModalProps {
   organizationId: string
@@ -23,8 +24,9 @@ export default function InviteModal({
   usageLimits 
 }: InviteModalProps) {
   const router = useRouter()
+  const { data: session } = useSession()
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<'TRAINER' | 'PT_MANAGER' | 'CLUB_MANAGER'>('TRAINER')
+  const [role, setRole] = useState<'TRAINER' | 'PT_MANAGER' | 'CLUB_MANAGER' | 'ADMIN'>('TRAINER')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -288,6 +290,9 @@ export default function InviteModal({
                   <option value="TRAINER">Trainer</option>
                   <option value="PT_MANAGER">PT Manager</option>
                   <option value="CLUB_MANAGER">Club Manager</option>
+                  {session?.user?.role === 'ADMIN' && (
+                    <option value="ADMIN">Admin</option>
+                  )}
                 </select>
               </div>
 
