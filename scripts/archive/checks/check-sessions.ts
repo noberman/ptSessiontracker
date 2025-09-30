@@ -1,5 +1,5 @@
-import { prisma } from '../src/lib/prisma'
-import { ensureCommissionTiers } from '../src/lib/commission/ensure-tiers'
+import { prisma } from '../../../src/lib/prisma'
+import { ensureCommissionTiers } from '../../../src/lib/commission/ensure-tiers'
 
 async function checkSessions() {
   try {

@@ -1,4 +1,4 @@
-import { prisma } from '../src/lib/prisma'
+import { prisma } from '../../../src/lib/prisma'
 
 async function deleteOrganization() {
   const orgId = 'cmfzdyxja0000rpeznjtcd22h' // test organization
