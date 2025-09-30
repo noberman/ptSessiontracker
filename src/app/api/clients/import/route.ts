@@ -475,18 +475,19 @@ export async function POST(request: Request) {
             if (result.existingClient) {
               // Update existing client's location and trainer if provided
               const updateData: any = {}
+              const existingClientData = result.existingClient as any // Has locationId and primaryTrainerId
               
               // Only update location if it's different from current
-              if (result.location && result.location.id !== result.existingClient.locationId) {
+              if (result.location && result.location.id !== existingClientData.locationId) {
                 updateData.locationId = result.location.id
                 console.log(`Updating client location to: ${result.location.name}`)
               }
               
               // Only update trainer if it's different from current
-              if (result.trainer && result.trainer.id !== result.existingClient.primaryTrainerId) {
+              if (result.trainer && result.trainer.id !== existingClientData.primaryTrainerId) {
                 updateData.primaryTrainerId = result.trainer.id
                 console.log(`Updating client trainer to: ${result.trainer.name}`)
-              } else if (!result.trainer && result.existingClient.primaryTrainerId) {
+              } else if (!result.trainer && existingClientData.primaryTrainerId) {
                 // Clear trainer if none selected but client has one
                 updateData.primaryTrainerId = null
                 console.log(`Clearing client trainer`)
