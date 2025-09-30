@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { Loader2, AlertCircle, Shield } from 'lucide-react'
 
-export default function TempLoginPage() {
+function TempLoginContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'error' | 'success'>('loading')
@@ -113,5 +113,26 @@ export default function TempLoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function TempLoginPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="max-w-md w-full space-y-8">
+            <div className="bg-white p-8 rounded-lg shadow-lg">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary-600" />
+                <h2 className="text-xl font-semibold mb-2">Loading...</h2>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <TempLoginContent />
+    </Suspense>
   )
 }
