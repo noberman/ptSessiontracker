@@ -112,8 +112,8 @@ export async function POST(request: NextRequest) {
             name: client.name,
             email: `clone_${client.email}`,
             organizationId: clonedOrg.id,
-            locationId: client.locationId ? idMap.locations[client.locationId] : null,
-            primaryTrainerId: client.primaryTrainerId ? idMap.users[client.primaryTrainerId] : null,
+            locationId: client.locationId ? idMap.locations[client.locationId] : undefined,
+            primaryTrainerId: client.primaryTrainerId ? idMap.users[client.primaryTrainerId] : undefined,
             active: client.active
           }
         })
