@@ -8,7 +8,7 @@ async function createProductionAdmin() {
     console.log('🔧 Creating production admin account...\n')
     
     // Check if admin already exists
-    const existingAdmin = await prisma.user.findUnique({
+    const existingAdmin = await prisma.user.findFirst({
       where: { email: 'admin@ptsession.com' }
     })
     

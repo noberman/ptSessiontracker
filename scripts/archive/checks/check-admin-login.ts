@@ -7,7 +7,7 @@ async function checkAdminLogin() {
   try {
     console.log('🔍 Checking admin account...\n')
     
-    const admin = await prisma.user.findUnique({
+    const admin = await prisma.user.findFirst({
       where: { email: 'admin@ptsession.com' }
     })
     

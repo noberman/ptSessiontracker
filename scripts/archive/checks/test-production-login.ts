@@ -8,7 +8,7 @@ async function testProductionLogin() {
     console.log('🔍 Testing Production Login Issue...\n')
     
     // 1. Check if admin exists
-    const admin = await prisma.user.findUnique({
+    const admin = await prisma.user.findFirst({
       where: { email: 'admin@ptsession.com' },
       include: { location: true }
     })
@@ -76,7 +76,7 @@ async function testProductionLogin() {
     }
     
     // 5. Test the password one more time
-    const updatedAdmin = await prisma.user.findUnique({
+    const updatedAdmin = await prisma.user.findFirst({
       where: { email: 'admin@ptsession.com' }
     })
     
