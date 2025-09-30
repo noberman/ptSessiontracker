@@ -183,8 +183,8 @@ export async function POST(request: NextRequest) {
           data: {
             trainerId: idMap.users[session.trainerId],
             clientId: idMap.clients[session.clientId],
-            packageId: session.packageId ? idMap.packages[session.packageId] : null,
-            locationId: session.locationId ? idMap.locations[session.locationId] : null,
+            packageId: session.packageId ? idMap.packages[session.packageId] : undefined,
+            locationId: session.locationId ? idMap.locations[session.locationId] : undefined,
             organizationId: clonedOrg.id,
             sessionDate: new Date(session.sessionDate),
             sessionValue: session.sessionValue,
