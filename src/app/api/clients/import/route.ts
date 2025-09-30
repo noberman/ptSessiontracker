@@ -227,7 +227,13 @@ export async function POST(request: Request) {
         }),
         prisma.client.findMany({
           where: { organizationId },
-          select: { id: true, name: true, email: true }
+          select: { 
+            id: true, 
+            name: true, 
+            email: true,
+            locationId: true,
+            primaryTrainerId: true
+          }
         }),
         prisma.packageType.findMany({
           where: { 
@@ -373,14 +379,14 @@ export async function POST(request: Request) {
       // Check if client exists and has existing packages
       const existingClient = clientMap[row.email?.toLowerCase()]
       if (existingClient) {
-        warnings.push(`Client already exists - will update client info`)
+        warnings.push(`Client already exists - location/trainer will be updated if changed`)
         
         // Check if client already has a package with this name
         const clientPackages = existingPackages.filter(p => p.clientId === existingClient.id)
         const matchingPackage = clientPackages.find(p => p.name === row.packageName)
         
         if (matchingPackage) {
-          warnings.push(`Client already has "${row.packageName}" with ${matchingPackage.remainingSessions} sessions remaining. Import will ADD ${row.remainingSessions} more sessions to this package.`)
+          warnings.push(`Client already has "${row.packageName}" with ${matchingPackage.remainingSessions} sessions remaining.`)
         } else {
           warnings.push(`Will create new package "${row.packageName}" for existing client`)
         }
@@ -467,10 +473,37 @@ export async function POST(request: Request) {
             let client
 
             if (result.existingClient) {
-              // Use existing client without updating their details
-              // (we don't want to overwrite their current name/location/trainer)
-              client = result.existingClient
-              console.log(`Using existing client: ${client.id} - ${client.name}`)
+              // Update existing client's location and trainer if provided
+              const updateData: any = {}
+              
+              // Only update location if it's different from current
+              if (result.location && result.location.id !== result.existingClient.locationId) {
+                updateData.locationId = result.location.id
+                console.log(`Updating client location to: ${result.location.name}`)
+              }
+              
+              // Only update trainer if it's different from current
+              if (result.trainer && result.trainer.id !== result.existingClient.primaryTrainerId) {
+                updateData.primaryTrainerId = result.trainer.id
+                console.log(`Updating client trainer to: ${result.trainer.name}`)
+              } else if (!result.trainer && result.existingClient.primaryTrainerId) {
+                // Clear trainer if none selected but client has one
+                updateData.primaryTrainerId = null
+                console.log(`Clearing client trainer`)
+              }
+              
+              // Update client if there are changes
+              if (Object.keys(updateData).length > 0) {
+                client = await tx.client.update({
+                  where: { id: result.existingClient.id },
+                  data: updateData
+                })
+                console.log(`Updated existing client: ${client.id} - ${client.name}`)
+                importResults.updated.clients++
+              } else {
+                client = result.existingClient
+                console.log(`Using existing client without changes: ${client.id} - ${client.name}`)
+              }
             } else {
               // Create new client
               client = await tx.client.create({
