@@ -71,6 +71,7 @@ export async function POST(request: Request) {
     const packageTypeAssignments = formData.get('packageTypeAssignments')
       ? JSON.parse(formData.get('packageTypeAssignments') as string)
       : {}
+    const duplicateHandling = formData.get('duplicateHandling') as string || 'skip' // 'skip' or 'overwrite'
 
     if (!file) {
       return NextResponse.json(
@@ -89,6 +90,8 @@ export async function POST(request: Request) {
         skip_empty_lines: true,
         trim: true,
       })
+      console.log(`Parsed ${records.length} records from CSV`)
+      console.log('First record headers:', Object.keys(records[0]))
     } catch (error) {
       return NextResponse.json(
         { error: 'Invalid CSV format' },
@@ -121,12 +124,26 @@ export async function POST(request: Request) {
       )
     }
 
+    // Filter out empty rows (rows where all values are empty strings)
+    const nonEmptyRecords = records.filter(record => {
+      const hasContent = Object.values(record).some(value => 
+        value && String(value).trim() !== ''
+      )
+      return hasContent
+    })
+    
+    console.log(`Filtered to ${nonEmptyRecords.length} non-empty records`)
+    
     // Normalize column names for processing
-    const normalizedRecords = records.map((record, index) => {
+    const normalizedRecords = nonEmptyRecords.map((record, index) => {
+      console.log(`\n=== Processing Row ${index + 2} ===`)
+      console.log('Raw record:', record)
+      
       const normalized: any = { rowNumber: index + 2 } // +2 because row 1 is headers
       
       Object.entries(record).forEach(([key, value]) => {
         const lowerKey = key.toLowerCase()
+        console.log(`Field: "${key}" -> "${value}"`)
         if (lowerKey === 'name') normalized.name = value
         else if (lowerKey === 'email') normalized.email = (value as string).toLowerCase().trim()
         else if (lowerKey === 'phone') normalized.phone = (value as string)?.trim() || undefined
@@ -147,12 +164,27 @@ export async function POST(request: Request) {
         }
         else if (lowerKey === 'expiry date') {
           if (value) {
-            // Handle DD/MM/YYYY format
-            const dateStr = value as string
+            // Handle DD/MM/YYYY or DD/MM/YY format
+            let dateStr = (value as string).trim()
+            console.log(`  Parsing date: "${dateStr}"`)
+            
             if (dateStr.includes('/')) {
-              const [day, month, year] = dateStr.split('/')
+              const [day, month, yearPart] = dateStr.split('/')
+              console.log(`  Date parts: day="${day}", month="${month}", year="${yearPart}"`)
+              
+              // Handle 2-digit year (assume 20xx for years 00-50, 19xx for 51-99)
+              let year = yearPart.trim()
+              if (year.length === 2) {
+                const yearNum = parseInt(year)
+                year = yearNum <= 50 ? `20${year}` : `19${year}`
+                console.log(`  Converted 2-digit year ${yearPart} to ${year}`)
+              }
+              
               // Create date as YYYY-MM-DD to avoid ambiguity
-              const parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
+              const dateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+              console.log(`  Creating date from: ${dateString}`)
+              const parsedDate = new Date(dateString)
+              console.log(`  Parsed date: ${parsedDate}`)
               normalized.expiryDate = isNaN(parsedDate.getTime()) ? undefined : parsedDate
             } else {
               // Try standard date parsing for other formats
@@ -165,6 +197,7 @@ export async function POST(request: Request) {
         }
       })
       
+      console.log('Normalized record:', normalized)
       return normalized as ImportRow & { rowNumber: number }
     })
 
@@ -193,6 +226,7 @@ export async function POST(request: Request) {
           } 
         }),
         prisma.client.findMany({
+          where: { organizationId },
           select: { id: true, name: true, email: true }
         }),
         prisma.packageType.findMany({
@@ -243,13 +277,13 @@ export async function POST(request: Request) {
       const errors: string[] = []
       const warnings: string[] = []
 
-      // Required field validation
-      if (!row.name) errors.push('Name is required')
-      if (!row.email) errors.push('Email is required')
-      if (!row.location) errors.push('Location is required')
-      if (!row.packageName) errors.push('Package Name is required')
-      if (!row.totalSessions) errors.push('Total Sessions is required')
-      if (!row.totalValue) errors.push('Total Value is required')
+      // Required field validation - check for actual content, not just truthy values
+      if (!row.name || row.name.trim() === '') errors.push('Name is required')
+      if (!row.email || row.email.trim() === '') errors.push('Email is required')
+      if (!row.location || row.location.trim() === '') errors.push('Location is required')
+      if (!row.packageName || row.packageName.trim() === '') errors.push('Package Name is required')
+      if (!row.totalSessions || isNaN(row.totalSessions)) errors.push('Total Sessions is required and must be a number')
+      if (!row.totalValue || isNaN(row.totalValue)) errors.push('Total Value is required and must be a number')
       
       // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -403,6 +437,11 @@ export async function POST(request: Request) {
     if (action === 'import') {
       const validRows = validationResults.filter(r => r.valid)
       
+      console.log(`Starting import: ${validRows.length} valid rows to import`)
+      console.log('Duplicate handling mode:', duplicateHandling)
+      console.log('Location assignments:', locationAssignments)
+      console.log('Trainer assignments:', trainerAssignments)
+      
       if (validRows.length === 0) {
         return NextResponse.json(
           { error: 'No valid rows to import' },
@@ -420,22 +459,18 @@ export async function POST(request: Request) {
 
       // Process each valid row
       for (const result of validRows) {
+        console.log(`Processing import for: ${result.row.email} - ${result.row.name}`)
+        console.log(`  Location: ${result.location?.name} (${result.location?.id})`)
+        console.log(`  Trainer: ${result.trainer?.name} (${result.trainer?.id})`)
         try {
           await prisma.$transaction(async (tx) => {
             let client
 
             if (result.existingClient) {
-              // Update existing client
-              client = await tx.client.update({
-                where: { id: result.existingClient.id },
-                data: {
-                  name: result.row.name,
-                  locationId: result.location!.id,
-                  primaryTrainerId: result.trainer?.id,
-                  updatedAt: new Date()
-                }
-              })
-              importResults.updated.clients++
+              // Use existing client without updating their details
+              // (we don't want to overwrite their current name/location/trainer)
+              client = result.existingClient
+              console.log(`Using existing client: ${client.id} - ${client.name}`)
             } else {
               // Create new client
               client = await tx.client.create({
@@ -445,9 +480,11 @@ export async function POST(request: Request) {
                   phone: result.row.phone || null,
                   locationId: result.location!.id,
                   primaryTrainerId: result.trainer?.id,
+                  organizationId: session.user.organizationId!, // Add organizationId
                   active: true
                 }
               })
+              console.log(`Created client: ${client.id} - ${client.name}`)
               importResults.created.clients++
             }
 
@@ -461,20 +498,27 @@ export async function POST(request: Request) {
             })
 
             if (existingPackage) {
-              // Update existing package - add to remaining sessions
-              const pkg = await tx.package.update({
-                where: { id: existingPackage.id },
-                data: {
-                  remainingSessions: existingPackage.remainingSessions + result.row.remainingSessions,
-                  // Optionally update expiry if the new one is later
-                  expiresAt: result.row.expiryDate && 
-                    (!existingPackage.expiresAt || new Date(result.row.expiryDate) > existingPackage.expiresAt)
-                    ? result.row.expiryDate 
-                    : existingPackage.expiresAt,
-                  updatedAt: new Date()
-                }
-              })
-              importResults.updated.packages = (importResults.updated.packages || 0) + 1
+              // Package with same name already exists for this client
+              if (duplicateHandling === 'overwrite') {
+                // Overwrite the existing package with new values
+                const pkg = await tx.package.update({
+                  where: { id: existingPackage.id },
+                  data: {
+                    totalSessions: result.row.totalSessions,
+                    remainingSessions: result.row.remainingSessions,
+                    totalValue: result.row.totalValue,
+                    sessionValue: result.row.sessionValue || (result.row.totalValue / result.row.totalSessions),
+                    expiresAt: result.row.expiryDate || null,
+                    updatedAt: new Date()
+                  }
+                })
+                console.log(`Overwrote package: ${pkg.id} - ${pkg.name} for client ${client.name}`)
+                importResults.updated.packages = (importResults.updated.packages || 0) + 1
+              } else {
+                // Skip duplicate package (default behavior)
+                console.log(`Skipping duplicate package: ${existingPackage.name} for client ${client.name} - already exists`)
+                importResults.updated.packages = (importResults.updated.packages || 0) + 1
+              }
             } else {
               // Create new package
               const sessionValue = result.row.sessionValue || (result.row.totalValue / result.row.totalSessions)
@@ -490,11 +534,13 @@ export async function POST(request: Request) {
                   remainingSessions: result.row.remainingSessions,
                   totalValue: result.row.totalValue,
                   sessionValue: sessionValue,
+                  organizationId: session.user.organizationId!, // Add organizationId
                   active: true,
                   startDate: new Date(),
                   expiresAt: result.row.expiryDate || null,
                 }
               })
+              console.log(`Created package: ${pkg.id} - ${pkg.name} for client ${client.name}`)
               importResults.created.packages++
             }
 
@@ -507,6 +553,8 @@ export async function POST(request: Request) {
             })
           })
         } catch (error: any) {
+          console.error(`Failed to import ${result.row.email}:`, error.message)
+          console.error('Full error:', error)
           importResults.failed.push({
             row: result.row.rowNumber,
             email: result.row.email,

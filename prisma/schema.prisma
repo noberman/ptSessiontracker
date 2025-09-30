@@ -80,7 +80,7 @@ model User {
 model Client {
   id               String        @id @default(cuid())
   name             String
-  email            String        @unique
+  email            String
   phone            String?
   locationId       String
   primaryTrainerId String?
@@ -95,6 +95,7 @@ model Client {
   packages         Package[]
   sessions         Session[]
 
+  @@unique([email, organizationId])
   @@index([organizationId])
   @@map("clients")
 }
