@@ -131,21 +131,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    // Get organization context
+    const organizationId = await getOrganizationId()
+    
+    // Check if email already exists within this organization
+    const existingUser = await prisma.user.findFirst({
+      where: { 
+        email,
+        organizationId 
+      },
     })
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Email already exists' },
+        { error: 'Email already exists in this organization' },
         { status: 400 }
       )
     }
 
     // Check usage limits if creating a trainer
     if (role === 'TRAINER') {
-      const organizationId = await getOrganizationId()
       if (!organizationId) {
         return NextResponse.json(
           { error: 'Organization not found' },
@@ -181,9 +186,6 @@ export async function POST(request: NextRequest) {
         )
       }
     }
-
-    // Get organization context
-    const organizationId = await getOrganizationId()
     
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
