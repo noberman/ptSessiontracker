@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Check if admin exists
-    const existingAdmin = await prisma.user.findUnique({
+    const existingAdmin = await prisma.user.findFirst({
       where: { email: 'admin@fitsync.com' }
     })
 
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       // Reset password to default
       const hashedPassword = await bcrypt.hash('Admin123!', 10)
       await prisma.user.update({
-        where: { email: 'admin@fitsync.com' },
+        where: { id: existingAdmin.id },
         data: { password: hashedPassword }
       })
       

@@ -55,8 +55,17 @@ export async function POST(request: Request) {
       })
 
       // Update user with organization and make them admin
+      // Need to find the user by ID since email is not unique
+      const userToUpdate = await tx.user.findFirst({
+        where: { email: session.user.email! }
+      })
+      
+      if (!userToUpdate) {
+        throw new Error('User not found')
+      }
+      
       const user = await tx.user.update({
-        where: { email: session.user.email! },  // We checked for email existence above
+        where: { id: userToUpdate.id },
         data: {
           organizationId: organization.id,
           locationId: location.id,
