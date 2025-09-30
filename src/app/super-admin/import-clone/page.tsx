@@ -132,7 +132,7 @@ export default function ImportClonePage() {
               <p className="text-sm text-yellow-800 font-semibold">Development Mode Only</p>
               <p className="text-sm text-yellow-700 mt-1">
                 This feature is only available in local development. 
-                Clones will have "CLONE_" prefix and test passwords.
+                Clones will have &quot;CLONE_&quot; prefix and test passwords.
               </p>
             </div>
           </div>
