@@ -177,7 +177,7 @@ export default function SuperAdminDashboard({ organizations }: SuperAdminDashboa
               </Button>
               {organizations.some(org => org.isClone) && (
                 <Button
-                  variant="destructive"
+                  variant="danger"
                   size="sm"
                   onClick={handleDeleteAllClones}
                   disabled={deleting}
