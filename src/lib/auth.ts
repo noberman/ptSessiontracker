@@ -42,9 +42,11 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const user = await prisma.user.findFirst({
+          // Find ALL users with this email (could be in multiple orgs)
+          const users = await prisma.user.findMany({
             where: {
               email: credentials.email,
+              active: true, // Only check active accounts
             },
             include: {
               location: true,
@@ -52,41 +54,39 @@ export const authOptions: NextAuthOptions = {
             },
           })
 
-          console.log('👤 User found:', user ? {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            active: user.active,
-            hasOrg: !!user.organizationId
-          } : 'Not found')
+          console.log(`👤 Found ${users.length} user(s) with email:`, credentials.email)
 
-          if (!user || !user.active) {
-            console.log('❌ User not found or inactive')
+          if (users.length === 0) {
+            console.log('❌ No active users found with this email')
             return null
           }
 
-          const isPasswordValid = await compare(
-            credentials.password,
-            user.password
-          )
+          // Try to find the user whose password matches
+          for (const user of users) {
+            console.log(`🔐 Checking password for user in org: ${user.organization?.name || 'No org'}`)
+            
+            const isPasswordValid = await compare(
+              credentials.password,
+              user.password
+            )
 
-          console.log('🔑 Password valid:', isPasswordValid)
-
-          if (!isPasswordValid) {
-            console.log('❌ Invalid password')
-            return null
+            if (isPasswordValid) {
+              console.log('✅ Login successful for:', user.email, 'Role:', user.role, 'Org:', user.organization?.name)
+              
+              return {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                locationId: user.locationId,
+                organizationId: user.organizationId,
+              }
+            }
           }
 
-          console.log('✅ Login successful for:', user.email, 'Role:', user.role)
-          
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            locationId: user.locationId,
-            organizationId: user.organizationId,
-          }
+          // If we get here, no passwords matched
+          console.log('❌ Invalid password for all accounts with this email')
+          return null
         } catch (error) {
           console.error('❌ Auth error:', error)
           throw error
