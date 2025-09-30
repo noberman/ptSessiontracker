@@ -65,7 +65,7 @@ export function CommissionSettings() {
     const updated = [...editedTiers]
     updated[index] = {
       ...updated[index],
-      [field]: field === 'commissionPercentage' ? parseFloat(value) : parseInt(value)
+      [field]: field === 'commissionPercentage' ? parseFloat(value) / 100 : parseInt(value)
     }
     setEditedTiers(updated)
   }
@@ -131,7 +131,7 @@ export function CommissionSettings() {
         ? (editedTiers[editedTiers.length - 1].maxSessions || 0) + 1 
         : 1,
       maxSessions: null,
-      commissionPercentage: 50,
+      commissionPercentage: 0.5,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -271,7 +271,7 @@ export function CommissionSettings() {
                   </label>
                   <input
                     type="number"
-                    value={tier.commissionPercentage}
+                    value={tier.commissionPercentage * 100}
                     onChange={(e) => handleTierChange(index, 'commissionPercentage', e.target.value)}
                     className="w-full px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary"
                     min="0"

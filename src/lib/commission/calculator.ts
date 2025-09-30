@@ -45,7 +45,7 @@ async function getCommissionTiers(): Promise<CommissionTier[]> {
   // Use getOrCreateCommissionTiers which will ensure tiers exist
   const tiers = await getOrCreateCommissionTiers()
   
-  console.log('✅ CALCULATOR: Tiers loaded successfully:', tiers.map(t => `${t.minSessions}-${t.maxSessions || '∞'}:${t.percentage}%`).join(', '))
+  console.log('✅ CALCULATOR: Tiers loaded successfully:', tiers.map(t => `${t.minSessions}-${t.maxSessions || '∞'}:${(t.percentage * 100).toFixed(1)}%`).join(', '))
   
   return tiers
 }
@@ -70,11 +70,11 @@ function calculateProgressiveTier(
     .find(tier => sessionCount >= tier.minSessions) || tiers[0]
   
   const commissionRate = tierAchieved.percentage
-  const commissionAmount = (totalValue * commissionRate) / 100
+  const commissionAmount = totalValue * commissionRate
   
   return {
     tierAchieved,
-    commissionRate: Math.round(commissionRate * 10) / 10, // Round to 1 decimal place
+    commissionRate: Math.round(commissionRate * 1000) / 10, // Convert to percentage and round to 1 decimal place
     commissionAmount: Math.round(commissionAmount * 100) / 100 // Round to 2 decimal places
   }
 }
@@ -128,7 +128,7 @@ function calculateGraduatedTier(
       )
       
       const tierValue = tierSessions.reduce((sum, s) => sum + s.sessionValue, 0)
-      const tierCommission = (tierValue * tier.percentage) / 100
+      const tierCommission = tierValue * tier.percentage
       
       tiersApplied.push({
         tier,
@@ -294,7 +294,7 @@ export function formatCommissionForExport(commissions: TrainerCommission[]) {
     'Commission Amount': `$${c.commissionAmount.toFixed(2)}`,
     'Method': c.method === 'PROGRESSIVE' ? 'Progressive Tier' : 'Graduated Tier',
     ...(c.tierAchieved && {
-      'Tier Achieved': `${c.tierAchieved.minSessions}-${c.tierAchieved.maxSessions || '+'} sessions (${c.tierAchieved.percentage}%)`
+      'Tier Achieved': `${c.tierAchieved.minSessions}-${c.tierAchieved.maxSessions || '+'} sessions (${(c.tierAchieved.percentage * 100).toFixed(1)}%)`
     })
   }))
 }
