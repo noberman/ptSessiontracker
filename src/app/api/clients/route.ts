@@ -142,14 +142,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if email already exists
-    const existingClient = await prisma.client.findUnique({
-      where: { email },
+    // Check if email already exists within the organization
+    const existingClient = await prisma.client.findFirst({
+      where: { 
+        email,
+        organizationId: session.user.organizationId
+      },
     })
 
     if (existingClient) {
       return NextResponse.json(
-        { error: 'Client with this email already exists' },
+        { error: 'Client with this email already exists in your organization' },
         { status: 400 }
       )
     }
