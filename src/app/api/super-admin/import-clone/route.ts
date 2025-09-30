@@ -107,15 +107,33 @@ export async function POST(request: NextRequest) {
     // 5. Clone clients
     if (data.clients && data.clients.length > 0) {
       for (const client of data.clients) {
+        // Build the data object conditionally
+        const clientData: any = {
+          name: client.name,
+          email: `clone_${client.email}`,
+          organizationId: clonedOrg.id,
+          active: client.active
+        }
+        
+        // Only add locationId if we have a valid mapped location
+        if (client.locationId && idMap.locations[client.locationId]) {
+          clientData.locationId = idMap.locations[client.locationId]
+        } else if (data.locations && data.locations.length > 0) {
+          // Use the first location as a fallback
+          clientData.locationId = Object.values(idMap.locations)[0]
+        } else {
+          // Skip this client if no location is available
+          console.log('⚠️ Skipping client', client.name, '- no location available')
+          continue
+        }
+        
+        // Only add primaryTrainerId if we have a valid mapped trainer
+        if (client.primaryTrainerId && idMap.users[client.primaryTrainerId]) {
+          clientData.primaryTrainerId = idMap.users[client.primaryTrainerId]
+        }
+        
         const clonedClient = await prisma.client.create({
-          data: {
-            name: client.name,
-            email: `clone_${client.email}`,
-            organizationId: clonedOrg.id,
-            locationId: client.locationId ? idMap.locations[client.locationId] : undefined,
-            primaryTrainerId: client.primaryTrainerId ? idMap.users[client.primaryTrainerId] : undefined,
-            active: client.active
-          }
+          data: clientData
         })
         idMap.clients[client.id] = clonedClient.id
       }
