@@ -149,9 +149,6 @@ export function PackageTable({
                 Client
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Trainer
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
@@ -186,9 +183,6 @@ export function PackageTable({
                   <div className="text-sm text-text-secondary">
                     {pkg.client.email}
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                  {pkg.client.primaryTrainer?.name || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {getPackageTypeBadge(pkg.packageType)}

@@ -90,6 +90,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
   const [showResults, setShowResults] = useState(false)
   const [importResults, setImportResults] = useState<any>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [duplicateHandling, setDuplicateHandling] = useState<'skip' | 'overwrite'>('skip')
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -206,6 +207,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
     formData.append('trainerAssignments', JSON.stringify(trainerAssignments))
     formData.append('locationAssignments', JSON.stringify(locationAssignments))
     formData.append('packageTypeAssignments', JSON.stringify(packageTypeAssignments))
+    formData.append('duplicateHandling', duplicateHandling)
 
     try {
       const response = await fetch('/api/clients/import', {
@@ -551,6 +553,45 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                   </p>
                 </div>
               </div>
+              
+              {/* Duplicate Handling Options */}
+              {summary.existingClients > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-sm font-medium text-text-primary mb-3">
+                    When a client already has the same package:
+                  </p>
+                  <div className="flex gap-4">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="duplicateHandling"
+                        value="skip"
+                        checked={duplicateHandling === 'skip'}
+                        onChange={(e) => setDuplicateHandling(e.target.value as 'skip' | 'overwrite')}
+                        className="mr-2"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-text-primary">Skip</span>
+                        <p className="text-xs text-text-secondary">Keep existing package, ignore import row</p>
+                      </div>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="duplicateHandling"
+                        value="overwrite"
+                        checked={duplicateHandling === 'overwrite'}
+                        onChange={(e) => setDuplicateHandling(e.target.value as 'skip' | 'overwrite')}
+                        className="mr-2"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-text-primary">Add Sessions</span>
+                        <p className="text-xs text-text-secondary">Add imported sessions to existing package</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -689,9 +730,19 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                           )}
                           {result.warnings.length > 0 && (
                             <div className="mt-1">
-                              {result.warnings.map((warning, i) => (
-                                <p key={i} className="text-xs text-warning-600">{warning}</p>
-                              ))}
+                              {result.warnings.map((warning, i) => {
+                                // Check if this is a duplicate package warning
+                                if (warning.includes('will ADD') || warning.includes('already has')) {
+                                  return (
+                                    <p key={i} className="text-xs text-warning-600">
+                                      {duplicateHandling === 'skip' 
+                                        ? '⚠️ Package exists - will skip this row'
+                                        : warning}
+                                    </p>
+                                  )
+                                }
+                                return <p key={i} className="text-xs text-warning-600">{warning}</p>
+                              })}
                             </div>
                           )}
                         </td>
