@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
             defaultSessions: packageType.defaultSessions,
             defaultPrice: packageType.defaultPrice,
             organizationId: clonedOrg.id,
-            active: packageType.active
+            isActive: packageType.isActive || packageType.active || true
           }
         })
       }
