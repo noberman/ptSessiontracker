@@ -165,7 +165,7 @@ export async function POST(request: Request) {
         else if (lowerKey === 'expiry date') {
           if (value) {
             // Handle DD/MM/YYYY or DD/MM/YY format
-            let dateStr = (value as string).trim()
+            const dateStr = (value as string).trim()
             console.log(`  Parsing date: "${dateStr}"`)
             
             if (dateStr.includes('/')) {
