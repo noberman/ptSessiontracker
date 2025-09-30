@@ -135,8 +135,16 @@ export async function POST(request: Request) {
         else if (lowerKey === 'package name') normalized.packageName = value
         else if (lowerKey === 'total sessions') normalized.totalSessions = parseInt(value as string)
         else if (lowerKey === 'remaining sessions') normalized.remainingSessions = parseInt(value as string)
-        else if (lowerKey === 'total value') normalized.totalValue = parseFloat(value as string)
-        else if (lowerKey === 'session value') normalized.sessionValue = value ? parseFloat(value as string) : undefined
+        else if (lowerKey === 'total value') {
+          // Handle currency formatting ($1,200 -> 1200)
+          const cleanValue = (value as string).replace(/[$,]/g, '').trim()
+          normalized.totalValue = parseFloat(cleanValue)
+        }
+        else if (lowerKey === 'session value') {
+          // Handle currency formatting
+          const cleanValue = value ? (value as string).replace(/[$,]/g, '').trim() : undefined
+          normalized.sessionValue = cleanValue ? parseFloat(cleanValue) : undefined
+        }
         else if (lowerKey === 'expiry date') normalized.expiryDate = value ? new Date(value as string) : undefined
       })
       
