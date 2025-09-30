@@ -178,25 +178,59 @@ export async function POST(request: NextRequest) {
 
     // 8. Clone sessions
     if (data.sessions && data.sessions.length > 0) {
+      let skippedSessions = 0
       for (const session of data.sessions) {
+        // Skip if we don't have the required trainer or client
+        if (!idMap.users[session.trainerId] || !idMap.clients[session.clientId]) {
+          skippedSessions++
+          continue
+        }
+        
+        // Build session data with required fields
+        const sessionData: any = {
+          trainerId: idMap.users[session.trainerId],
+          clientId: idMap.clients[session.clientId],
+          organizationId: clonedOrg.id,
+          sessionDate: new Date(session.sessionDate),
+          sessionValue: session.sessionValue,
+          validated: session.validated,
+          cancelled: session.cancelled || false,
+          notes: session.notes || null
+        }
+        
+        // Handle locationId (required field)
+        if (session.locationId && idMap.locations[session.locationId]) {
+          sessionData.locationId = idMap.locations[session.locationId]
+        } else if (Object.values(idMap.locations).length > 0) {
+          // Use first available location as fallback
+          sessionData.locationId = Object.values(idMap.locations)[0] as string
+        } else {
+          // Skip session if no location available
+          skippedSessions++
+          continue
+        }
+        
+        // Add optional packageId
+        if (session.packageId && idMap.packages[session.packageId]) {
+          sessionData.packageId = idMap.packages[session.packageId]
+        }
+        
+        // Add optional date fields
+        if (session.validatedAt) {
+          sessionData.validatedAt = new Date(session.validatedAt)
+        }
+        if (session.cancelledAt) {
+          sessionData.cancelledAt = new Date(session.cancelledAt)
+        }
+        
         await prisma.session.create({
-          data: {
-            trainerId: idMap.users[session.trainerId],
-            clientId: idMap.clients[session.clientId],
-            packageId: session.packageId ? idMap.packages[session.packageId] : undefined,
-            locationId: session.locationId ? idMap.locations[session.locationId] : undefined,
-            organizationId: clonedOrg.id,
-            sessionDate: new Date(session.sessionDate),
-            sessionValue: session.sessionValue,
-            validated: session.validated,
-            validatedAt: session.validatedAt ? new Date(session.validatedAt) : null,
-            cancelled: session.cancelled || false,
-            cancelledAt: session.cancelledAt ? new Date(session.cancelledAt) : null,
-            notes: session.notes || null
-          }
+          data: sessionData
         })
       }
-      console.log('✅ Cloned', data.sessions.length, 'sessions')
+      console.log('✅ Cloned', data.sessions.length - skippedSessions, 'sessions')
+      if (skippedSessions > 0) {
+        console.log('⚠️ Skipped', skippedSessions, 'sessions due to missing references')
+      }
     }
 
     // 9. Clone commission tiers
