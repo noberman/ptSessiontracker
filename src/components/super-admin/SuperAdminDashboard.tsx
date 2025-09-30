@@ -17,6 +17,7 @@ import {
   LogOut
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { getSubscriptionDisplayName } from '@/lib/subscription-utils'
 
 interface Organization {
   id: string
@@ -295,7 +296,7 @@ export default function SuperAdminDashboard({ organizations }: SuperAdminDashboa
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTierColor(org.subscriptionTier)}`}>
-                      {org.subscriptionTier}
+                      {getSubscriptionDisplayName(org.subscriptionTier)}
                     </span>
                   </td>
                   <td className="px-6 py-4">

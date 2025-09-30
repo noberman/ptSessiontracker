@@ -1,5 +1,0 @@
-Name,Email,Location,Trainer Email,Package Type,Package Name,Total Sessions,Remaining Sessions,Total Value,Session Value,Expiry Date
-John Doe,john.doe@test.com,Wood Square,trainer1@gym.com,PT,10 Session Package,10,8,1000,100,2025-12-31
-Jane Smith,jane.smith@test.com,Wood Square,trainer2@gym.com,Group,Group Training Monthly,12,10,360,30,2025-12-31
-Mike Johnson,mike.j@test.com,Wood Square,,Custom,Custom Training Plan,15,15,1500,100,2026-01-31
-Sarah Williams,sarah.w@test.com,Wood Square,trainer1@gym.com,PT,20 Session Package,20,18,1800,90,

@@ -96,33 +96,6 @@ export default async function OrganizationSettingsPage() {
           </div>
         </div>
       </Card>
-
-      {/* Subscription Info */}
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold text-text-primary mb-4">
-          Subscription
-        </h2>
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-text-secondary">Plan</span>
-            <span className="text-text-primary font-medium">
-              {organization.subscriptionTier}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-text-secondary">Status</span>
-            <span className="text-text-primary font-medium">
-              {organization.subscriptionStatus}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-text-secondary">Member Since</span>
-            <span className="text-text-primary font-medium">
-              {new Date(organization.createdAt).toLocaleDateString()}
-            </span>
-          </div>
-        </div>
-      </Card>
     </div>
   )
 }
