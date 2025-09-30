@@ -18,7 +18,7 @@ async function createProductionAdmin() {
       
       const hashedPassword = await bcrypt.hash('admin123', 10)
       await prisma.user.update({
-        where: { email: 'admin@ptsession.com' },
+        where: { id: existingAdmin.id },
         data: { 
           password: hashedPassword,
           active: true
