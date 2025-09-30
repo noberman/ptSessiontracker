@@ -585,8 +585,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                         className="mr-2"
                       />
                       <div>
-                        <span className="text-sm font-medium text-text-primary">Add Sessions</span>
-                        <p className="text-xs text-text-secondary">Add imported sessions to existing package</p>
+                        <span className="text-sm font-medium text-text-primary">Overwrite</span>
+                        <p className="text-xs text-text-secondary">Replace existing package with imported data</p>
                       </div>
                     </label>
                   </div>
@@ -737,7 +737,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                                     <p key={i} className="text-xs text-warning-600">
                                       {duplicateHandling === 'skip' 
                                         ? '⚠️ Package exists - will skip this row'
-                                        : warning}
+                                        : '⚠️ Package exists - will overwrite with imported data'}
                                     </p>
                                   )
                                 }
