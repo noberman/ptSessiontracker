@@ -216,7 +216,7 @@ export default function ImportClonePage() {
               Delete all clone organizations and their data. This is useful for cleanup after debugging.
             </p>
             <Button
-              variant="destructive"
+              variant="danger"
               onClick={handleDeleteAllClones}
               className="flex items-center gap-2"
             >
