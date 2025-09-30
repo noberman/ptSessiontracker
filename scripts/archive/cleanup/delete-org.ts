@@ -7,7 +7,7 @@ async function deleteOrganization() {
     console.log(`🔍 Looking for organization with ID: ${orgId}`)
     
     // Find the organization first
-    const org = await prisma.organization.findUnique({
+    const org = await prisma.organization.findFirst({
       where: { id: orgId },
       include: {
         users: true,

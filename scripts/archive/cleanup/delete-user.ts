@@ -7,7 +7,7 @@ async function deleteUser() {
     console.log(`🔍 Looking for user with email: ${email}`)
     
     // Find the user first
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
       where: { email },
       include: {
         sessions: true,
@@ -69,7 +69,7 @@ async function deleteUser() {
         console.log('🏢 Organization has no remaining users')
         console.log('   You may want to delete the organization as well')
         
-        const org = await prisma.organization.findUnique({
+        const org = await prisma.organization.findFirst({
           where: { id: user.organizationId }
         })
         
