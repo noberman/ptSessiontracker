@@ -14,7 +14,7 @@ async function createSuperAdmin() {
   
   try {
     // Check if super admin already exists
-    const existingAdmin = await prisma.user.findUnique({
+    const existingAdmin = await prisma.user.findFirst({
       where: { email }
     })
 
@@ -22,7 +22,7 @@ async function createSuperAdmin() {
       if (existingAdmin.role !== 'SUPER_ADMIN') {
         // Update existing user to super admin
         const updated = await prisma.user.update({
-          where: { email },
+          where: { id: existingAdmin.id },
           data: {
             role: 'SUPER_ADMIN',
             active: true
@@ -59,7 +59,7 @@ async function createSuperAdmin() {
     }
 
     // Log the action
-    const admin = await prisma.user.findUnique({
+    const admin = await prisma.user.findFirst({
       where: { email }
     })
 
