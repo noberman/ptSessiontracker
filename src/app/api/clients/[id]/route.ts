@@ -139,7 +139,7 @@ export async function PUT(
           email,
           organizationId: session.user.organizationId,
           NOT: {
-            id: params.id
+            id: id
           }
         },
       })
