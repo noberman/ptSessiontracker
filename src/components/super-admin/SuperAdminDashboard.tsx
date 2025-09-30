@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
+import { signOut } from 'next-auth/react'
 import { 
   Users, 
   Calendar, 
@@ -12,7 +13,8 @@ import {
   Building,
   Shield,
   Upload,
-  Trash2
+  Trash2,
+  LogOut
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
@@ -164,31 +166,42 @@ export default function SuperAdminDashboard({ organizations }: SuperAdminDashboa
               Beta Management & Debugging Tools
             </p>
           </div>
-          {process.env.NODE_ENV === 'development' && (
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => window.location.href = '/super-admin/import-clone'}
-                className="flex items-center gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                Import Clone
-              </Button>
-              {organizations.some(org => org.isClone) && (
+          <div className="flex items-center gap-2">
+            {process.env.NODE_ENV === 'development' && (
+              <>
                 <Button
-                  variant="danger"
+                  variant="secondary"
                   size="sm"
-                  onClick={handleDeleteAllClones}
-                  disabled={deleting}
+                  onClick={() => window.location.href = '/super-admin/import-clone'}
                   className="flex items-center gap-2"
                 >
-                  <Trash2 className="h-4 w-4" />
-                  {deleting ? 'Deleting...' : 'Delete All Clones'}
+                  <Upload className="h-4 w-4" />
+                  Import Clone
                 </Button>
-              )}
-            </div>
-          )}
+                {organizations.some(org => org.isClone) && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleDeleteAllClones}
+                    disabled={deleting}
+                    className="flex items-center gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deleting ? 'Deleting...' : 'Delete All Clones'}
+                  </Button>
+                )}
+              </>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="flex items-center gap-2 bg-white text-red-600 hover:bg-red-50"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
       </div>
 
