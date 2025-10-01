@@ -1,4 +1,5 @@
 import { NextAuthOptions } from 'next-auth'
+import { JWT } from 'next-auth/jwt'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import { compare } from 'bcryptjs'
@@ -153,7 +154,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account, trigger }) {
+    async jwt({ token, user, account, trigger }): Promise<JWT> {
       console.log('🔐 JWT Callback:', {
         trigger,
         hasUser: !!user,
@@ -187,7 +188,7 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (e) {
           // Cookies might not be available in all contexts
-          console.log('⚠️ Could not check for pending org switch cookie:', e.message)
+          console.log('⚠️ Could not check for pending org switch cookie:', e instanceof Error ? e.message : 'Unknown error')
         }
         
         // Check if we need to refresh the available orgs
@@ -199,7 +200,14 @@ export const authOptions: NextAuthOptions = {
         
         if (!shouldRefresh) {
           console.log('📌 No refresh needed, keeping existing multi-org data')
-          return token
+          // Ensure token has all required JWT fields
+          return {
+            ...token,
+            id: token.id || '',
+            role: token.role || 'pending',
+            locationId: token.locationId || null,
+            organizationId: token.organizationId || null,
+          }
         }
         
         console.log('🔄 Fetching fresh user data from database (org switch or missing data)')
@@ -227,7 +235,7 @@ export const authOptions: NextAuthOptions = {
               cookieStore.delete('pending-org-switch')
               console.log('✅ Cleared pending org switch cookie')
             } catch (e) {
-              console.log('⚠️ Could not clear cookie:', e.message)
+              console.log('⚠️ Could not clear cookie:', e instanceof Error ? e.message : 'Unknown error')
             }
           }
           
@@ -270,7 +278,14 @@ export const authOptions: NextAuthOptions = {
         } else {
           console.log('⚠️ No user found in database for email:', token.email)
           console.log('⚠️ Returning token without organization data')
-          return token // Must return token even when no user found
+          // Ensure token has all required JWT fields even when no user found
+          return {
+            ...token,
+            id: token.id || '',
+            role: token.role || 'pending',
+            locationId: token.locationId || null,
+            organizationId: token.organizationId || null,
+          }
         }
       }
       
@@ -294,12 +309,14 @@ export const authOptions: NextAuthOptions = {
               : dbUsers[0]
             
             // Build list of available organizations
-            const availableOrgs = dbUsers.map(u => ({
-              orgId: u.organizationId,
-              userId: u.id,
-              orgName: u.organization?.name || 'Unknown',
-              role: u.role
-            }))
+            const availableOrgs = dbUsers
+              .filter(u => u.organizationId !== null)
+              .map(u => ({
+                orgId: u.organizationId!,
+                userId: u.id,
+                orgName: u.organization?.name || 'Unknown',
+                role: u.role as string
+              }))
             
             console.log('🏢 Selected org:', selectedUser.organization?.name, 'Available:', availableOrgs.length)
             
@@ -321,9 +338,12 @@ export const authOptions: NextAuthOptions = {
             // New user - they'll need to complete signup
             return {
               ...token,
-              id: user.id,
+              id: user.id || token.id || '',
               email: user.email,
               name: user.name,
+              role: token.role || 'pending',
+              locationId: token.locationId || null,
+              organizationId: token.organizationId || null,
               needsOnboarding: true,
             }
           }
@@ -387,7 +407,14 @@ export const authOptions: NextAuthOptions = {
           return tokenData
         }
       }
-      return token
+      // Ensure token has all required JWT fields
+      return {
+        ...token,
+        id: token.id || '',
+        role: token.role || 'pending',
+        locationId: token.locationId || null,
+        organizationId: token.organizationId || null,
+      }
     },
     async session({ session, token }) {
       console.log('🎯 Session Callback - Token data:', {
