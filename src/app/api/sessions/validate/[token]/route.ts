@@ -8,8 +8,10 @@ export async function GET(
 ) {
   try {
     const { token } = await params
+    console.log('🔍 Validation GET request for token:', token)
 
     if (!token) {
+      console.log('❌ No token provided')
       return NextResponse.json(
         { error: 'Validation token is required' },
         { status: 400 }
@@ -17,6 +19,7 @@ export async function GET(
     }
 
     // Find session by validation token
+    console.log('🔍 Looking for session with validation token:', token)
     const session = await prisma.session.findUnique({
       where: { validationToken: token },
       include: {
@@ -50,7 +53,20 @@ export async function GET(
       }
     })
 
+    console.log('🔍 Session found:', session ? 'YES' : 'NO')
+    if (session) {
+      console.log('📋 Session details:', {
+        id: session.id,
+        validated: session.validated,
+        validationExpiry: session.validationExpiry,
+        sessionDate: session.sessionDate,
+        clientEmail: session.client?.email,
+        trainerEmail: session.trainer?.email
+      })
+    }
+
     if (!session) {
+      console.log('❌ Session not found for token:', token)
       return NextResponse.json(
         { error: 'Invalid or expired validation token' },
         { status: 404 }
@@ -106,9 +122,14 @@ export async function GET(
       }
     })
   } catch (error: any) {
-    console.error('Validation check error:', error)
+    console.error('❌ Validation check error:', error)
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    })
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     )
   }

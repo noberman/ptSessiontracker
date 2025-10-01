@@ -72,6 +72,7 @@ export default withAuth(
             path === '/signup' ||
             path === '/' || 
             path.startsWith('/validate/') ||
+            path.startsWith('/api/sessions/validate/') ||  // Allow unauthenticated access to validation API
             path.startsWith('/invitation/') ||  // Allow unauthenticated access to invitation pages
             path.startsWith('/api/invitations/accept') ||  // Allow unauthenticated invitation acceptance
             path.startsWith('/auth/temp-login') ||
