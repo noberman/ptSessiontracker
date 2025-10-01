@@ -217,7 +217,7 @@ export async function POST(request: Request) {
         prisma.location.findMany({ where: locationFilter }),
         prisma.user.findMany({ 
           where: { 
-            role: 'TRAINER',
+            role: { in: ['TRAINER', 'PT_MANAGER'] },  // Include PT Managers who can also train
             active: true,
             // If club manager, only show trainers from their location
             ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId
@@ -348,7 +348,7 @@ export async function POST(request: Request) {
       } else if (row.trainerEmail) {
         trainer = trainerMap[row.trainerEmail]
         if (!trainer) {
-          errors.push(`Trainer '${row.trainerEmail}' not found - please select a trainer`)
+          errors.push(`Trainer/PT Manager '${row.trainerEmail}' not found - please select a trainer`)
         }
       }
       
