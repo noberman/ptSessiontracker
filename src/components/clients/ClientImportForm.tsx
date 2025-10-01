@@ -77,6 +77,7 @@ interface ClientImportFormProps {
 export function ClientImportForm({ userRole }: ClientImportFormProps) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const validationResultsRef = useRef<HTMLDivElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [validationResults, setValidationResults] = useState<ValidationResult[] | null>(null)
@@ -91,6 +92,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
   const [importResults, setImportResults] = useState<any>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [duplicateHandling, setDuplicateHandling] = useState<'skip' | 'overwrite'>('skip')
+  const [showValidationBanner, setShowValidationBanner] = useState(false)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -184,6 +186,20 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
       setLocations(data.locations || [])
       setTrainers(data.trainers || [])
       setPackageTypes(data.packageTypes || [])
+      
+      // Show validation banner and auto-hide after 5 seconds
+      setShowValidationBanner(true)
+      setTimeout(() => setShowValidationBanner(false), 5000)
+      
+      // Auto-scroll to validation results after a brief delay for render
+      setTimeout(() => {
+        if (validationResultsRef.current) {
+          validationResultsRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          })
+        }
+      }, 100)
     } catch (error: any) {
       alert(error.message || 'Failed to validate file')
     } finally {
@@ -413,6 +429,21 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
 
   return (
     <div className="space-y-6">
+      {/* Validation Complete Banner */}
+      {showValidationBanner && validationResults && (
+        <div className="mb-4 p-4 bg-success-50 border border-success-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center">
+            <CheckCircle className="h-5 w-5 text-success-600 mr-3" />
+            <span className="text-success-800 font-medium">
+              Validation complete! {summary?.validRows || 0} valid rows, {summary?.invalidRows || 0} issues found.
+            </span>
+          </div>
+          <span className="text-success-700 text-sm animate-bounce">
+            ↓ Scroll down to view results
+          </span>
+        </div>
+      )}
+      
       {/* File Upload Section */}
       <Card>
         <CardHeader>
@@ -495,6 +526,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
       </Card>
 
       {/* Validation Results */}
+      <div ref={validationResultsRef}>
       {validationResults && summary && (() => {
         // Calculate live summary based on current validation state
         const liveResults = getFilteredResults()
@@ -796,6 +828,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
         </>
       )
       })()}
+      </div>
     </div>
   )
 }
