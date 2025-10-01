@@ -215,7 +215,7 @@ export const authOptions: NextAuthOptions = {
         
         if (dbUsers.length > 0) {
           // Use pending org switch if available, otherwise current org from token, or default to first
-          let targetOrgId = pendingOrgSwitch || token.organizationId
+          const targetOrgId = pendingOrgSwitch || token.organizationId
           
           // Clear the cookie if it was used
           if (pendingOrgSwitch) {
