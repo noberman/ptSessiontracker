@@ -22,6 +22,7 @@ interface AcceptInvitationClientProps {
   token: string
   isLoggedIn: boolean
   currentUserEmail?: string | null
+  userExistsInSystem: boolean
 }
 
 export default function AcceptInvitationClient({
@@ -29,19 +30,31 @@ export default function AcceptInvitationClient({
   token,
   isLoggedIn,
   currentUserEmail,
+  userExistsInSystem,
 }: AcceptInvitationClientProps) {
   const router = useRouter()
   const { update } = useSession()
-  const [mode, setMode] = useState<'initial' | 'signup' | 'login'>('initial')
+  
+  // Determine initial mode based on user existence
+  const getInitialMode = () => {
+    if (isLoggedIn && currentUserEmail === invitation.email) {
+      return 'accept' // User is logged in with correct account
+    }
+    if (isLoggedIn && currentUserEmail !== invitation.email) {
+      return 'wrong-account' // User is logged in with wrong account
+    }
+    if (userExistsInSystem) {
+      return 'login' // User exists but not logged in
+    }
+    return 'signup' // New user needs to create account
+  }
+  
+  const [mode, setMode] = useState<'accept' | 'wrong-account' | 'signup' | 'login'>(getInitialMode())
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  // Check if user needs to create account or just accept
-  const needsAccount = !isLoggedIn || currentUserEmail !== invitation.email
-  const wrongAccount = isLoggedIn && currentUserEmail !== invitation.email
 
   const handleAccept = async () => {
     setLoading(true)
@@ -73,8 +86,19 @@ export default function AcceptInvitationClient({
           await update() // Force session refresh to include new org
           router.push('/dashboard?invitation=accepted&refresh=true')
         } else if (data.newUser) {
-          // New user created - redirect to login
-          router.push('/login?welcome=true')
+          // New user created - auto-login them
+          const { signIn } = await import('next-auth/react')
+          const signInResponse = await signIn('credentials', {
+            email: invitation.email,
+            password: password,
+            redirect: false,
+          })
+          
+          if (signInResponse?.ok) {
+            router.push('/dashboard?welcome=true')
+          } else {
+            router.push('/login?welcome=true')
+          }
         } else {
           // Existing user accepted - redirect to dashboard
           router.push('/dashboard?invitation=accepted')
@@ -134,7 +158,8 @@ export default function AcceptInvitationClient({
 
           {/* Content */}
           <div className="p-6">
-            {mode === 'initial' && (
+            {/* User is logged in with correct account - just accept */}
+            {mode === 'accept' && (
               <>
                 <div className="mb-6 text-center">
                   <p className="text-text-secondary mb-4">
@@ -156,56 +181,72 @@ export default function AcceptInvitationClient({
                   )}
                 </div>
 
-                {wrongAccount && (
-                  <div className="mb-6 p-4 bg-warning-50 border border-warning-200 rounded-lg">
-                    <p className="text-sm text-warning-800">
-                      You&apos;re currently logged in as <strong>{currentUserEmail}</strong>.
-                      This invitation was sent to <strong>{invitation.email}</strong>.
-                      Please log out and log in with the correct account.
-                    </p>
+                {error && (
+                  <div className="mb-4 p-3 bg-error-50 border border-error-200 rounded-md">
+                    <p className="text-sm text-error-600">{error}</p>
                   </div>
                 )}
 
-                {!isLoggedIn && (
-                  <>
-                    <div className="space-y-3">
-                      <Button
-                        onClick={() => setMode('signup')}
-                        className="w-full"
-                        size="lg"
-                      >
-                        <UserCheck className="w-5 h-5 mr-2" />
-                        Create Account & Accept
-                      </Button>
-                      
-                      <Button
-                        onClick={() => setMode('login')}
-                        variant="outline"
-                        className="w-full"
-                        size="lg"
-                      >
-                        I already have an account
-                      </Button>
-                    </div>
-                  </>
-                )}
-
-                {isLoggedIn && !wrongAccount && (
-                  <Button
-                    onClick={handleAccept}
-                    className="w-full"
-                    size="lg"
-                    disabled={loading}
-                  >
-                    {loading ? 'Accepting...' : 'Accept Invitation'}
-                  </Button>
-                )}
+                <Button
+                  onClick={handleAccept}
+                  className="w-full"
+                  size="lg"
+                  disabled={loading}
+                >
+                  {loading ? 'Accepting...' : 'Accept Invitation'}
+                </Button>
               </>
             )}
 
+            {/* User is logged in with wrong account */}
+            {mode === 'wrong-account' && (
+              <>
+                <div className="mb-6 text-center">
+                  <p className="text-text-secondary mb-4">
+                    <span className="font-medium text-text-primary">{invitation.invitedBy.name}</span> has invited you to join as a{' '}
+                    <span className="font-medium text-text-primary">{roleLabels[invitation.role] || invitation.role}</span>
+                  </p>
+                  
+                  <div className="bg-background-secondary rounded-lg p-4 mb-4">
+                    <div className="flex items-center justify-center gap-2 text-sm text-text-secondary">
+                      <Mail className="w-4 h-4" />
+                      <span>{invitation.email}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-6 p-4 bg-warning-50 border border-warning-200 rounded-lg">
+                  <p className="text-sm text-warning-800">
+                    You&apos;re currently logged in as <strong>{currentUserEmail}</strong>.
+                    This invitation was sent to <strong>{invitation.email}</strong>.
+                    Please log out and log in with the correct account.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => router.push('/api/auth/signout')}
+                  className="w-full"
+                  size="lg"
+                >
+                  Log Out & Switch Account
+                </Button>
+              </>
+            )}
+
+            {/* New user - create account */}
             {mode === 'signup' && (
               <>
-                <h2 className="text-xl font-bold mb-4">Create Your Account</h2>
+                <div className="mb-6 text-center">
+                  <p className="text-text-secondary mb-2">
+                    Welcome! <span className="font-medium text-text-primary">{invitation.invitedBy.name}</span> has invited you to join
+                  </p>
+                  <p className="text-lg font-medium text-text-primary mb-4">
+                    {invitation.organization.name} as {roleLabels[invitation.role] || invitation.role}
+                  </p>
+                  <p className="text-sm text-text-secondary">
+                    Create your password to get started
+                  </p>
+                </div>
                 <form onSubmit={handleSignup}>
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-text-primary mb-1">
@@ -276,34 +317,34 @@ export default function AcceptInvitationClient({
                     </div>
                   )}
 
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setMode('initial')}
-                      className="flex-1"
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="flex-1"
-                    >
-                      {loading ? 'Creating...' : 'Create Account'}
-                    </Button>
-                  </div>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {loading ? 'Creating Account...' : 'Create Account & Join'}
+                  </Button>
                 </form>
               </>
             )}
 
+            {/* Existing user - needs to login */}
             {mode === 'login' && (
               <>
                 <div className="text-center mb-6">
-                  <h2 className="text-xl font-bold mb-2">Already Have an Account?</h2>
-                  <p className="text-text-secondary text-sm">
-                    Please log in with your existing account for {invitation.email} to accept this invitation.
+                  <p className="text-text-secondary mb-2">
+                    Welcome back! You already have an account.
                   </p>
+                  <p className="text-lg font-medium text-text-primary mb-4">
+                    Log in to join {invitation.organization.name}
+                  </p>
+                  <div className="bg-background-secondary rounded-lg p-4">
+                    <div className="flex items-center justify-center gap-2 text-sm text-text-secondary">
+                      <Mail className="w-4 h-4" />
+                      <span>{invitation.email}</span>
+                    </div>
+                  </div>
                 </div>
 
                 {error && (
@@ -312,21 +353,13 @@ export default function AcceptInvitationClient({
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setMode('initial')}
-                    className="flex-1"
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    onClick={() => router.push(`/login?redirect=/invitation/${token}`)}
-                    className="flex-1"
-                  >
-                    Go to Login
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => router.push(`/login?redirect=/invitation/${token}`)}
+                  className="w-full"
+                  size="lg"
+                >
+                  Continue to Login
+                </Button>
               </>
             )}
           </div>

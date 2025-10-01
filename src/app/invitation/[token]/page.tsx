@@ -2,6 +2,7 @@ import AcceptInvitationClient from './AcceptInvitationClient'
 import { getInvitationByToken } from '@/lib/invitation-service'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 interface PageProps {
   params: Promise<{
@@ -108,12 +109,22 @@ export default async function AcceptInvitationPage({ params }: PageProps) {
     )
   }
 
+  // Check if user with this email already exists in ANY organization
+  let userExistsInSystem = false
+  if (invitation.status === 'PENDING') {
+    const existingUser = await prisma.user.findFirst({
+      where: { email: invitation.email }
+    })
+    userExistsInSystem = !!existingUser
+  }
+
   return (
     <AcceptInvitationClient 
       invitation={invitation}
       token={token}
       isLoggedIn={!!session}
       currentUserEmail={session?.user?.email}
+      userExistsInSystem={userExistsInSystem}
     />
   )
 }
