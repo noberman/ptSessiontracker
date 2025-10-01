@@ -83,12 +83,14 @@ export const authOptions: NextAuthOptions = {
             
             // IMPORTANT: Only include organizations where the password matched
             // This prevents unauthorized access to orgs with different passwords
-            const availableOrgs = validUsers.map(u => ({
-              orgId: u.organizationId,
-              userId: u.id,
-              orgName: u.organization?.name || 'Unknown',
-              role: u.role
-            }))
+            const availableOrgs = validUsers
+              .filter(u => u.organizationId !== null) // Filter out any without org ID
+              .map(u => ({
+                orgId: u.organizationId!,
+                userId: u.id,
+                orgName: u.organization?.name || 'Unknown',
+                role: u.role as string
+              }))
               
             console.log('🔐 Credentials Provider - Returning user data:', {
               id: user.id,
@@ -239,12 +241,14 @@ export const authOptions: NextAuthOptions = {
           })
           
           // Build list of available organizations
-          const availableOrgs = dbUsers.map(u => ({
-            orgId: u.organizationId,
-            userId: u.id,
-            orgName: u.organization?.name || 'Unknown',
-            role: u.role
-          }))
+          const availableOrgs = dbUsers
+            .filter(u => u.organizationId !== null)
+            .map(u => ({
+              orgId: u.organizationId!,
+              userId: u.id,
+              orgName: u.organization?.name || 'Unknown',
+              role: u.role as string
+            }))
           
           console.log('🔄 Refreshing token with multi-org data:', {
             email: currentUser.email,
