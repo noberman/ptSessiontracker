@@ -73,6 +73,7 @@ export default withAuth(
             path === '/' || 
             path.startsWith('/validate/') ||
             path.startsWith('/invitation/') ||  // Allow unauthenticated access to invitation pages
+            path.startsWith('/api/invitations/accept') ||  // Allow unauthenticated invitation acceptance
             path.startsWith('/auth/temp-login') ||
             path.startsWith('/_next/') ||
             path.includes('.')) {
