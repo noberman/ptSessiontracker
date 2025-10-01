@@ -463,31 +463,54 @@ export async function POST(request: Request) {
         successful: [] as any[]
       }
 
-      // Process each valid row
-      for (const result of validRows) {
-        console.log(`Processing import for: ${result.row.email} - ${result.row.name}`)
-        console.log(`  Location: ${result.location?.name} (${result.location?.id})`)
-        console.log(`  Trainer: ${result.trainer?.name} (${result.trainer?.id})`)
+      // Group rows by email to handle multiple packages for the same client
+      const rowsByEmail = validRows.reduce((acc, result) => {
+        const email = result.row.email.toLowerCase()
+        if (!acc[email]) {
+          acc[email] = []
+        }
+        acc[email].push(result)
+        return acc
+      }, {} as Record<string, typeof validRows>)
+
+      // Process each unique client (by email)
+      for (const [email, clientRows] of Object.entries(rowsByEmail)) {
+        console.log(`Processing import for client: ${email} with ${clientRows.length} package(s)`)
+        
         try {
           await prisma.$transaction(async (tx) => {
             let client
+            
+            // Use the first row for client data (all rows for same email should have same client info)
+            const firstRow = clientRows[0]
+            console.log(`  Location: ${firstRow.location?.name} (${firstRow.location?.id})`)
+            console.log(`  Trainer: ${firstRow.trainer?.name} (${firstRow.trainer?.id})`)
+            
+            // Check if client exists in the database (not just from initial query)
+            const existingClientInDb = await tx.client.findFirst({
+              where: {
+                email: email,
+                organizationId: session.user.organizationId!
+              }
+            })
 
-            if (result.existingClient) {
+            if (existingClientInDb || firstRow.existingClient) {
+              const existingClient = existingClientInDb || firstRow.existingClient!
               // Update existing client's location and trainer if provided
               const updateData: any = {}
-              const existingClientData = result.existingClient as any // Has locationId and primaryTrainerId
+              const existingClientData = existingClient as any // Has locationId and primaryTrainerId
               
               // Only update location if it's different from current
-              if (result.location && result.location.id !== existingClientData.locationId) {
-                updateData.locationId = result.location.id
-                console.log(`Updating client location to: ${result.location.name}`)
+              if (firstRow.location && firstRow.location.id !== existingClientData.locationId) {
+                updateData.locationId = firstRow.location.id
+                console.log(`Updating client location to: ${firstRow.location.name}`)
               }
               
               // Only update trainer if it's different from current
-              if (result.trainer && result.trainer.id !== existingClientData.primaryTrainerId) {
-                updateData.primaryTrainerId = result.trainer.id
-                console.log(`Updating client trainer to: ${result.trainer.name}`)
-              } else if (!result.trainer && existingClientData.primaryTrainerId) {
+              if (firstRow.trainer && firstRow.trainer.id !== existingClientData.primaryTrainerId) {
+                updateData.primaryTrainerId = firstRow.trainer.id
+                console.log(`Updating client trainer to: ${firstRow.trainer.name}`)
+              } else if (!firstRow.trainer && existingClientData.primaryTrainerId) {
                 // Clear trainer if none selected but client has one
                 updateData.primaryTrainerId = null
                 console.log(`Clearing client trainer`)
@@ -496,24 +519,24 @@ export async function POST(request: Request) {
               // Update client if there are changes
               if (Object.keys(updateData).length > 0) {
                 client = await tx.client.update({
-                  where: { id: result.existingClient.id },
+                  where: { id: existingClient.id },
                   data: updateData
                 })
                 console.log(`Updated existing client: ${client.id} - ${client.name}`)
                 importResults.updated.clients++
               } else {
-                client = result.existingClient
-                console.log(`Using existing client without changes: ${client.id} - ${client.name}`)
+                client = existingClient as any
+                console.log(`Using existing client without changes: ${existingClient.id} - ${existingClient.name}`)
               }
             } else {
               // Create new client
               client = await tx.client.create({
                 data: {
-                  name: result.row.name,
-                  email: result.row.email,
-                  phone: result.row.phone || null,
-                  locationId: result.location!.id,
-                  primaryTrainerId: result.trainer?.id,
+                  name: firstRow.row.name,
+                  email: firstRow.row.email,
+                  phone: firstRow.row.phone || null,
+                  locationId: firstRow.location!.id,
+                  primaryTrainerId: firstRow.trainer?.id,
                   organizationId: session.user.organizationId!, // Add organizationId
                   active: true
                 }
@@ -522,77 +545,90 @@ export async function POST(request: Request) {
               importResults.created.clients++
             }
 
-            // Check if client already has an active package with the same name
-            const existingPackage = await tx.package.findFirst({
-              where: {
-                clientId: client.id,
-                name: result.row.packageName,
-                active: true
-              }
-            })
+            // Client should always be defined at this point
+            if (!client) {
+              throw new Error('Failed to create or retrieve client')
+            }
 
-            if (existingPackage) {
-              // Package with same name already exists for this client
-              if (duplicateHandling === 'overwrite') {
-                // Overwrite the existing package with new values
-                const pkg = await tx.package.update({
-                  where: { id: existingPackage.id },
+            // Now process all packages for this client
+            for (const result of clientRows) {
+              console.log(`  Processing package: ${result.row.packageName}`)
+
+              // Check if client already has an active package with the same name
+              const existingPackage = await tx.package.findFirst({
+                where: {
+                  clientId: client.id,
+                  name: result.row.packageName,
+                  active: true
+                }
+              })
+
+              if (existingPackage) {
+                // Package with same name already exists for this client
+                if (duplicateHandling === 'overwrite') {
+                  // Overwrite the existing package with new values
+                  const pkg = await tx.package.update({
+                    where: { id: existingPackage.id },
+                    data: {
+                      totalSessions: result.row.totalSessions,
+                      remainingSessions: result.row.remainingSessions,
+                      totalValue: result.row.totalValue,
+                      sessionValue: result.row.sessionValue || (result.row.totalValue / result.row.totalSessions),
+                      expiresAt: result.row.expiryDate || null,
+                      updatedAt: new Date()
+                    }
+                  })
+                  console.log(`Overwrote package: ${pkg.id} - ${pkg.name} for client ${client.name}`)
+                  importResults.updated.packages = (importResults.updated.packages || 0) + 1
+                } else {
+                  // Skip duplicate package (default behavior)
+                  console.log(`Skipping duplicate package: ${existingPackage.name} for client ${client.name} - already exists`)
+                  importResults.updated.packages = (importResults.updated.packages || 0) + 1
+                }
+              } else {
+                // Create new package
+                const sessionValue = result.row.sessionValue || (result.row.totalValue / result.row.totalSessions)
+                
+                // If package name matches a PackageType, use it; otherwise default to Custom
+                const pkg = await tx.package.create({
                   data: {
+                    clientId: client.id,
+                    name: result.row.packageName,
+                    packageType: result.packageType?.name || "Custom",
+                    packageTypeId: result.packageType?.id || null,
                     totalSessions: result.row.totalSessions,
                     remainingSessions: result.row.remainingSessions,
                     totalValue: result.row.totalValue,
-                    sessionValue: result.row.sessionValue || (result.row.totalValue / result.row.totalSessions),
+                    sessionValue: sessionValue,
+                    organizationId: session.user.organizationId!, // Add organizationId
+                    active: true,
+                    startDate: new Date(),
                     expiresAt: result.row.expiryDate || null,
-                    updatedAt: new Date()
                   }
                 })
-                console.log(`Overwrote package: ${pkg.id} - ${pkg.name} for client ${client.name}`)
-                importResults.updated.packages = (importResults.updated.packages || 0) + 1
-              } else {
-                // Skip duplicate package (default behavior)
-                console.log(`Skipping duplicate package: ${existingPackage.name} for client ${client.name} - already exists`)
-                importResults.updated.packages = (importResults.updated.packages || 0) + 1
+                console.log(`Created package: ${pkg.id} - ${pkg.name} for client ${client.name}`)
+                importResults.created.packages++
               }
-            } else {
-              // Create new package
-              const sessionValue = result.row.sessionValue || (result.row.totalValue / result.row.totalSessions)
-              
-              // If package name matches a PackageType, use it; otherwise default to Custom
-              const pkg = await tx.package.create({
-                data: {
-                  clientId: client.id,
-                  name: result.row.packageName,
-                  packageType: result.packageType?.name || "Custom",
-                  packageTypeId: result.packageType?.id || null,
-                  totalSessions: result.row.totalSessions,
-                  remainingSessions: result.row.remainingSessions,
-                  totalValue: result.row.totalValue,
-                  sessionValue: sessionValue,
-                  organizationId: session.user.organizationId!, // Add organizationId
-                  active: true,
-                  startDate: new Date(),
-                  expiresAt: result.row.expiryDate || null,
-                }
-              })
-              console.log(`Created package: ${pkg.id} - ${pkg.name} for client ${client.name}`)
-              importResults.created.packages++
-            }
 
-            importResults.successful.push({
-              client: client.name,
-              email: client.email,
-              package: result.row.packageName,
-              remainingSessions: result.row.remainingSessions,
-              action: existingPackage ? 'Updated existing package' : 'Created new package'
-            })
+              importResults.successful.push({
+                client: client.name,
+                email: client.email,
+                package: result.row.packageName,
+                remainingSessions: result.row.remainingSessions,
+                action: existingPackage ? 'Updated existing package' : 'Created new package'
+              })
+            }
           })
         } catch (error: any) {
-          console.error(`Failed to import ${result.row.email}:`, error.message)
+          console.error(`Failed to import client ${email}:`, error.message)
           console.error('Full error:', error)
-          importResults.failed.push({
-            row: result.row.rowNumber,
-            email: result.row.email,
-            error: error.message
+          // Add all rows for this client to failed list
+          clientRows.forEach(result => {
+            importResults.failed.push({
+              row: result.row.rowNumber,
+              email: result.row.email,
+              error: error.message
+            })
           })
         }
       }
