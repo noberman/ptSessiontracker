@@ -348,12 +348,10 @@ export async function POST(request: Request) {
       return expiry
     })()
 
-    // Combine date and time if provided
-    const sessionDateTime = new Date(sessionDate)
-    if (sessionTime) {
-      const [hours, minutes] = sessionTime.split(':')
-      sessionDateTime.setHours(parseInt(hours), parseInt(minutes))
-    }
+    // Combine date and time if provided (handle timezone correctly)
+    const sessionDateTime = sessionTime 
+      ? new Date(`${sessionDate}T${sessionTime}:00`) // ISO format preserves local timezone
+      : new Date(`${sessionDate}T00:00:00`) // Default to midnight local time
 
     // Create the session in a transaction
     const newSession = await prisma.$transaction(async (tx) => {
