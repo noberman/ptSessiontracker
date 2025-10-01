@@ -35,7 +35,7 @@ NODE_ENV=staging
 The landing page now dynamically determines where to send users:
 
 1. **In Production** (fitsync.io):
-   - All login/signup links go to → `https://app.fitsync.io`
+   - All login/signup links go to → `https://fitsync.io`
 
 2. **In Staging** (Railway URL):
    - All login/signup links go to → `https://fitsync-main-staging.up.railway.app`
@@ -43,7 +43,7 @@ The landing page now dynamically determines where to send users:
 3. **Auto-detection Logic**:
    - If hostname includes "staging" or "railway" → Use staging URL
    - If hostname is "localhost" → Use local development URL
-   - Otherwise → Use production app.fitsync.io
+   - Otherwise → Use production fitsync.io
 
 ## Testing
 

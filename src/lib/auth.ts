@@ -1,13 +1,13 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
-import { PrismaAdapter } from '@auth/prisma-adapter'
 import { compare } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { validateTempToken } from '@/lib/auth/super-admin'
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  // Note: PrismaAdapter is not used with JWT strategy
+  // adapter: PrismaAdapter(prisma) as any,
   session: {
     strategy: 'jwt',
   },
@@ -73,6 +73,14 @@ export const authOptions: NextAuthOptions = {
             if (isPasswordValid) {
               console.log('✅ Login successful for:', user.email, 'Role:', user.role, 'Org:', user.organization?.name)
               
+              // Get all organizations for this email (for org switching)
+              const availableOrgs = users.map(u => ({
+                orgId: u.organizationId,
+                userId: u.id,
+                orgName: u.organization?.name || 'Unknown',
+                role: u.role
+              }))
+              
               return {
                 id: user.id,
                 email: user.email,
@@ -80,6 +88,7 @@ export const authOptions: NextAuthOptions = {
                 role: user.role,
                 locationId: user.locationId,
                 organizationId: user.organizationId,
+                availableOrgs, // Include all available orgs for switching
               }
             }
           }
@@ -163,22 +172,44 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         // For Google OAuth, we need to check if user exists in DB
         if (account?.provider === 'google') {
-          const dbUser = await prisma.user.findFirst({
-            where: { email: user.email! },
+          // Find ALL users with this email across organizations
+          const dbUsers = await prisma.user.findMany({
+            where: { email: user.email!, active: true },
             include: { organization: true }
           })
           
-          if (dbUser) {
-            console.log('✅ Google user found in DB:', dbUser.email)
-            // Existing user logging in with Google
+          if (dbUsers.length > 0) {
+            console.log(`✅ Google user found in ${dbUsers.length} organization(s):`, user.email)
+            
+            // Get last selected org from the token (passed from client)
+            // or default to first organization
+            const lastOrgId = token.lastOrganizationId
+            const selectedUser = lastOrgId 
+              ? dbUsers.find(u => u.organizationId === lastOrgId) || dbUsers[0]
+              : dbUsers[0]
+            
+            // Build list of available organizations
+            const availableOrgs = dbUsers.map(u => ({
+              orgId: u.organizationId,
+              userId: u.id,
+              orgName: u.organization?.name || 'Unknown',
+              role: u.role
+            }))
+            
+            console.log('🏢 Selected org:', selectedUser.organization?.name, 'Available:', availableOrgs.length)
+            
             return {
               ...token,
-              id: dbUser.id,
-              role: dbUser.role,
-              locationId: dbUser.locationId,
-              organizationId: dbUser.organizationId,
-              organizationName: dbUser.organization?.name || null,
-              onboardingCompletedAt: dbUser.onboardingCompletedAt,
+              id: selectedUser.id,
+              email: user.email,
+              name: user.name || selectedUser.name,
+              role: selectedUser.role,
+              locationId: selectedUser.locationId,
+              organizationId: selectedUser.organizationId,
+              organizationName: selectedUser.organization?.name || null,
+              onboardingCompletedAt: selectedUser.onboardingCompletedAt,
+              organizationOnboardingCompletedAt: selectedUser.organization?.onboardingCompletedAt,
+              availableOrgs, // Store all available organizations
             }
           } else {
             console.log('🆕 New Google user:', user.email)
@@ -212,6 +243,7 @@ export const authOptions: NextAuthOptions = {
             organizationName: dbUser?.organization?.name || null,
             onboardingCompletedAt: dbUser?.onboardingCompletedAt || null,
             organizationOnboardingCompletedAt: dbUser?.organization?.onboardingCompletedAt || null,
+            availableOrgs: (user as any).availableOrgs || [], // Pass through available orgs
           }
         }
       }
@@ -230,6 +262,12 @@ export const authOptions: NextAuthOptions = {
           onboardingCompletedAt: token.onboardingCompletedAt as Date | null | undefined,
           organizationOnboardingCompletedAt: token.organizationOnboardingCompletedAt as Date | null | undefined,
           needsOnboarding: token.needsOnboarding as boolean | undefined,
+          availableOrgs: token.availableOrgs as Array<{
+            orgId: string
+            userId: string
+            orgName: string
+            role: string
+          }> | undefined,
         },
       }
       

@@ -21,6 +21,8 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { UserMenu } from './UserMenu'
+import { OrgSwitcher } from './OrgSwitcher'
+import { Separator } from '@/components/ui/separator'
 
 interface NavItem {
   title: string
@@ -175,7 +177,16 @@ export function Sidebar({ isCollapsed = false, onCollapsedChange }: SidebarProps
         })}
       </nav>
 
-      <div className="border-t p-4">
+      <div className="border-t p-4 space-y-3">
+        {/* Organization Switcher - only shows if user has multiple orgs */}
+        <OrgSwitcher />
+        
+        {/* Divider between org switcher and user menu (only if org switcher is shown) */}
+        {session?.user?.availableOrgs && session.user.availableOrgs.length > 1 && (
+          <Separator />
+        )}
+        
+        {/* User Profile Menu */}
         <UserMenu isCollapsed={isCollapsed} />
       </div>
     </>

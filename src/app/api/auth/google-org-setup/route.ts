@@ -54,22 +54,22 @@ export async function POST(request: Request) {
         },
       })
 
-      // Update user with organization and make them admin
-      // Need to find the user by ID since email is not unique
-      const userToUpdate = await tx.user.findFirst({
-        where: { email: session.user.email! }
-      })
+      // For Google OAuth, we always create a NEW user for the NEW organization
+      // This is because the same email can belong to multiple organizations
+      // Each org+email combination is a separate user account
+      const { hash } = await import('bcryptjs')
+      const randomPassword = Math.random().toString(36).slice(-12) // They'll use Google OAuth, not password
       
-      if (!userToUpdate) {
-        throw new Error('User not found')
-      }
-      
-      const user = await tx.user.update({
-        where: { id: userToUpdate.id },
+      const user = await tx.user.create({
         data: {
+          email: session.user.email!,
+          name: session.user.name || 'Admin',
+          password: await hash(randomPassword, 10), // Required field but won't be used with OAuth
           organizationId: organization.id,
           locationId: location.id,
           role: 'ADMIN',
+          active: true,
+          onboardingCompletedAt: new Date(),
         },
       })
 

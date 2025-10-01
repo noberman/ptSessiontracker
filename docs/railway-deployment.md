@@ -2,7 +2,7 @@
 
 ## Domain Setup for FitSync
 
-This guide explains how to configure Railway to serve the landing page on `fitsync.io` and the main application on `app.fitsync.io`.
+This guide explains how to configure Railway to serve both the landing page and main application on `fitsync.io`.
 
 ## Single Service Setup (Recommended)
 
@@ -26,7 +26,7 @@ Set these environment variables in Railway:
 DATABASE_URL=[Your Railway PostgreSQL URL]
 
 # NextAuth
-NEXTAUTH_URL=https://app.fitsync.io
+NEXTAUTH_URL=https://fitsync.io
 NEXTAUTH_SECRET=[Generate a secure secret]
 
 # Email Service
@@ -35,13 +35,13 @@ RESEND_FROM_EMAIL=noreply@fitsync.io
 RESEND_FROM_NAME=FitSync
 
 # Application Settings
-APP_URL=https://app.fitsync.io
+APP_URL=https://fitsync.io
 SESSION_VALIDATION_EXPIRY_DAYS=30
 
 # Domain Configuration
 LANDING_DOMAIN=fitsync.io
-APP_DOMAIN=app.fitsync.io
-NEXT_PUBLIC_APP_URL=https://app.fitsync.io
+APP_DOMAIN=fitsync.io
+NEXT_PUBLIC_APP_URL=https://fitsync.io
 
 # Environment
 NODE_ENV=production
@@ -55,11 +55,7 @@ In Railway's domain settings for your service:
    - Domain: `fitsync.io`
    - Add the CNAME or A record to your DNS provider as instructed by Railway
 
-2. **Add Custom Domain #2**: 
-   - Domain: `app.fitsync.io`
-   - Add the CNAME record to your DNS provider as instructed by Railway
-
-3. **Add Custom Domain #3** (optional but recommended):
+2. **Add Custom Domain #2** (optional but recommended):
    - Domain: `www.fitsync.io`
    - This should redirect to `fitsync.io`
 
@@ -75,7 +71,6 @@ fitsync.io        CNAME    [your-service].up.railway.app
 fitsync.io        A        [Railway's IP address]
 
 # For subdomains
-app.fitsync.io    CNAME    [your-service].up.railway.app
 www.fitsync.io    CNAME    [your-service].up.railway.app
 ```
 
@@ -85,36 +80,28 @@ Railway automatically provisions SSL certificates for all custom domains via Let
 
 ## How It Works
 
-The application uses middleware-based routing to serve different content based on the domain:
+The application serves all content from a single domain:
 
-1. **fitsync.io** → Shows the landing page
-2. **app.fitsync.io** → Shows the application (login/dashboard)
-3. **www.fitsync.io** → Shows the landing page
+1. **fitsync.io** → Shows the landing page or application based on authentication state
+2. **www.fitsync.io** → Redirects to fitsync.io
 
-The middleware (`src/middleware.ts`) detects the hostname and routes accordingly:
-- Landing domain requests get the marketing landing page
-- App subdomain requests get the application with authentication
+The application routes based on authentication state:
+- Unauthenticated users see the landing page
+- Authenticated users see the dashboard/application
 
 ## Testing Locally
 
 To test the domain routing locally:
 
-1. Edit your `/etc/hosts` file (Mac/Linux) or `C:\Windows\System32\drivers\etc\hosts` (Windows):
-```
-127.0.0.1    local.fitsync.io
-127.0.0.1    app.local.fitsync.io
-```
-
-2. Update `.env.local`:
+1. Update `.env.local`:
 ```env
-LANDING_DOMAIN=local.fitsync.io:3000
-APP_DOMAIN=app.local.fitsync.io:3000
-NEXT_PUBLIC_APP_URL=http://app.local.fitsync.io:3000
+LANDING_DOMAIN=localhost:3000
+APP_DOMAIN=localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-3. Access:
-- `http://local.fitsync.io:3000` - Landing page
-- `http://app.local.fitsync.io:3000` - Application
+2. Access:
+- `http://localhost:3000` - Shows landing page when logged out, dashboard when logged in
 
 ## Deployment Steps
 
