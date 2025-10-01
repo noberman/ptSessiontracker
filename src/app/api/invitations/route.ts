@@ -67,6 +67,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('📩 Creating invitation:', {
+      email,
+      role,
+      organizationId: user.organizationId,
+      invitedBy: user.name || user.email
+    })
+
     // Create invitation
     const invitation = await createInvitation({
       email,
@@ -75,11 +82,20 @@ export async function POST(request: NextRequest) {
       invitedById: user.id,
     })
 
+    console.log('✅ Invitation created:', {
+      id: invitation.id,
+      token: invitation.token?.substring(0, 10) + '...',
+      expiresAt: invitation.expiresAt
+    })
+
     // Send invitation email
     try {
+      console.log('📧 Sending invitation email...')
       await sendInvitationEmail(invitation)
+      console.log('✅ Invitation email sent successfully')
     } catch (emailError) {
-      console.error('Failed to send invitation email:', emailError)
+      console.error('❌ Failed to send invitation email:', emailError)
+      console.error('❌ Full error:', JSON.stringify(emailError, null, 2))
       // Don't fail the request if email fails - invitation is created
     }
 

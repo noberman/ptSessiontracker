@@ -100,6 +100,15 @@ export function Sidebar({ isCollapsed = false, onCollapsedChange }: SidebarProps
   const { data: session } = useSession()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
+  // Debug session data
+  console.log('📊 Sidebar - Session data:', {
+    hasSession: !!session,
+    userEmail: session?.user?.email,
+    hasAvailableOrgs: !!session?.user?.availableOrgs,
+    availableOrgsCount: session?.user?.availableOrgs?.length || 0,
+    availableOrgs: session?.user?.availableOrgs
+  })
+
   const userRole = session?.user?.role
 
   const filteredNavItems = navItems.filter((item) => {

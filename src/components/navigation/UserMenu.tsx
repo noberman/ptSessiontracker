@@ -49,7 +49,7 @@ export function UserMenu({ isCollapsed = false }: UserMenuProps) {
             <User className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-900 border shadow-lg z-50">
           <DropdownMenuLabel>
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">{session.user.name}</p>
@@ -91,7 +91,7 @@ export function UserMenu({ isCollapsed = false }: UserMenuProps) {
           </div>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-900 border shadow-lg z-50">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{session.user.name}</p>

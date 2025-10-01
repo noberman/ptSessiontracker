@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getToken } from 'next-auth/jwt'
 import { NextRequest } from 'next/server'
+import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,25 +32,28 @@ export async function POST(request: NextRequest) {
     )
 
     if (!hasAccess) {
+      console.log('❌ Access denied:', { organizationId, userId, availableOrgs })
       return NextResponse.json(
         { error: 'Access denied to this organization' },
         { status: 403 }
       )
     }
 
-    console.log(`🔄 User ${session.user.email} switching to org ${organizationId}`)
+    console.log(`✅ User ${session.user.email} switching from ${session.user.organizationId} to ${organizationId}`)
 
-    // The actual organization switch happens in the jwt callback
-    // when the session is updated. We just need to trigger a session update
-    // with the new organization ID stored somewhere the jwt callback can access it.
-    
-    // For now, we'll rely on the client-side localStorage and page refresh
-    // to handle the actual switch. The jwt callback will pick up the new org
-    // on the next session refresh.
+    // Set a cookie with the new organization ID that the JWT callback can read
+    const cookieStore = await cookies()
+    cookieStore.set('pending-org-switch', organizationId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 // expires in 60 seconds
+    })
 
     return NextResponse.json({ 
       success: true,
-      message: 'Organization switch initiated. Refreshing session...'
+      message: 'Organization switch initiated. Refreshing session...',
+      newOrganizationId: organizationId
     })
   } catch (error) {
     console.error('Error switching organization:', error)

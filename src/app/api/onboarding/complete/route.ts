@@ -25,6 +25,12 @@ export async function POST(request: NextRequest) {
     // Get the request body for any final data to save
     const body = await request.json()
 
+    console.log('📝 Onboarding complete request:', { 
+      userId: session.user.id, 
+      organizationId: session.user.organizationId,
+      body 
+    })
+
     // Update user to mark onboarding as complete
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
@@ -35,6 +41,18 @@ export async function POST(request: NextRequest) {
         organization: true,
       }
     })
+
+    // IMPORTANT: Also update the organization's onboardingCompletedAt
+    // This is what the middleware checks to determine if onboarding is needed
+    if (updatedUser.organizationId) {
+      console.log('📝 Updating organization onboarding status for:', updatedUser.organizationId)
+      await prisma.organization.update({
+        where: { id: updatedUser.organizationId },
+        data: {
+          onboardingCompletedAt: new Date(),
+        }
+      })
+    }
 
     // If there are any defaults to set based on skipped steps, handle them here
     if (body.skippedSteps?.includes('commission') && updatedUser.organizationId) {

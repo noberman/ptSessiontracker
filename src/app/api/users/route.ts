@@ -134,19 +134,36 @@ export async function POST(request: NextRequest) {
     // Get organization context
     const organizationId = await getOrganizationId()
     
-    // Check if email already exists within this organization
-    const existingUser = await prisma.user.findFirst({
-      where: { 
-        email,
-        organizationId 
-      },
+    // Check if email exists in ANY organization (not just current one)
+    const existingUserAnyOrg = await prisma.user.findFirst({
+      where: { email },
+      select: { 
+        organizationId: true,
+        organization: { 
+          select: { name: true } 
+        }
+      }
     })
 
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'Email already exists in this organization' },
-        { status: 400 }
-      )
+    if (existingUserAnyOrg) {
+      // Email exists - check if it's in current org or different org
+      if (existingUserAnyOrg.organizationId === organizationId) {
+        return NextResponse.json(
+          { error: 'Email already exists in this organization' },
+          { status: 400 }
+        )
+      } else {
+        // Email exists in a different organization
+        console.log(`❌ Blocked manual creation: ${email} already exists in org ${existingUserAnyOrg.organization?.name}`)
+        return NextResponse.json(
+          { 
+            error: 'This email is already registered with another organization. Please use email invitation to add them to your organization.',
+            requiresInvitation: true,
+            existingOrganization: existingUserAnyOrg.organization?.name 
+          },
+          { status: 400 }
+        )
+      }
     }
 
     // Check usage limits if creating a trainer

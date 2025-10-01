@@ -24,7 +24,15 @@ interface InvitationEmailData {
  * TODO: Integrate with SendGrid/Resend
  */
 export async function sendInvitationEmail(invitation: InvitationEmailData) {
+  console.log('📧 sendInvitationEmail called with:', {
+    email: invitation.email,
+    organization: invitation.organization.name,
+    invitedBy: invitation.invitedBy.name,
+    role: invitation.role
+  })
+  
   const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invitation/${invitation.token}`
+  console.log('🔗 Invitation URL:', invitationUrl)
   
   // Calculate days until expiration
   const daysUntilExpiry = Math.ceil(
@@ -83,6 +91,13 @@ The FitSync Team
   }
 
   try {
+    console.log('📮 Attempting to send email via Resend with config:', {
+      from: `${process.env.RESEND_FROM_NAME || 'FitSync'} <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
+      to: invitation.email,
+      hasApiKey: !!process.env.RESEND_API_KEY,
+      apiKeyPrefix: process.env.RESEND_API_KEY?.substring(0, 10)
+    })
+    
     // Send email via Resend
     const { data, error } = await resend.emails.send({
       from: `${process.env.RESEND_FROM_NAME || 'FitSync'} <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
@@ -94,6 +109,7 @@ The FitSync Team
 
     if (error) {
       console.error('❌ Failed to send invitation email:', error)
+      console.error('❌ Error details:', JSON.stringify(error, null, 2))
       
       // Log failed attempt
       await prisma.emailLog.create({
@@ -114,6 +130,11 @@ The FitSync Team
       
       return false
     }
+
+    console.log('✅ Email sent successfully via Resend:', {
+      messageId: data?.id,
+      to: invitation.email
+    })
 
     // Log successful email
     await prisma.emailLog.create({

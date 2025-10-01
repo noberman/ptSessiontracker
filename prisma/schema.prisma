@@ -18,6 +18,7 @@ model Organization {
   stripeSubscriptionId String?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+  onboardingCompletedAt DateTime?         // When first admin completed onboarding
   commissionMethod     String             @default("PROGRESSIVE")
   adminNotes           String?            @db.Text
   lastIssue            String?

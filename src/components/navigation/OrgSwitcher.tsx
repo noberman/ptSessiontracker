@@ -21,8 +21,21 @@ export function OrgSwitcher() {
   const [isOpen, setIsOpen] = useState(false)
   const [isSwitching, setIsSwitching] = useState(false)
 
+  // Debug logging
+  console.log('🏢 OrgSwitcher - Session data:', {
+    hasSession: !!session,
+    hasUser: !!session?.user,
+    hasAvailableOrgs: !!session?.user?.availableOrgs,
+    availableOrgsLength: session?.user?.availableOrgs?.length || 0,
+    availableOrgs: session?.user?.availableOrgs,
+    currentOrgId: session?.user?.organizationId,
+    currentOrgName: session?.user?.organizationName,
+    userEmail: session?.user?.email
+  })
+
   // Don't render if user has no orgs or only one org
   if (!session?.user?.availableOrgs || session.user.availableOrgs.length <= 1) {
+    console.log('🏢 OrgSwitcher - Not rendering (single org or no orgs)')
     return null
   }
 
@@ -30,15 +43,27 @@ export function OrgSwitcher() {
   const availableOrgs = session.user.availableOrgs || []
 
   const handleSwitchOrg = async (orgId: string, userId: string) => {
-    if (orgId === session.user.organizationId) return // Already in this org
+    console.log('🔀 OrgSwitcher - Switch attempt:', {
+      currentOrgId: session.user.organizationId,
+      targetOrgId: orgId,
+      targetUserId: userId,
+      isSameOrg: orgId === session.user.organizationId
+    })
+    
+    if (orgId === session.user.organizationId) {
+      console.log('🔀 Already in this org, skipping switch')
+      return // Already in this org
+    }
     
     try {
       setIsSwitching(true)
       
       // Store the last selected organization
+      console.log('🔀 Storing in localStorage:', orgId)
       localStorage.setItem('lastOrganizationId', orgId)
       
       // Call API to switch organization
+      console.log('🔀 Calling switch API with:', { organizationId: orgId, userId })
       const response = await fetch('/api/auth/switch-org', {
         method: 'POST',
         headers: {
@@ -50,17 +75,33 @@ export function OrgSwitcher() {
         }),
       })
 
+      console.log('🔀 API Response:', {
+        ok: response.ok,
+        status: response.status
+      })
+
       if (!response.ok) {
+        const errorData = await response.json()
+        console.error('🔀 API Error:', errorData)
         throw new Error('Failed to switch organization')
       }
 
-      // Update the session
-      await update()
+      const result = await response.json()
+      console.log('🔀 API Success:', result)
+
+      // Update the session with the new organization
+      console.log('🔀 Updating session with new org...')
+      // Pass the new organizationId to the session update
+      await update({
+        organizationId: orgId,
+        switchingOrg: true
+      })
+      console.log('🔀 Session updated, reloading page...')
       
       // Refresh the page to reload with new org context
       window.location.reload()
     } catch (error) {
-      console.error('Failed to switch organization:', error)
+      console.error('🔀 Failed to switch organization:', error)
       // TODO: Show error toast
     } finally {
       setIsSwitching(false)
@@ -93,7 +134,7 @@ export function OrgSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="start" className="w-[240px]">
+      <DropdownMenuContent align="start" className="w-[240px] bg-white dark:bg-gray-900 border shadow-lg z-50">
         <DropdownMenuLabel>Switch Organization</DropdownMenuLabel>
         <DropdownMenuSeparator />
         

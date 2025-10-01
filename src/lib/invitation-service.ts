@@ -60,7 +60,47 @@ export async function createInvitation({
   })
 
   if (existingInvitation) {
-    throw new Error('An invitation has already been sent to this email')
+    throw new Error('An invitation has already been sent to this email and is still pending')
+  }
+
+  // Check if user was already accepted (they're already in the org)
+  const acceptedInvitation = await prisma.invitation.findFirst({
+    where: {
+      email,
+      organizationId,
+      status: 'ACCEPTED',
+    },
+  })
+
+  if (acceptedInvitation) {
+    // Double-check if user actually exists in the organization
+    const userExists = await prisma.user.findFirst({
+      where: {
+        email,
+        organizationId,
+      },
+    })
+    
+    if (userExists) {
+      throw new Error('This user is already a member of your organization')
+    }
+    // If invitation was accepted but user doesn't exist, allow re-inviting
+  }
+
+  // Delete any old CANCELLED or EXPIRED invitations to avoid unique constraint errors
+  // This allows re-inviting users who cancelled or whose invitations expired
+  const deletedCount = await prisma.invitation.deleteMany({
+    where: {
+      email,
+      organizationId,
+      status: {
+        in: ['CANCELLED', 'EXPIRED'],
+      },
+    },
+  })
+  
+  if (deletedCount.count > 0) {
+    console.log(`🧹 Cleaned up ${deletedCount.count} old cancelled/expired invitation(s) for ${email}`)
   }
 
   // Check usage limits based on subscription tier

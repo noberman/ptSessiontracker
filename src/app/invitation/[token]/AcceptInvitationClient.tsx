@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import { Building2, UserCheck, Mail, Lock, User } from 'lucide-react'
 
@@ -30,6 +31,7 @@ export default function AcceptInvitationClient({
   currentUserEmail,
 }: AcceptInvitationClientProps) {
   const router = useRouter()
+  const { update } = useSession()
   const [mode, setMode] = useState<'initial' | 'signup' | 'login'>('initial')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
@@ -61,7 +63,16 @@ export default function AcceptInvitationClient({
       const data = await response.json()
 
       if (response.ok) {
-        if (data.newUser) {
+        if (data.requiresLogin) {
+          // User exists - needs to login first
+          setError('')
+          setMode('login')
+        } else if (data.requiresRelogin) {
+          // Multi-org user added to new org - needs to refresh session
+          console.log('🔄 Triggering session update after invitation acceptance')
+          await update() // Force session refresh to include new org
+          router.push('/dashboard?invitation=accepted&refresh=true')
+        } else if (data.newUser) {
           // New user created - redirect to login
           router.push('/login?welcome=true')
         } else {

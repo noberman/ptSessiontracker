@@ -61,7 +61,8 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
-          // Try to find the user whose password matches
+          // Try to find users whose password matches
+          const validUsers = []
           for (const user of users) {
             console.log(`🔐 Checking password for user in org: ${user.organization?.name || 'No org'}`)
             
@@ -71,25 +72,41 @@ export const authOptions: NextAuthOptions = {
             )
 
             if (isPasswordValid) {
-              console.log('✅ Login successful for:', user.email, 'Role:', user.role, 'Org:', user.organization?.name)
+              console.log('✅ Password valid for org:', user.organization?.name)
+              validUsers.push(user)
+            }
+          }
+
+          if (validUsers.length > 0) {
+            const user = validUsers[0] // Use first valid user as primary
+            console.log('✅ Login successful for:', user.email, 'Role:', user.role, 'Org:', user.organization?.name)
+            
+            // IMPORTANT: Only include organizations where the password matched
+            // This prevents unauthorized access to orgs with different passwords
+            const availableOrgs = validUsers.map(u => ({
+              orgId: u.organizationId,
+              userId: u.id,
+              orgName: u.organization?.name || 'Unknown',
+              role: u.role
+            }))
               
-              // Get all organizations for this email (for org switching)
-              const availableOrgs = users.map(u => ({
-                orgId: u.organizationId,
-                userId: u.id,
-                orgName: u.organization?.name || 'Unknown',
-                role: u.role
-              }))
-              
-              return {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                locationId: user.locationId,
-                organizationId: user.organizationId,
-                availableOrgs, // Include all available orgs for switching
-              }
+            console.log('🔐 Credentials Provider - Returning user data:', {
+              id: user.id,
+              email: user.email,
+              organizationId: user.organizationId,
+              organizationName: user.organization?.name,
+              availableOrgsCount: availableOrgs.length,
+              availableOrgs: availableOrgs
+            })
+            
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              role: user.role,
+              locationId: user.locationId,
+              organizationId: user.organizationId,
+              availableOrgs, // Include all available orgs for switching
             }
           }
 
@@ -147,25 +164,108 @@ export const authOptions: NextAuthOptions = {
       
       // Always refresh user data when needed
       if (trigger === 'update' || (token && token.email)) {
-        const dbUser = await prisma.user.findFirst({
-          where: { email: token.email as string },
+        console.log('🔍 JWT Callback - Token refresh triggered:', {
+          trigger,
+          hasEmail: !!token.email,
+          hasAvailableOrgs: !!(token.availableOrgs && token.availableOrgs.length > 0),
+          availableOrgsCount: token.availableOrgs?.length || 0,
+          hasOrganizationId: !!token.organizationId,
+          organizationId: token.organizationId,
+          organizationName: token.organizationName
+        })
+        
+        // Check if there's a pending org switch FIRST (from cookies)
+        let pendingOrgSwitch: string | undefined
+        try {
+          const { cookies } = await import('next/headers')
+          const cookieStore = await cookies()
+          pendingOrgSwitch = cookieStore.get('pending-org-switch')?.value
+          if (pendingOrgSwitch) {
+            console.log('🚀 Found pending org switch to:', pendingOrgSwitch)
+          }
+        } catch (e) {
+          // Cookies might not be available in all contexts
+          console.log('⚠️ Could not check for pending org switch cookie:', e.message)
+        }
+        
+        // Check if we need to refresh the available orgs
+        // Refresh if: pending org switch, no availableOrgs, or refresh parameter in trigger
+        const shouldRefresh = pendingOrgSwitch || 
+                             !token.availableOrgs || 
+                             token.availableOrgs.length === 0 ||
+                             trigger === 'update'
+        
+        if (!shouldRefresh) {
+          console.log('📌 No refresh needed, keeping existing multi-org data')
+          return token
+        }
+        
+        console.log('🔄 Fetching fresh user data from database (org switch or missing data)')
+        // Fetch ALL users with this email to build availableOrgs
+        const dbUsers = await prisma.user.findMany({
+          where: { email: token.email as string, active: true },
           include: { organization: true }
         })
         
-        if (dbUser) {
-          console.log('🔄 Refreshing token data for:', dbUser.email, {
-            onboardingCompletedAt: dbUser.onboardingCompletedAt
+        console.log('🔍 Database query result:', {
+          foundCount: dbUsers.length,
+          email: token.email,
+          organizations: dbUsers.map(u => u.organization?.name)
+        })
+        
+        if (dbUsers.length > 0) {
+          // Use pending org switch if available, otherwise current org from token, or default to first
+          let targetOrgId = pendingOrgSwitch || token.organizationId
+          
+          // Clear the cookie if it was used
+          if (pendingOrgSwitch) {
+            try {
+              const { cookies } = await import('next/headers')
+              const cookieStore = await cookies()
+              cookieStore.delete('pending-org-switch')
+              console.log('✅ Cleared pending org switch cookie')
+            } catch (e) {
+              console.log('⚠️ Could not clear cookie:', e.message)
+            }
+          }
+          
+          console.log('🔄 Finding user for orgId:', targetOrgId)
+          const currentUser = dbUsers.find(u => u.organizationId === targetOrgId) || dbUsers[0]
+          console.log('🔄 Selected user:', {
+            id: currentUser.id,
+            org: currentUser.organization?.name,
+            orgId: currentUser.organizationId,
+            role: currentUser.role
+          })
+          
+          // Build list of available organizations
+          const availableOrgs = dbUsers.map(u => ({
+            orgId: u.organizationId,
+            userId: u.id,
+            orgName: u.organization?.name || 'Unknown',
+            role: u.role
+          }))
+          
+          console.log('🔄 Refreshing token with multi-org data:', {
+            email: currentUser.email,
+            currentOrg: currentUser.organization?.name,
+            availableOrgsCount: availableOrgs.length
           })
           
           return {
             ...token,
-            id: dbUser.id,
-            role: dbUser.role,
-            locationId: dbUser.locationId,
-            organizationId: dbUser.organizationId,
-            organizationName: dbUser.organization?.name || null,
-            onboardingCompletedAt: dbUser.onboardingCompletedAt,
+            id: currentUser.id,
+            role: currentUser.role,
+            locationId: currentUser.locationId,
+            organizationId: currentUser.organizationId,
+            organizationName: currentUser.organization?.name || null,
+            onboardingCompletedAt: currentUser.onboardingCompletedAt,
+            organizationOnboardingCompletedAt: currentUser.organization?.onboardingCompletedAt,
+            availableOrgs // Include all available orgs
           }
+        } else {
+          console.log('⚠️ No user found in database for email:', token.email)
+          console.log('⚠️ Returning token without organization data')
         }
       }
       
@@ -224,32 +324,77 @@ export const authOptions: NextAuthOptions = {
           }
         } else {
           // Credentials login - fetch full user data
+          console.log('🔑 JWT Callback - Processing credentials login for user.id:', user.id)
+          console.log('🔑 JWT Callback - User object from credentials:', {
+            hasId: !!user.id,
+            hasRole: !!(user as any).role,
+            hasOrganizationId: !!(user as any).organizationId,
+            organizationId: (user as any).organizationId,
+            availableOrgsCount: (user as any).availableOrgs?.length || 0,
+            provider: account?.provider
+          })
+          
+          // For temp-token (super admin Login As), fetch organization directly
+          // since there might not be a User record in that org
+          let organizationData = null
+          if (account?.provider === 'temp-token' && (user as any).organizationId) {
+            organizationData = await prisma.organization.findUnique({
+              where: { id: (user as any).organizationId }
+            })
+            console.log('🔑 Temp token login - fetched org directly:', {
+              orgId: organizationData?.id,
+              orgName: organizationData?.name,
+              orgOnboardingCompleted: organizationData?.onboardingCompletedAt
+            })
+          }
+          
           const dbUser = await prisma.user.findFirst({
             where: { id: user.id },
             include: { organization: true }
           })
           
-          console.log('📧 Credentials login for:', dbUser?.email, {
+          console.log('📧 Credentials login for:', dbUser?.email || (user as any).email, {
             userOnboardingCompletedAt: dbUser?.onboardingCompletedAt,
-            orgOnboardingCompletedAt: dbUser?.organization?.onboardingCompletedAt
+            orgOnboardingCompletedAt: dbUser?.organization?.onboardingCompletedAt || organizationData?.onboardingCompletedAt,
+            dbOrganizationId: dbUser?.organizationId || (user as any).organizationId,
+            dbOrganizationName: dbUser?.organization?.name || organizationData?.name
           })
           
-          return {
+          const tokenData = {
             ...token,
             id: user.id,
             role: (user as any).role,
             locationId: (user as any).locationId,
             organizationId: (user as any).organizationId,
-            organizationName: dbUser?.organization?.name || null,
+            organizationName: dbUser?.organization?.name || organizationData?.name || null,
             onboardingCompletedAt: dbUser?.onboardingCompletedAt || null,
-            organizationOnboardingCompletedAt: dbUser?.organization?.onboardingCompletedAt || null,
+            organizationOnboardingCompletedAt: dbUser?.organization?.onboardingCompletedAt || organizationData?.onboardingCompletedAt || null,
             availableOrgs: (user as any).availableOrgs || [], // Pass through available orgs
           }
+          
+          console.log('🎫 JWT Callback - Returning token data:', {
+            id: tokenData.id,
+            organizationId: tokenData.organizationId,
+            organizationName: tokenData.organizationName,
+            availableOrgsCount: tokenData.availableOrgs.length
+          })
+          
+          return tokenData
         }
       }
       return token
     },
     async session({ session, token }) {
+      console.log('🎯 Session Callback - Token data:', {
+        hasId: !!token.id,
+        hasRole: !!token.role,
+        hasOrganizationId: !!token.organizationId,
+        organizationId: token.organizationId,
+        organizationName: token.organizationName,
+        availableOrgsCount: (token.availableOrgs as any)?.length || 0,
+        availableOrgs: token.availableOrgs
+      })
+      
       const enrichedSession = {
         ...session,
         user: {

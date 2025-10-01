@@ -28,6 +28,7 @@ model Organization {
   stripeSubscriptionId String?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+  onboardingCompletedAt DateTime?         // When first admin completed onboarding
   commissionMethod     String             @default("PROGRESSIVE")
   
   // Super Admin Features (Added Sept 2025)
@@ -57,6 +58,8 @@ model Organization {
 - Each organization has one subscription
 - Stripe IDs are populated when subscription is activated
 - Organizations can have multiple locations (branches)
+- onboardingCompletedAt is set when first admin completes onboarding wizard
+- Subsequent admins skip onboarding if organization already completed it
 
 ### User
 Represents system users including trainers, managers, and administrators.
@@ -563,9 +566,10 @@ enum InvitationStatus {
 
 ## Schema Versioning
 
-Current Version: **2.0.0**
+Current Version: **2.1.0**
 
 ### Version History
+- 2.1.0: Added onboardingCompletedAt to Organization model for wizard completion tracking
 - 2.0.0: Simplified package system - removed PackageTemplate, consolidated PackageType with single name field
 - 1.0.0: Initial schema with primary trainer support
 
