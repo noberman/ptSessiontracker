@@ -1,9 +1,14 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
+interface SeparatorProps extends React.ComponentPropsWithoutRef<"div"> {
+  orientation?: "horizontal" | "vertical"
+  decorative?: boolean
+}
+
 const Separator = React.forwardRef<
   HTMLDivElement,
-  React.ComponentPropsWithoutRef<"div">
+  SeparatorProps
 >(({ className, orientation = "horizontal", decorative = true, ...props }, ref) => (
   <div
     ref={ref}
