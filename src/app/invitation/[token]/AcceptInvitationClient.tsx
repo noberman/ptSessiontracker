@@ -37,15 +37,27 @@ export default function AcceptInvitationClient({
   
   // Determine initial mode based on user existence
   const getInitialMode = () => {
+    console.log('🎨 [Client] Determining initial mode:', {
+      isLoggedIn,
+      currentUserEmail,
+      invitationEmail: invitation.email,
+      userExistsInSystem,
+      emailsMatch: currentUserEmail === invitation.email,
+    })
+    
     if (isLoggedIn && currentUserEmail === invitation.email) {
+      console.log('✅ [Client] Mode: accept - User logged in with correct account')
       return 'accept' // User is logged in with correct account
     }
     if (isLoggedIn && currentUserEmail !== invitation.email) {
+      console.log('⚠️ [Client] Mode: wrong-account - User logged in with wrong email')
       return 'wrong-account' // User is logged in with wrong account
     }
     if (userExistsInSystem) {
+      console.log('🔑 [Client] Mode: login - User exists but not logged in')
       return 'login' // User exists but not logged in
     }
+    console.log('🆕 [Client] Mode: signup - New user needs to create account')
     return 'signup' // New user needs to create account
   }
   
@@ -57,27 +69,43 @@ export default function AcceptInvitationClient({
   const [error, setError] = useState('')
 
   const handleAccept = async () => {
+    console.log('🚀 [Client] handleAccept called in mode:', mode)
     setLoading(true)
     setError('')
 
     try {
+      const requestBody = {
+        token,
+        name: mode === 'signup' ? name : undefined,
+        password: mode === 'signup' ? password : undefined,
+      }
+      
+      console.log('📤 [Client] Sending accept request:', {
+        hasToken: !!token,
+        hasName: !!requestBody.name,
+        hasPassword: !!requestBody.password,
+        mode,
+      })
+      
       const response = await fetch('/api/invitations/accept', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          token,
-          name: mode === 'signup' ? name : undefined,
-          password: mode === 'signup' ? password : undefined,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
+      console.log('📥 [Client] Accept response:', {
+        status: response.status,
+        ok: response.ok,
+        data,
+      })
 
       if (response.ok) {
         if (data.requiresLogin) {
           // User exists - needs to login first
+          console.log('🔄 [Client] Switching to login mode - user already exists')
           setError('')
           setMode('login')
         } else if (data.requiresRelogin) {

@@ -112,11 +112,27 @@ export default async function AcceptInvitationPage({ params }: PageProps) {
   // Check if user with this email already exists in ANY organization
   let userExistsInSystem = false
   if (invitation.status === 'PENDING') {
+    console.log('🔍 [Server] Checking if user exists for email:', invitation.email)
     const existingUser = await prisma.user.findFirst({
       where: { email: invitation.email }
     })
     userExistsInSystem = !!existingUser
+    console.log('🔍 [Server] User exists check result:', {
+      email: invitation.email,
+      userExistsInSystem,
+      existingUserId: existingUser?.id || null,
+      existingUserOrg: existingUser?.organizationId || null,
+    })
   }
+
+  console.log('🎯 [Server] Passing to client component:', {
+    token,
+    isLoggedIn: !!session,
+    currentUserEmail: session?.user?.email || 'none',
+    userExistsInSystem,
+    invitationEmail: invitation.email,
+    invitationStatus: invitation.status,
+  })
 
   return (
     <AcceptInvitationClient 

@@ -155,27 +155,29 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, account, trigger }): Promise<JWT> {
-      console.log('🔐 JWT Callback:', {
-        trigger,
-        hasUser: !!user,
-        hasToken: !!token,
-        provider: account?.provider,
-        tokenEmail: token.email,
-        isImpersonating: token.isImpersonating,
-        impersonatedBy: token.impersonatedBy
-      })
+      // Commented out verbose logging - uncomment for debugging
+      // console.log('🔐 JWT Callback:', {
+      //   trigger,
+      //   hasUser: !!user,
+      //   hasToken: !!token,
+      //   provider: account?.provider,
+      //   tokenEmail: token.email,
+      //   isImpersonating: token.isImpersonating,
+      //   impersonatedBy: token.impersonatedBy
+      // })
       
       // Always refresh user data when needed
       if (trigger === 'update' || (token && token.email)) {
-        console.log('🔍 JWT Callback - Token refresh triggered:', {
-          trigger,
-          hasEmail: !!token.email,
-          hasAvailableOrgs: !!(token.availableOrgs && token.availableOrgs.length > 0),
-          availableOrgsCount: token.availableOrgs?.length || 0,
-          hasOrganizationId: !!token.organizationId,
-          organizationId: token.organizationId,
-          organizationName: token.organizationName
-        })
+        // Commented out verbose logging
+        // console.log('🔍 JWT Callback - Token refresh triggered:', {
+        //   trigger,
+        //   hasEmail: !!token.email,
+        //   hasAvailableOrgs: !!(token.availableOrgs && token.availableOrgs.length > 0),
+        //   availableOrgsCount: token.availableOrgs?.length || 0,
+        //   hasOrganizationId: !!token.organizationId,
+        //   organizationId: token.organizationId,
+        //   organizationName: token.organizationName
+        // })
         
         // Check if there's a pending org switch FIRST (from cookies)
         let pendingOrgSwitch: string | undefined
@@ -199,7 +201,7 @@ export const authOptions: NextAuthOptions = {
                              trigger === 'update'
         
         if (!shouldRefresh) {
-          console.log('📌 No refresh needed, keeping existing multi-org data')
+          // console.log('📌 No refresh needed, keeping existing multi-org data')
           // Ensure token has all required JWT fields
           return {
             ...token,
@@ -210,18 +212,18 @@ export const authOptions: NextAuthOptions = {
           }
         }
         
-        console.log('🔄 Fetching fresh user data from database (org switch or missing data)')
+        // console.log('🔄 Fetching fresh user data from database (org switch or missing data)')
         // Fetch ALL users with this email to build availableOrgs
         const dbUsers = await prisma.user.findMany({
           where: { email: token.email as string, active: true },
           include: { organization: true }
         })
         
-        console.log('🔍 Database query result:', {
-          foundCount: dbUsers.length,
-          email: token.email,
-          organizations: dbUsers.map(u => u.organization?.name)
-        })
+        // console.log('🔍 Database query result:', {
+        //   foundCount: dbUsers.length,
+        //   email: token.email,
+        //   organizations: dbUsers.map(u => u.organization?.name)
+        // })
         
         if (dbUsers.length > 0) {
           // Use pending org switch if available, otherwise current org from token, or default to first
@@ -349,15 +351,15 @@ export const authOptions: NextAuthOptions = {
           }
         } else {
           // Credentials login - fetch full user data
-          console.log('🔑 JWT Callback - Processing credentials login for user.id:', user.id)
-          console.log('🔑 JWT Callback - User object from credentials:', {
-            hasId: !!user.id,
-            hasRole: !!(user as any).role,
-            hasOrganizationId: !!(user as any).organizationId,
-            organizationId: (user as any).organizationId,
-            availableOrgsCount: (user as any).availableOrgs?.length || 0,
-            provider: account?.provider
-          })
+          // console.log('🔑 JWT Callback - Processing credentials login for user.id:', user.id)
+          // console.log('🔑 JWT Callback - User object from credentials:', {
+          //   hasId: !!user.id,
+          //   hasRole: !!(user as any).role,
+          //   hasOrganizationId: !!(user as any).organizationId,
+          //   organizationId: (user as any).organizationId,
+          //   availableOrgsCount: (user as any).availableOrgs?.length || 0,
+          //   provider: account?.provider
+          // })
           
           // For temp-token (super admin Login As), fetch organization directly
           // since there might not be a User record in that org
@@ -417,15 +419,16 @@ export const authOptions: NextAuthOptions = {
       }
     },
     async session({ session, token }) {
-      console.log('🎯 Session Callback - Token data:', {
-        hasId: !!token.id,
-        hasRole: !!token.role,
-        hasOrganizationId: !!token.organizationId,
-        organizationId: token.organizationId,
-        organizationName: token.organizationName,
-        availableOrgsCount: (token.availableOrgs as any)?.length || 0,
-        availableOrgs: token.availableOrgs
-      })
+      // Commented out verbose logging
+      // console.log('🎯 Session Callback - Token data:', {
+      //   hasId: !!token.id,
+      //   hasRole: !!token.role,
+      //   hasOrganizationId: !!token.organizationId,
+      //   organizationId: token.organizationId,
+      //   organizationName: token.organizationName,
+      //   availableOrgsCount: (token.availableOrgs as any)?.length || 0,
+      //   availableOrgs: token.availableOrgs
+      // })
       
       const enrichedSession = {
         ...session,

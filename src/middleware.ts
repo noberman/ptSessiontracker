@@ -6,13 +6,14 @@ export default withAuth(
     const token = (req as any).nextauth.token
     const path = req.nextUrl.pathname
     
-    console.log('🔐 Middleware Check:', {
-      path,
-      role: token?.role,
-      hasOnboardingCompletedAt: !!token?.onboardingCompletedAt,
-      onboardingCompletedAt: token?.onboardingCompletedAt,
-      isImpersonating: token?.isImpersonating,
-    })
+    // Commented out verbose logging - uncomment for debugging
+    // console.log('🔐 Middleware Check:', {
+    //   path,
+    //   role: token?.role,
+    //   hasOnboardingCompletedAt: !!token?.onboardingCompletedAt,
+    //   onboardingCompletedAt: token?.onboardingCompletedAt,
+    //   isImpersonating: token?.isImpersonating,
+    // })
 
     // Super admin routes
     if (token?.role === 'SUPER_ADMIN' && !token?.isImpersonating) {

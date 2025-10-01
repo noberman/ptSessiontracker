@@ -14,6 +14,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { token, name, password } = body
 
+    console.log('🔍 [API Accept] Received request:', {
+      hasToken: !!token,
+      hasName: !!name,
+      hasPassword: !!password,
+    })
+
     if (!token) {
       return NextResponse.json(
         { error: 'Invitation token required' },
@@ -23,6 +29,13 @@ export async function POST(request: NextRequest) {
 
     // Get invitation details
     const invitation = await getInvitationByToken(token)
+    
+    console.log('🎯 [API Accept] Invitation found:', {
+      found: !!invitation,
+      email: invitation?.email,
+      status: invitation?.status,
+      organizationId: invitation?.organizationId,
+    })
     
     if (!invitation) {
       return NextResponse.json(
@@ -119,9 +132,10 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // User not logged in - check if they need to login or create account
-      console.log(`🎫 Non-logged-in user accepting invitation for ${invitation.email}`)
+      console.log(`🎫 [API Accept] Non-logged-in user accepting invitation for ${invitation.email}`)
       
       // Check if email exists in ANY organization
+      console.log('🔍 [API Accept] Checking if user exists in ANY organization...')
       const existingUserAnyOrg = await prisma.user.findFirst({
         where: { email: invitation.email },
         select: { 
@@ -134,10 +148,16 @@ export async function POST(request: NextRequest) {
           }
         }
       })
+      
+      console.log('🔍 [API Accept] User existence check result:', {
+        exists: !!existingUserAnyOrg,
+        existingOrgName: existingUserAnyOrg?.organization?.name || 'none',
+        existingOrgId: existingUserAnyOrg?.organizationId || 'none',
+      })
 
       if (existingUserAnyOrg) {
         // Email already exists - they must login first
-        console.log(`⚠️ Email ${invitation.email} already exists in org ${existingUserAnyOrg.organization?.name}. Requiring login.`)
+        console.log(`⚠️ [API Accept] Email ${invitation.email} already exists in org ${existingUserAnyOrg.organization?.name}. Requiring login.`)
         return NextResponse.json({
           requiresLogin: true,
           message: 'An account with this email already exists. Please log in to accept this invitation.',
