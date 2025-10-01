@@ -270,6 +270,7 @@ export const authOptions: NextAuthOptions = {
         } else {
           console.log('⚠️ No user found in database for email:', token.email)
           console.log('⚠️ Returning token without organization data')
+          return token // Must return token even when no user found
         }
       }
       
