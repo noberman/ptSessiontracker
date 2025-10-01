@@ -50,7 +50,7 @@ async function cleanupTestData() {
       prisma.client.count(),
       prisma.user.count(),
       prisma.location.count(),
-      prisma.packageTemplate.count(),
+      prisma.packageType.count(),
     ])
     
     console.log('\n📊 Remaining data:')
