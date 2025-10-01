@@ -27,6 +27,21 @@ export function SetupChecklist() {
       return
     }
 
+    // Check how long user has been using the app
+    const firstLoginDate = localStorage.getItem('first_login_date')
+    if (!firstLoginDate) {
+      localStorage.setItem('first_login_date', new Date().toISOString())
+    } else {
+      // Auto-dismiss after 7 days of usage
+      const daysSinceFirstLogin = Math.floor(
+        (Date.now() - new Date(firstLoginDate).getTime()) / (1000 * 60 * 60 * 24)
+      )
+      if (daysSinceFirstLogin > 7) {
+        handleDismiss()
+        return
+      }
+    }
+
     // Check onboarding status
     const progress = JSON.parse(localStorage.getItem('onboarding_progress') || '{}')
     const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true'
@@ -41,7 +56,7 @@ export function SetupChecklist() {
       const [clientsRes, packagesRes, sessionsRes, invitationsRes] = await Promise.all([
         fetch('/api/clients'),
         fetch('/api/packages'),
-        fetch('/api/sessions?limit=1'),
+        fetch('/api/sessions?limit=10'),
         fetch('/api/invitations'),
       ])
 
@@ -49,6 +64,12 @@ export function SetupChecklist() {
       const packages = await packagesRes.json()
       const sessions = await sessionsRes.json()
       const invitations = await invitationsRes.json()
+
+      // Auto-dismiss for active users (10+ sessions means they know the system)
+      if (sessions.sessions?.length >= 10) {
+        handleDismiss()
+        return
+      }
 
       const checklistItems: ChecklistItem[] = [
         {

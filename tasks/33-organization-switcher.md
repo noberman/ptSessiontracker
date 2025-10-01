@@ -6,8 +6,19 @@
 **Dependencies: Task 20 (Multi-tenant)**  
 **Estimated Time: 2 hours**
 
+## Current State (as of Dec 2024)
+**IMPORTANT**: The database foundation for multi-org support has been partially implemented:
+- ✅ Email unique constraint removed from User model
+- ✅ Compound unique constraint added: (email + organizationId)
+- ✅ Same email can exist in multiple organizations
+- ⚠️ **BUT**: Currently requires separate user accounts (different passwords) for each org
+- ⚠️ **NOT IMPLEMENTED**: True organization switching with single sign-on
+- ⚠️ **CURRENT BEHAVIOR**: User must log out and log in with credentials for different org
+
+This task describes the FULL implementation needed for proper organization switching with a single user account.
+
 ## Objective
-Allow users who belong to multiple organizations to switch between them.
+Allow users who belong to multiple organizations to switch between them without logging out.
 
 ## Implementation Checklist
 
