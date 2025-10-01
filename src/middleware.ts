@@ -29,20 +29,21 @@ export default withAuth(
       }
     }
 
-    // Check if admin needs onboarding
-    if (token?.role === 'ADMIN' && !token?.onboardingCompletedAt) {
+    // Check if admin's ORGANIZATION needs onboarding (not the user)
+    // This ensures only the first admin goes through onboarding, not invited admins
+    if (token?.role === 'ADMIN' && !token?.organizationOnboardingCompletedAt) {
       // Allow access to onboarding and API routes
       if (!path.startsWith('/onboarding') && 
           !path.startsWith('/api/') && 
           !path.startsWith('/_next/')) {
-        console.log('🎯 Admin needs onboarding - redirecting from', path, 'to /onboarding')
+        console.log('🎯 Organization needs onboarding - redirecting from', path, 'to /onboarding')
         return NextResponse.redirect(new URL('/onboarding', req.url))
       }
     }
 
-    // If user is trying to access onboarding but already completed it
-    if (path.startsWith('/onboarding') && token?.onboardingCompletedAt) {
-      console.log('✅ Onboarding already complete - redirecting to dashboard')
+    // If user is trying to access onboarding but organization already completed it
+    if (path.startsWith('/onboarding') && token?.organizationOnboardingCompletedAt) {
+      console.log('✅ Organization onboarding already complete - redirecting to dashboard')
       return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 

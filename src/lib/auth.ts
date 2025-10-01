@@ -199,7 +199,8 @@ export const authOptions: NextAuthOptions = {
           })
           
           console.log('📧 Credentials login for:', dbUser?.email, {
-            onboardingCompletedAt: dbUser?.onboardingCompletedAt
+            userOnboardingCompletedAt: dbUser?.onboardingCompletedAt,
+            orgOnboardingCompletedAt: dbUser?.organization?.onboardingCompletedAt
           })
           
           return {
@@ -210,6 +211,7 @@ export const authOptions: NextAuthOptions = {
             organizationId: (user as any).organizationId,
             organizationName: dbUser?.organization?.name || null,
             onboardingCompletedAt: dbUser?.onboardingCompletedAt || null,
+            organizationOnboardingCompletedAt: dbUser?.organization?.onboardingCompletedAt || null,
           }
         }
       }
@@ -226,6 +228,7 @@ export const authOptions: NextAuthOptions = {
           organizationId: token.organizationId as string | null,
           organizationName: token.organizationName as string | null | undefined,
           onboardingCompletedAt: token.onboardingCompletedAt as Date | null | undefined,
+          organizationOnboardingCompletedAt: token.organizationOnboardingCompletedAt as Date | null | undefined,
           needsOnboarding: token.needsOnboarding as boolean | undefined,
         },
       }
