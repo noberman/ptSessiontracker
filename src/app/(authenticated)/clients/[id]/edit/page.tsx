@@ -58,7 +58,7 @@ export default async function EditClientPage({
     
     trainers = await prisma.user.findMany({
       where: {
-        role: 'TRAINER',
+        role: { in: ['TRAINER', 'PT_MANAGER'] },
         active: true,
         locationId: session.user.locationId,
       },
@@ -79,7 +79,7 @@ export default async function EditClientPage({
       }),
       prisma.user.findMany({
         where: {
-          role: 'TRAINER',
+          role: { in: ['TRAINER', 'PT_MANAGER'] },
           active: true,
           organizationId: session.user.organizationId,
         },

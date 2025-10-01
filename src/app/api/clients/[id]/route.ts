@@ -151,12 +151,12 @@ export async function PUT(
       }
     }
 
-    // Validate trainer assignment
+    // Validate trainer assignment (PT Managers can also be trainers)
     if (primaryTrainerId) {
       const trainer = await prisma.user.findFirst({
         where: {
           id: primaryTrainerId,
-          role: 'TRAINER',
+          role: { in: ['TRAINER', 'PT_MANAGER'] },
           active: true,
           locationId: locationId || currentClient.locationId || undefined,
         },

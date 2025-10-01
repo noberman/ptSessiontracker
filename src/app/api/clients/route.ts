@@ -167,12 +167,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate trainer assignment
+    // Validate trainer assignment (PT Managers can also be trainers)
     if (primaryTrainerId) {
       const trainer = await prisma.user.findFirst({
         where: {
           id: primaryTrainerId,
-          role: 'TRAINER',
+          role: { in: ['TRAINER', 'PT_MANAGER'] },
           active: true,
           locationId: locationId || undefined,
           organizationId: session.user.organizationId, // Ensure trainer is in same org

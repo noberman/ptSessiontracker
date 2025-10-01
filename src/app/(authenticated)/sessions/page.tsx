@@ -160,7 +160,7 @@ export default async function SessionsPage({
       }),
       prisma.user.findMany({
         where: {
-          role: 'TRAINER',
+          role: { in: ['TRAINER', 'PT_MANAGER'] },
           active: true,
           organizationId: session.user.organizationId,
         },

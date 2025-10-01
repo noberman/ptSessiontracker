@@ -180,10 +180,10 @@ export default async function ClientsPage({
           select: { id: true, name: true },
           orderBy: { name: 'asc' },
         }),
-    // Get trainers for filter
+    // Get trainers for filter (including PT Managers who can also train)
     prisma.user.findMany({
       where: {
-        role: 'TRAINER',
+        role: { in: ['TRAINER', 'PT_MANAGER'] },
         active: true,
         organizationId: session.user.organizationId,
         ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId

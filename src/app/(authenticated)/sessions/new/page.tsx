@@ -139,12 +139,15 @@ export default async function NewSessionPage({
   // Get trainers list for managers/admins
   let trainers: any[] = []
   if (session.user.role !== 'TRAINER') {
-    const trainerQuery = session.user.role === 'CLUB_MANAGER' && session.user.locationId
-      ? { role: 'TRAINER' as const, locationId: session.user.locationId, active: true, organizationId: session.user.organizationId }
-      : { role: 'TRAINER' as const, active: true, organizationId: session.user.organizationId }
-    
     trainers = await prisma.user.findMany({
-      where: trainerQuery,
+      where: {
+        role: { in: ['TRAINER', 'PT_MANAGER'] },
+        active: true,
+        organizationId: session.user.organizationId,
+        ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId
+          ? { locationId: session.user.locationId }
+          : {}),
+      },
       select: {
         id: true,
         name: true,
