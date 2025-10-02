@@ -175,16 +175,10 @@ export function SessionDetailsClient({ session, canEdit, canDelete }: SessionDet
                 <div>
                   <p className="text-sm text-text-secondary">Time</p>
                   <p className="text-xl font-semibold text-text-primary">
-                    {(() => {
-                      // Since session.sessionDate is a Date object, use Date methods directly
-                      const date = new Date(session.sessionDate)
-                      const hours = date.getHours()
-                      const minutes = date.getMinutes()
-                      
-                      const ampm = hours >= 12 ? 'PM' : 'AM'
-                      const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
-                      return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${ampm}`
-                    })()}
+                    {new Date(session.sessionDate).toLocaleDateString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </p>
                 </div>
                 <Clock className="w-5 h-5 text-text-secondary" />

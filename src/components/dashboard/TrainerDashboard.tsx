@@ -265,16 +265,10 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
                     <div>
                       <p className="font-medium text-text-primary">{session.client.name}</p>
                       <p className="text-sm text-text-secondary">
-                        {(() => {
-                          // Since session.sessionDate is a Date object, use Date methods directly
-                          const date = new Date(session.sessionDate)
-                          const hours = date.getHours()
-                          const minutes = date.getMinutes()
-                          
-                          const ampm = hours >= 12 ? 'PM' : 'AM'
-                          const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
-                          return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${ampm}`
-                        })()}
+                        {new Date(session.sessionDate).toLocaleDateString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                         {session.package && ` - ${session.package.name}`}
                       </p>
                     </div>
