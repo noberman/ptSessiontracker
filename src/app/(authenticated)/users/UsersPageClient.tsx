@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { UserTable } from '@/components/users/UserTable'
+import { ArchivedUsersTable } from '@/components/users/ArchivedUsersTable'
 import { InvitationsTable } from '@/components/invitations/InvitationsTable'
 import InviteModal from '@/components/invitations/InviteModal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { UserSearch } from '@/components/users/UserSearch'
 import Link from 'next/link'
-import { Users, Mail, Clock, CheckCircle } from 'lucide-react'
+import { Users, Mail, Clock, CheckCircle, Archive } from 'lucide-react'
 
 interface UsersPageClientProps {
   initialUsers: any[]
@@ -42,7 +43,7 @@ export default function UsersPageClient({
   organizationId,
   usageLimits,
 }: UsersPageClientProps) {
-  const [activeTab, setActiveTab] = useState<'members' | 'pending' | 'history'>('members')
+  const [activeTab, setActiveTab] = useState<'members' | 'pending' | 'history' | 'archive'>('members')
   const [invitations, setInvitations] = useState<any[]>([])
   const [invitationStats, setInvitationStats] = useState({
     pending: 0,
@@ -51,13 +52,30 @@ export default function UsersPageClient({
   })
   const [loading, setLoading] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [archivedUsers, setArchivedUsers] = useState<any[]>([])
+  const [archivedCount, setArchivedCount] = useState(0)
+  const [archiveLoading, setArchiveLoading] = useState(false)
 
   // Fetch invitations when tab changes
   useEffect(() => {
-    if (activeTab !== 'members') {
+    if (activeTab === 'pending' || activeTab === 'history') {
       fetchInvitations()
+    } else if (activeTab === 'archive' && archivedUsers.length === 0) {
+      fetchArchivedUsers()
     }
   }, [activeTab])
+
+  // Fetch archive count on mount
+  useEffect(() => {
+    fetch('/api/users/list?active=false&limit=1')
+      .then(res => res.json())
+      .then(data => {
+        if (data.pagination?.total) {
+          setArchivedCount(data.pagination.total)
+        }
+      })
+      .catch(console.error)
+  }, [])
 
   const fetchInvitations = async () => {
     setLoading(true)
@@ -88,6 +106,45 @@ export default function UsersPageClient({
       console.error('Failed to fetch invitations:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchArchivedUsers = async () => {
+    setArchiveLoading(true)
+    try {
+      const response = await fetch('/api/users/list?active=false')
+      const data = await response.json()
+      
+      if (response.ok) {
+        setArchivedUsers(data.users || [])
+        setArchivedCount(data.pagination?.total || 0)
+      }
+    } catch (error) {
+      console.error('Failed to fetch archived users:', error)
+    } finally {
+      setArchiveLoading(false)
+    }
+  }
+
+  const handleReactivateUser = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/users/${userId}/reactivate`, {
+        method: 'POST',
+      })
+      
+      if (response.ok) {
+        // Remove from archived list
+        setArchivedUsers(prev => prev.filter(u => u.id !== userId))
+        setArchivedCount(prev => prev - 1)
+        // Optionally refresh the main users list if on that tab
+        window.location.reload()
+      } else {
+        const error = await response.json()
+        alert(`Failed to reactivate user: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to reactivate user:', error)
+      alert('Failed to reactivate user')
     }
   }
 
@@ -164,6 +221,25 @@ export default function UsersPageClient({
               <Clock className="w-4 h-4" />
               Invitation History
             </button>
+            
+            {currentUserRole === 'ADMIN' && (
+              <button
+                onClick={() => setActiveTab('archive')}
+                className={`
+                  py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+                  ${activeTab === 'archive'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border'
+                  }
+                `}
+              >
+                <Archive className="w-4 h-4" />
+                Archived Users
+                {archivedCount > 0 && (
+                  <Badge variant="gray" size="sm">{archivedCount}</Badge>
+                )}
+              </button>
+            )}
           </nav>
         </div>
 
@@ -220,6 +296,15 @@ export default function UsersPageClient({
             onRefresh={fetchInvitations}
             showActions={false}
             showStatus={true}
+          />
+        )}
+
+        {activeTab === 'archive' && (
+          <ArchivedUsersTable
+            users={archivedUsers}
+            loading={archiveLoading}
+            onReactivate={handleReactivateUser}
+            onRefresh={fetchArchivedUsers}
           />
         )}
       

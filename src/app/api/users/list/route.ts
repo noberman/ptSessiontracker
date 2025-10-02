@@ -21,11 +21,15 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search') || ''
   const role = searchParams.get('role') || ''
   const locationId = searchParams.get('locationId') || ''
+  const activeParam = searchParams.get('active')
   
   const skip = (page - 1) * limit
   
   const where: any = {
-    active: true,
+    // If active param is explicitly false, show inactive users; otherwise show active
+    active: activeParam === 'false' ? false : true,
+    // Always filter by organization
+    organizationId: session.user.organizationId,
   }
   
   if (search) {
