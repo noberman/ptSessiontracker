@@ -265,7 +265,7 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
                     <div>
                       <p className="font-medium text-text-primary">{session.client.name}</p>
                       <p className="text-sm text-text-secondary">
-                        {new Date(session.sessionDate).toLocaleDateString('en-US', {
+                        {new Date(session.sessionDate).toLocaleTimeString('en-US', {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
