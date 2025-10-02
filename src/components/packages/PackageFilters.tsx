@@ -75,6 +75,8 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     
     // Reset to page 1 when applying filters
     router.push(`/packages?${params.toString()}`)
+    // Force refresh to update server component with new filters
+    router.refresh()
   }
 
   const clearFilters = () => {
@@ -87,6 +89,8 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
       endDate: '',
     })
     router.push('/packages')
+    // Force refresh to update server component
+    router.refresh()
   }
 
   const activeFilterCount = 
