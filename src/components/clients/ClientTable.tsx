@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
+import { ActionsDropdown } from '@/components/ui/ActionsDropdown'
 
 interface Client {
   id: string
@@ -125,9 +126,6 @@ export function ClientTable({
                 Client
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Contact
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Location
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
@@ -136,7 +134,7 @@ export function ClientTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -149,21 +147,12 @@ export function ClientTable({
                     <div className="text-sm font-medium text-text-primary">
                       {client.name}
                     </div>
+                    <div className="text-sm text-text-secondary">
+                      {client.email}
+                    </div>
                     <div className="text-xs text-text-secondary">
                       {client._count.packages} package{client._count.packages !== 1 ? 's' : ''}
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm text-text-primary">
-                      {client.email}
-                    </div>
-                    {client.phone && (
-                      <div className="text-xs text-text-secondary">
-                        {client.phone}
-                      </div>
-                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -195,35 +184,37 @@ export function ClientTable({
                   </Badge>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="flex space-x-2">
-                    <Link href={`/clients/${client.id}`}>
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
-                    </Link>
-                    {canEdit && (
-                      <Link href={`/clients/${client.id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          Edit
-                        </Button>
-                      </Link>
-                    )}
-                    {canDelete && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDelete(client.id)}
-                      >
-                        Delete
-                      </Button>
-                    )}
+                  <div className="flex justify-center">
+                    <ActionsDropdown
+                      actions={[
+                        {
+                          label: 'View',
+                          href: `/clients/${client.id}`,
+                          icon: 'view',
+                          show: true
+                        },
+                        {
+                          label: 'Edit',
+                          href: `/clients/${client.id}/edit`,
+                          icon: 'edit',
+                          show: canEdit
+                        },
+                        {
+                          label: 'Delete',
+                          onClick: () => handleDelete(client.id),
+                          icon: 'delete',
+                          variant: 'danger',
+                          show: canDelete
+                        }
+                      ]}
+                    />
                   </div>
                 </td>
               </tr>
             ))}
             {clients.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-8 text-center text-text-secondary">
+                <td colSpan={6} className="px-6 py-8 text-center text-text-secondary">
                   No clients found
                 </td>
               </tr>

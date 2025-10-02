@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
+import { ActionsDropdown } from '@/components/ui/ActionsDropdown'
 
 interface User {
   id: string
@@ -130,7 +131,7 @@ export function UserTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -167,28 +168,30 @@ export function UserTable({
                   </Badge>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="flex space-x-2">
-                    <Link href={`/users/${user.id}`}>
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
-                    </Link>
-                    {canEdit && (
-                      <Link href={`/users/${user.id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          Edit
-                        </Button>
-                      </Link>
-                    )}
-                    {canDelete && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDelete(user.id)}
-                      >
-                        Delete
-                      </Button>
-                    )}
+                  <div className="flex justify-center">
+                    <ActionsDropdown
+                      actions={[
+                        {
+                          label: 'View',
+                          href: `/users/${user.id}`,
+                          icon: 'view',
+                          show: true
+                        },
+                        {
+                          label: 'Edit',
+                          href: `/users/${user.id}/edit`,
+                          icon: 'edit',
+                          show: canEdit
+                        },
+                        {
+                          label: 'Delete',
+                          onClick: () => handleDelete(user.id),
+                          icon: 'delete',
+                          variant: 'danger',
+                          show: canDelete
+                        }
+                      ]}
+                    />
                   </div>
                 </td>
               </tr>

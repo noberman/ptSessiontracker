@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
 import { Mail, RefreshCw } from 'lucide-react'
+import { ActionsDropdown } from '@/components/ui/ActionsDropdown'
 
 interface Session {
   id: string
@@ -195,16 +196,10 @@ export function SessionTable({
                 Location
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Package
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Value
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Status
               </th>
               {canEdit && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                   Actions
                 </th>
               )}
@@ -235,47 +230,33 @@ export function SessionTable({
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                   {session.location?.name || '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                  {session.package?.name || '-'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                  {formatCurrency(session.sessionValue)}
-                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {getStatusBadge(session)}
                 </td>
                 {canEdit && (
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex space-x-2">
-                      <Link href={`/sessions/${session.id}`}>
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
-                      </Link>
-                      {!session.validated && !session.cancelled && (
-                        <>
-                          <Link href={`/sessions/${session.id}/edit`}>
-                            <Button variant="outline" size="sm">
-                              Edit
-                            </Button>
-                          </Link>
-                          {canResendValidation(session) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleResendValidation(session.id, session.client.email)}
-                              disabled={resendingIds.has(session.id)}
-                              title="Resend validation email"
-                            >
-                              {resendingIds.has(session.id) ? (
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Mail className="w-4 h-4" />
-                              )}
-                            </Button>
-                          )}
-                        </>
-                      )}
+                    <div className="flex justify-center">
+                      <ActionsDropdown
+                        actions={[
+                          {
+                            label: 'View',
+                            href: `/sessions/${session.id}`,
+                            icon: 'view',
+                            show: true
+                          },
+                          {
+                            label: 'Edit',
+                            href: `/sessions/${session.id}/edit`,
+                            icon: 'edit',
+                            show: !session.validated && !session.cancelled
+                          },
+                          {
+                            label: 'Resend Validation',
+                            onClick: () => handleResendValidation(session.id, session.client.email),
+                            show: !session.validated && !session.cancelled && canResendValidation(session)
+                          }
+                        ]}
+                      />
                     </div>
                   </td>
                 )}

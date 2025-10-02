@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
+import { ActionsDropdown } from '@/components/ui/ActionsDropdown'
 
 interface Package {
   id: string
@@ -155,13 +156,7 @@ export function PackageTable({
                 Client
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Sessions
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                Price
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Expiry
@@ -169,7 +164,7 @@ export function PackageTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -191,18 +186,12 @@ export function PackageTable({
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {getPackageTypeBadge(pkg.packageType)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-text-primary">
                     {pkg.remainingSessions} / {pkg.totalSessions}
                   </div>
                   <div className="text-xs text-text-secondary">
                     {pkg._count.sessions} used
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                  {formatCurrency(pkg.totalValue)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                   {formatDate(pkg.expiresAt)}
@@ -211,24 +200,30 @@ export function PackageTable({
                   {getStatusBadge(pkg)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="flex space-x-2">
-                    <Link href={`/packages/${pkg.id}`}>
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
-                    </Link>
-                    {canEdit && (
-                      <Link href={`/packages/${pkg.id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          Edit
-                        </Button>
-                      </Link>
-                    )}
-                    {canDelete && (
-                      <Button variant="danger" size="sm">
-                        Delete
-                      </Button>
-                    )}
+                  <div className="flex justify-center">
+                    <ActionsDropdown
+                      actions={[
+                        {
+                          label: 'View',
+                          href: `/packages/${pkg.id}`,
+                          icon: 'view',
+                          show: true
+                        },
+                        {
+                          label: 'Edit',
+                          href: `/packages/${pkg.id}/edit`,
+                          icon: 'edit',
+                          show: canEdit
+                        },
+                        {
+                          label: 'Delete',
+                          onClick: () => console.log('Delete package', pkg.id),
+                          icon: 'delete',
+                          variant: 'danger',
+                          show: canDelete
+                        }
+                      ]}
+                    />
                   </div>
                 </td>
               </tr>
