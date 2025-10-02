@@ -176,62 +176,14 @@ export function SessionDetailsClient({ session, canEdit, canDelete }: SessionDet
                   <p className="text-sm text-text-secondary">Time</p>
                   <p className="text-xl font-semibold text-text-primary">
                     {(() => {
-                      // DEBUG: Log all the timezone data for investigation
-                      const dateStr = session.sessionDate.toString()
-                      const originalDate = session.sessionDate
-                      
-                      console.log('🕐 TIMEZONE DEBUG - Session Details:', {
-                        originalSessionDate: originalDate,
-                        dateStrToString: dateStr,
-                        typeOfOriginal: typeof originalDate,
-                        rawSessionDate: session.sessionDate,
-                        newDateFromOriginal: new Date(originalDate),
-                        newDateFromString: new Date(dateStr),
-                        newDateUTCHours: new Date(originalDate).getUTCHours(),
-                        newDateLocalHours: new Date(originalDate).getHours(),
-                        currentTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                        currentTimezoneOffset: new Date().getTimezoneOffset()
-                      })
-                      
-                      // Extract time components directly from ISO string to avoid timezone conversion
-                      let hours: number, minutes: number
-                      
-                      if (dateStr.includes('T')) {
-                        // Parse ISO format: 2024-01-01T19:22:00.000Z
-                        const timePart = dateStr.split('T')[1].split('.')[0] // Gets "19:22:00"
-                        const [h, m] = timePart.split(':').map(Number)
-                        hours = h
-                        minutes = m
-                        console.log('🕐 TIMEZONE DEBUG - ISO Parsing:', {
-                          timePart,
-                          extractedHours: h,
-                          extractedMinutes: m
-                        })
-                      } else {
-                        // Fallback for other formats
-                        const date = new Date(dateStr)
-                        hours = date.getHours()
-                        minutes = date.getMinutes()
-                        console.log('🕐 TIMEZONE DEBUG - Fallback Parsing:', {
-                          dateStr,
-                          fallbackHours: hours,
-                          fallbackMinutes: minutes
-                        })
-                      }
+                      // Since session.sessionDate is a Date object, use Date methods directly
+                      const date = new Date(session.sessionDate)
+                      const hours = date.getHours()
+                      const minutes = date.getMinutes()
                       
                       const ampm = hours >= 12 ? 'PM' : 'AM'
                       const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
-                      const finalDisplay = `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${ampm}`
-                      
-                      console.log('🕐 TIMEZONE DEBUG - Final Display:', {
-                        hours,
-                        minutes,
-                        ampm,
-                        displayHours,
-                        finalDisplay
-                      })
-                      
-                      return finalDisplay
+                      return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${ampm}`
                     })()}
                   </p>
                 </div>
