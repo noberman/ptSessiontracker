@@ -97,8 +97,7 @@ export default function UsersPageClient({
   const totalUsed = activeMembers + pendingInvites
 
   return (
-    <div className="min-h-screen bg-background-secondary">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div>
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -223,7 +222,6 @@ export default function UsersPageClient({
             showStatus={true}
           />
         )}
-      </div>
       
       {/* Invite Modal */}
       {showInviteModal && (

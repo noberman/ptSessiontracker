@@ -32,8 +32,7 @@ export function PackagesPageClient({
   searchParams
 }: PackagesPageClientProps) {
   return (
-    <div className="min-h-screen bg-background-secondary">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div>
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
@@ -72,7 +71,6 @@ export function PackagesPageClient({
           canEdit={canEdit}
           canDelete={canDelete}
         />
-      </div>
     </div>
   )
 }
