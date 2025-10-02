@@ -20,6 +20,7 @@ export default async function PackagesPage({
   }>
 }) {
   const params = await searchParams
+  console.log('🔍 PACKAGES PAGE DEBUG - Server received params:', params)
   const session = await getServerSession(authOptions)
 
   if (!session) {

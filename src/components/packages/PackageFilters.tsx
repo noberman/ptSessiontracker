@@ -55,6 +55,9 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
   }, [])
 
   const applyFilters = () => {
+    console.log('🔍 PACKAGE FILTERS DEBUG - Apply Filters clicked')
+    console.log('Current filters state:', filters)
+    
     const params = new URLSearchParams()
     
     // Handle array filters
@@ -73,12 +76,21 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     if (filters.startDate) params.set('startDate', filters.startDate)
     if (filters.endDate) params.set('endDate', filters.endDate)
     
+    const newUrl = `/packages?${params.toString()}`
+    console.log('🔍 PACKAGE FILTERS DEBUG - New URL:', newUrl)
+    console.log('🔍 PACKAGE FILTERS DEBUG - Current URL:', window.location.pathname + window.location.search)
+    
     // Reset to page 1 when applying filters
     // Use replace instead of push to avoid history issues
-    router.replace(`/packages?${params.toString()}`)
+    console.log('🔍 PACKAGE FILTERS DEBUG - Calling router.replace()')
+    router.replace(newUrl)
+    
     // Small delay before refresh to ensure URL is updated
+    console.log('🔍 PACKAGE FILTERS DEBUG - Setting timeout for router.refresh()')
     setTimeout(() => {
+      console.log('🔍 PACKAGE FILTERS DEBUG - Calling router.refresh()')
       router.refresh()
+      console.log('🔍 PACKAGE FILTERS DEBUG - router.refresh() called')
     }, 100)
   }
 

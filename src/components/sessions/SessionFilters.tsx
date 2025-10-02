@@ -57,6 +57,9 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
   }, [])
 
   const applyFilters = () => {
+    console.log('🔍 SESSION FILTERS DEBUG - Apply Filters clicked')
+    console.log('Current filters state:', filters)
+    
     const params = new URLSearchParams()
     
     // Handle array filters
@@ -77,12 +80,21 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
     if (filters.startDate) params.set('startDate', filters.startDate)
     if (filters.endDate) params.set('endDate', filters.endDate)
     
+    const newUrl = `/sessions?${params.toString()}`
+    console.log('🔍 SESSION FILTERS DEBUG - New URL:', newUrl)
+    console.log('🔍 SESSION FILTERS DEBUG - Current URL:', window.location.pathname + window.location.search)
+    
     // Reset to page 1 when applying filters
     // Use replace instead of push to avoid history issues
-    router.replace(`/sessions?${params.toString()}`)
+    console.log('🔍 SESSION FILTERS DEBUG - Calling router.replace()')
+    router.replace(newUrl)
+    
     // Small delay before refresh to ensure URL is updated
+    console.log('🔍 SESSION FILTERS DEBUG - Setting timeout for router.refresh()')
     setTimeout(() => {
+      console.log('🔍 SESSION FILTERS DEBUG - Calling router.refresh()')
       router.refresh()
+      console.log('🔍 SESSION FILTERS DEBUG - router.refresh() called')
     }, 100)
   }
 
