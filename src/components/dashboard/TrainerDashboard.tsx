@@ -36,6 +36,7 @@ interface DashboardData {
     id: string
     sessionDate: string
     validated: boolean
+    createdAt?: string  // Add createdAt for correct time display
     client: {
       name: string
       email: string
@@ -265,7 +266,7 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
                     <div>
                       <p className="font-medium text-text-primary">{session.client.name}</p>
                       <p className="text-sm text-text-secondary">
-                        {new Date(session.sessionDate).toLocaleTimeString('en-US', {
+                        {new Date(session.createdAt || session.sessionDate).toLocaleTimeString('en-US', {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}

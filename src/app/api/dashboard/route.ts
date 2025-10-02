@@ -164,7 +164,11 @@ export async function GET(request: Request) {
               lte: new Date(new Date().setHours(23, 59, 59, 999))
             }
           },
-          include: {
+          select: {
+            id: true,
+            sessionDate: true,
+            validated: true,
+            createdAt: true,  // Add createdAt for correct time display
             client: {
               select: {
                 name: true,
