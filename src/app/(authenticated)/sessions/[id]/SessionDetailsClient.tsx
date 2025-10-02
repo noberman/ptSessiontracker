@@ -175,10 +175,19 @@ export function SessionDetailsClient({ session, canEdit, canDelete }: SessionDet
                 <div>
                   <p className="text-sm text-text-secondary">Time</p>
                   <p className="text-xl font-semibold text-text-primary">
-                    {new Date(session.sessionDate).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {(() => {
+                      // Handle timezone correctly by parsing as local time
+                      const dateStr = session.sessionDate.toString()
+                      const date = dateStr.includes('T') && dateStr.includes('Z') 
+                        ? new Date(dateStr.replace('Z', '')) // Remove Z to prevent UTC interpretation
+                        : new Date(dateStr)
+                      
+                      const hours = date.getHours()
+                      const minutes = date.getMinutes().toString().padStart(2, '0')
+                      const ampm = hours >= 12 ? 'PM' : 'AM'
+                      const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+                      return `${displayHours.toString().padStart(2, '0')}:${minutes} ${ampm}`
+                    })()}
                   </p>
                 </div>
                 <Clock className="w-5 h-5 text-text-secondary" />
