@@ -40,6 +40,18 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Sync filter state with URL when searchParams change
+  useEffect(() => {
+    setFilters({
+      clientIds: getArrayFromParam(searchParams.get('clientIds')),
+      locationIds: getArrayFromParam(searchParams.get('locationIds')),
+      activeStatuses: getArrayFromParam(searchParams.get('activeStatuses')),
+      expirationStatus: searchParams.get('expirationStatus') || '',
+      startDate: searchParams.get('startDate') || '',
+      endDate: searchParams.get('endDate') || '',
+    })
+  }, [searchParams])
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -42,6 +42,18 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Sync filter state with URL when searchParams change
+  useEffect(() => {
+    setFilters({
+      clientIds: getArrayFromParam(searchParams.get('clientIds')),
+      trainerIds: getArrayFromParam(searchParams.get('trainerIds')),
+      locationIds: getArrayFromParam(searchParams.get('locationIds')),
+      validatedStatuses: getArrayFromParam(searchParams.get('validatedStatuses')),
+      startDate: searchParams.get('startDate') || '',
+      endDate: searchParams.get('endDate') || '',
+    })
+  }, [searchParams])
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
