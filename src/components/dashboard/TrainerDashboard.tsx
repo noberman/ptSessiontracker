@@ -266,15 +266,26 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
                       <p className="font-medium text-text-primary">{session.client.name}</p>
                       <p className="text-sm text-text-secondary">
                         {(() => {
+                          // Extract time components directly from ISO string to avoid timezone conversion
                           const dateStr = session.sessionDate.toString()
-                          const date = dateStr.includes('T') && dateStr.includes('Z') 
-                            ? new Date(dateStr.replace('Z', '')) 
-                            : new Date(dateStr)
-                          const hours = date.getHours()
-                          const minutes = date.getMinutes().toString().padStart(2, '0')
+                          let hours: number, minutes: number
+                          
+                          if (dateStr.includes('T')) {
+                            // Parse ISO format: 2024-01-01T19:22:00.000Z
+                            const timePart = dateStr.split('T')[1].split('.')[0] // Gets "19:22:00"
+                            const [h, m] = timePart.split(':').map(Number)
+                            hours = h
+                            minutes = m
+                          } else {
+                            // Fallback for other formats
+                            const date = new Date(dateStr)
+                            hours = date.getHours()
+                            minutes = date.getMinutes()
+                          }
+                          
                           const ampm = hours >= 12 ? 'PM' : 'AM'
                           const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
-                          return `${displayHours.toString().padStart(2, '0')}:${minutes} ${ampm}`
+                          return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${ampm}`
                         })()}
                         {session.package && ` - ${session.package.name}`}
                       </p>
