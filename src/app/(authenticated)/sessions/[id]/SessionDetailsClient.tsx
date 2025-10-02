@@ -337,10 +337,10 @@ export function SessionDetailsClient({ session, canEdit, canDelete }: SessionDet
                   <p className="text-sm text-text-secondary">Validation Expires</p>
                   <p className="text-sm text-text-primary">
                     {session.validationExpiry ? 
-                      new Date(session.validationExpiry).toLocaleDateString('en-US', {
+                      new Date(session.validationExpiry).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
                         year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
                       }) : 'No expiry'}
                   </p>
                 </div>
