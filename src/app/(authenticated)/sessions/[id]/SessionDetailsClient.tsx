@@ -175,10 +175,28 @@ export function SessionDetailsClient({ session, canEdit, canDelete }: SessionDet
                 <div>
                   <p className="text-sm text-text-secondary">Time</p>
                   <p className="text-xl font-semibold text-text-primary">
-                    {new Date(session.sessionDate).toLocaleDateString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {(() => {
+                      const sessionDate = session.sessionDate
+                      const date = new Date(sessionDate)
+                      
+                      console.log('🕐 MAIN TIME DEBUG:', {
+                        originalSessionDate: sessionDate,
+                        dateObject: date,
+                        toLocaleTimeString: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                        toLocaleDateString: date.toLocaleDateString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                        getHours: date.getHours(),
+                        getMinutes: date.getMinutes(),
+                        getUTCHours: date.getUTCHours(),
+                        getUTCMinutes: date.getUTCMinutes(),
+                        toISOString: date.toISOString(),
+                        toString: date.toString(),
+                      })
+                      
+                      return date.toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    })()}
                   </p>
                 </div>
                 <Clock className="w-5 h-5 text-text-secondary" />
@@ -307,13 +325,36 @@ export function SessionDetailsClient({ session, canEdit, canDelete }: SessionDet
               <div>
                 <p className="text-sm text-text-secondary">Created</p>
                 <p className="text-sm text-text-primary">
-                  {new Date(session.createdAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {(() => {
+                    const createdAt = session.createdAt
+                    const date = new Date(createdAt)
+                    
+                    console.log('🕐 METADATA CREATED DEBUG:', {
+                      originalCreatedAt: createdAt,
+                      dateObject: date,
+                      toLocaleDateString: date.toLocaleDateString('en-US', { 
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }),
+                      getHours: date.getHours(),
+                      getMinutes: date.getMinutes(),
+                      getUTCHours: date.getUTCHours(),
+                      getUTCMinutes: date.getUTCMinutes(),
+                      toISOString: date.toISOString(),
+                      toString: date.toString(),
+                    })
+                    
+                    return date.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  })()}
                 </p>
               </div>
               <div>
