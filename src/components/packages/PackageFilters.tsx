@@ -74,9 +74,12 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     if (filters.endDate) params.set('endDate', filters.endDate)
     
     // Reset to page 1 when applying filters
-    router.push(`/packages?${params.toString()}`)
-    // Force refresh to update server component with new filters
-    router.refresh()
+    // Use replace instead of push to avoid history issues
+    router.replace(`/packages?${params.toString()}`)
+    // Small delay before refresh to ensure URL is updated
+    setTimeout(() => {
+      router.refresh()
+    }, 100)
   }
 
   const clearFilters = () => {
@@ -88,9 +91,11 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
       startDate: '',
       endDate: '',
     })
-    router.push('/packages')
-    // Force refresh to update server component
-    router.refresh()
+    router.replace('/packages')
+    // Small delay before refresh to ensure URL is updated
+    setTimeout(() => {
+      router.refresh()
+    }, 100)
   }
 
   const activeFilterCount = 

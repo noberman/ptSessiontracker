@@ -78,7 +78,12 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
     if (filters.endDate) params.set('endDate', filters.endDate)
     
     // Reset to page 1 when applying filters
-    router.push(`/sessions?${params.toString()}`)
+    // Use replace instead of push to avoid history issues
+    router.replace(`/sessions?${params.toString()}`)
+    // Small delay before refresh to ensure URL is updated
+    setTimeout(() => {
+      router.refresh()
+    }, 100)
   }
 
   const clearFilters = () => {
@@ -90,7 +95,11 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
       startDate: '',
       endDate: '',
     })
-    router.push('/sessions')
+    router.replace('/sessions')
+    // Small delay before refresh to ensure URL is updated
+    setTimeout(() => {
+      router.refresh()
+    }, 100)
   }
 
   const activeFilterCount = 
