@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -63,6 +63,12 @@ export function SessionTable({
   const [resendingIds, setResendingIds] = useState<Set<string>>(new Set())
   const router = useRouter()
   const searchParams = useSearchParams()
+  
+  // Update local state when props change (e.g., after filtering)
+  useEffect(() => {
+    setSessions(initialSessions)
+    setPagination(initialPagination)
+  }, [initialSessions, initialPagination])
   
   // Fetch sessions when page or limit changes
   const fetchSessions = async (targetPage: number, targetLimit?: number) => {

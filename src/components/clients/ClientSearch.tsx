@@ -70,11 +70,6 @@ export function ClientSearch({
   }, [])
 
   const applyFilters = () => {
-    // Debug: Log current filter state
-    console.log('Current filter state before applying:', {
-      filters,
-      searchInput
-    })
     
     const params = new URLSearchParams()
     
@@ -86,11 +81,9 @@ export function ClientSearch({
     // Handle array filters - use current filter state
     if (filters.locationIds && filters.locationIds.length > 0) {
       params.set('locationIds', filters.locationIds.join(','))
-      console.log('Adding locationIds to params:', filters.locationIds)
     }
     if (filters.trainerIds && filters.trainerIds.length > 0) {
       params.set('trainerIds', filters.trainerIds.join(','))
-      console.log('Adding trainerIds to params:', filters.trainerIds)
     }
     
     // Handle active status
@@ -100,15 +93,6 @@ export function ClientSearch({
     
     // Update filters state with search
     setFilters(prev => ({ ...prev, search: searchInput }))
-    
-    // Debug: Log what we're applying
-    console.log('Final URL parameters:', {
-      search: searchInput,
-      locationIds: filters.locationIds,
-      trainerIds: filters.trainerIds,
-      queryString: params.toString(),
-      fullUrl: params.toString() ? `/clients?${params.toString()}` : '/clients'
-    })
     
     // Reset to page 1 when applying filters
     const url = params.toString() ? `/clients?${params.toString()}` : '/clients'
@@ -161,33 +145,21 @@ export function ClientSearch({
 
   // Toggle functions for multi-select - update state immediately
   const toggleLocationId = (id: string) => {
-    setFilters(prev => {
-      const newLocationIds = prev.locationIds.includes(id)
+    setFilters(prev => ({
+      ...prev,
+      locationIds: prev.locationIds.includes(id)
         ? prev.locationIds.filter(l => l !== id)
         : [...prev.locationIds, id]
-      
-      console.log('Toggled location:', id, 'New locationIds:', newLocationIds)
-      
-      return {
-        ...prev,
-        locationIds: newLocationIds
-      }
-    })
+    }))
   }
   
   const toggleTrainerId = (id: string) => {
-    setFilters(prev => {
-      const newTrainerIds = prev.trainerIds.includes(id)
+    setFilters(prev => ({
+      ...prev,
+      trainerIds: prev.trainerIds.includes(id)
         ? prev.trainerIds.filter(t => t !== id)
         : [...prev.trainerIds, id]
-      
-      console.log('Toggled trainer:', id, 'New trainerIds:', newTrainerIds)
-      
-      return {
-        ...prev,
-        trainerIds: newTrainerIds
-      }
-    })
+    }))
   }
 
   return (

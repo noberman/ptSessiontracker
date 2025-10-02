@@ -16,6 +16,7 @@ interface PackagesPageClientProps {
   canEdit: boolean
   canDelete: boolean
   canManageTypes: boolean
+  searchParams: any
 }
 
 export function PackagesPageClient({
@@ -27,7 +28,8 @@ export function PackagesPageClient({
   canCreate,
   canEdit,
   canDelete,
-  canManageTypes
+  canManageTypes,
+  searchParams
 }: PackagesPageClientProps) {
   return (
     <div className="min-h-screen bg-background-secondary">

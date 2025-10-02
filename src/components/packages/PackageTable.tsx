@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -56,6 +56,12 @@ export function PackageTable({
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
+  
+  // Update local state when props change (e.g., after filtering)
+  useEffect(() => {
+    setPackages(initialPackages)
+    setPagination(initialPagination)
+  }, [initialPackages, initialPagination])
   
   // Fetch packages when page or limit changes
   const fetchPackages = async (targetPage: number, targetLimit?: number) => {

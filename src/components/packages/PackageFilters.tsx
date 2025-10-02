@@ -27,30 +27,31 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     return param ? param.split(',').filter(Boolean) : []
   }
   
-  const [filters, setFilters] = useState({
-    clientIds: getArrayFromParam(searchParams.get('clientIds')),
-    locationIds: getArrayFromParam(searchParams.get('locationIds')),
-    activeStatuses: getArrayFromParam(searchParams.get('activeStatuses')),
-    expirationStatus: searchParams.get('expirationStatus') || '',
-    startDate: searchParams.get('startDate') || '',
-    endDate: searchParams.get('endDate') || '',
-  })
-
+  // Only use local state for UI state, not filter values
   const [isOpen, setIsOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [localChanges, setLocalChanges] = useState<Record<string, any>>({})
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Sync filter state with URL when searchParams change
-  useEffect(() => {
-    setFilters({
-      clientIds: getArrayFromParam(searchParams.get('clientIds')),
-      locationIds: getArrayFromParam(searchParams.get('locationIds')),
-      activeStatuses: getArrayFromParam(searchParams.get('activeStatuses')),
-      expirationStatus: searchParams.get('expirationStatus') || '',
-      startDate: searchParams.get('startDate') || '',
-      endDate: searchParams.get('endDate') || '',
-    })
-  }, [searchParams])
+  // Get current filter values - either from local changes or URL
+  const getFilterValue = (key: string, isArray = false) => {
+    if (key in localChanges) {
+      return localChanges[key]
+    }
+    if (isArray) {
+      return getArrayFromParam(searchParams.get(key))
+    }
+    return searchParams.get(key) || ''
+  }
+
+  const currentFilters = {
+    clientIds: getFilterValue('clientIds', true) as string[],
+    locationIds: getFilterValue('locationIds', true) as string[],
+    activeStatuses: getFilterValue('activeStatuses', true) as string[],
+    expirationStatus: getFilterValue('expirationStatus') as string,
+    startDate: getFilterValue('startDate') as string,
+    endDate: getFilterValue('endDate') as string,
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -67,95 +68,78 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
   }, [])
 
   const applyFilters = () => {
-    console.log('🔍 PACKAGE FILTERS DEBUG - Apply Filters clicked')
-    console.log('Current filters state:', filters)
     
     const params = new URLSearchParams()
     
     // Handle array filters
-    if (filters.clientIds.length > 0) {
-      params.set('clientIds', filters.clientIds.join(','))
+    if (currentFilters.clientIds.length > 0) {
+      params.set('clientIds', currentFilters.clientIds.join(','))
     }
-    if (filters.locationIds.length > 0) {
-      params.set('locationIds', filters.locationIds.join(','))
+    if (currentFilters.locationIds.length > 0) {
+      params.set('locationIds', currentFilters.locationIds.join(','))
     }
-    if (filters.activeStatuses.length > 0) {
-      params.set('activeStatuses', filters.activeStatuses.join(','))
+    if (currentFilters.activeStatuses.length > 0) {
+      params.set('activeStatuses', currentFilters.activeStatuses.join(','))
     }
     
     // Handle single value filters
-    if (filters.expirationStatus) params.set('expirationStatus', filters.expirationStatus)
-    if (filters.startDate) params.set('startDate', filters.startDate)
-    if (filters.endDate) params.set('endDate', filters.endDate)
+    if (currentFilters.expirationStatus) params.set('expirationStatus', currentFilters.expirationStatus)
+    if (currentFilters.startDate) params.set('startDate', currentFilters.startDate)
+    if (currentFilters.endDate) params.set('endDate', currentFilters.endDate)
     
     const newUrl = `/packages?${params.toString()}`
-    console.log('🔍 PACKAGE FILTERS DEBUG - New URL:', newUrl)
-    console.log('🔍 PACKAGE FILTERS DEBUG - Current URL:', window.location.pathname + window.location.search)
+    
+    // Clear local changes when applying
+    setLocalChanges({})
     
     // Reset to page 1 when applying filters
-    // Use replace instead of push to avoid history issues
-    console.log('🔍 PACKAGE FILTERS DEBUG - Calling router.replace()')
-    router.replace(newUrl)
-    
-    // Small delay before refresh to ensure URL is updated
-    console.log('🔍 PACKAGE FILTERS DEBUG - Setting timeout for router.refresh()')
-    setTimeout(() => {
-      console.log('🔍 PACKAGE FILTERS DEBUG - Calling router.refresh()')
-      router.refresh()
-      console.log('🔍 PACKAGE FILTERS DEBUG - router.refresh() called')
-    }, 100)
+    router.push(newUrl)
+    router.refresh() // Force server component to re-fetch with new filters
   }
 
   const clearFilters = () => {
-    setFilters({
-      clientIds: [],
-      locationIds: [],
-      activeStatuses: [],
-      expirationStatus: '',
-      startDate: '',
-      endDate: '',
-    })
-    router.replace('/packages')
-    // Small delay before refresh to ensure URL is updated
-    setTimeout(() => {
-      router.refresh()
-    }, 100)
+    setLocalChanges({})
+    router.push('/packages')
+    router.refresh() // Force refresh to clear filters
   }
 
   const activeFilterCount = 
-    filters.clientIds.length + 
-    filters.locationIds.length + 
-    filters.activeStatuses.length + 
-    (filters.expirationStatus ? 1 : 0) +
-    (filters.startDate ? 1 : 0) + 
-    (filters.endDate ? 1 : 0)
+    currentFilters.clientIds.length + 
+    currentFilters.locationIds.length + 
+    currentFilters.activeStatuses.length + 
+    (currentFilters.expirationStatus ? 1 : 0) +
+    (currentFilters.startDate ? 1 : 0) + 
+    (currentFilters.endDate ? 1 : 0)
 
   // Toggle functions for multi-select
   const toggleClientId = (id: string) => {
-    setFilters(prev => ({
+    const current = currentFilters.clientIds
+    setLocalChanges(prev => ({
       ...prev,
-      clientIds: prev.clientIds.includes(id)
-        ? prev.clientIds.filter(c => c !== id)
-        : [...prev.clientIds, id]
+      clientIds: current.includes(id)
+        ? current.filter(c => c !== id)
+        : [...current, id]
     }))
   }
   
   const toggleLocationId = (id: string) => {
-    setFilters(prev => ({
+    const current = currentFilters.locationIds
+    setLocalChanges(prev => ({
       ...prev,
-      locationIds: prev.locationIds.includes(id)
-        ? prev.locationIds.filter(l => l !== id)
-        : [...prev.locationIds, id]
+      locationIds: current.includes(id)
+        ? current.filter(l => l !== id)
+        : [...current, id]
     }))
   }
   
   
   const toggleActiveStatus = (status: string) => {
-    setFilters(prev => ({
+    const current = currentFilters.activeStatuses
+    setLocalChanges(prev => ({
       ...prev,
-      activeStatuses: prev.activeStatuses.includes(status)
-        ? prev.activeStatuses.filter(s => s !== status)
-        : [...prev.activeStatuses, status]
+      activeStatuses: current.includes(status)
+        ? current.filter(s => s !== status)
+        : [...current, status]
     }))
   }
 
@@ -197,8 +181,8 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
               </label>
               <Input
                 type="date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                value={currentFilters.startDate}
+                onChange={(e) => setLocalChanges(prev => ({ ...prev, startDate: e.target.value }))}
                 className="text-sm"
               />
             </div>
@@ -209,8 +193,8 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
               </label>
               <Input
                 type="date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                value={currentFilters.endDate}
+                onChange={(e) => setLocalChanges(prev => ({ ...prev, endDate: e.target.value }))}
                 className="text-sm"
               />
             </div>
@@ -227,9 +211,9 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
                   className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
                 >
                   <span>
-                    {filters.clientIds.length === 0 
+                    {currentFilters.clientIds.length === 0 
                       ? 'All Clients' 
-                      : `${filters.clientIds.length} selected`}
+                      : `${currentFilters.clientIds.length} selected`}
                   </span>
                   <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -248,7 +232,7 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
                           >
                             <input
                               type="checkbox"
-                              checked={filters.clientIds.includes(client.id)}
+                              checked={currentFilters.clientIds.includes(client.id)}
                               onChange={() => toggleClientId(client.id)}
                               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                             />
@@ -275,9 +259,9 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
                     className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
                   >
                     <span>
-                      {filters.locationIds.length === 0 
+                      {currentFilters.locationIds.length === 0 
                         ? 'All Locations' 
-                        : `${filters.locationIds.length} selected`}
+                        : `${currentFilters.locationIds.length} selected`}
                     </span>
                     <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -293,7 +277,7 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
                           >
                             <input
                               type="checkbox"
-                              checked={filters.locationIds.includes(location.id)}
+                              checked={currentFilters.locationIds.includes(location.id)}
                               onChange={() => toggleLocationId(location.id)}
                               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                             />
@@ -320,11 +304,11 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
                   className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
                 >
                   <span>
-                    {filters.activeStatuses.length === 0 
+                    {currentFilters.activeStatuses.length === 0 
                       ? 'All Status' 
-                      : filters.activeStatuses.length === 2
+                      : currentFilters.activeStatuses.length === 2
                       ? 'All Status'
-                      : filters.activeStatuses.includes('true') 
+                      : currentFilters.activeStatuses.includes('true') 
                       ? 'Active' 
                       : 'Inactive'}
                   </span>
@@ -338,7 +322,7 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
                       <label className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={filters.activeStatuses.includes('true')}
+                          checked={currentFilters.activeStatuses.includes('true')}
                           onChange={() => toggleActiveStatus('true')}
                           className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                         />
@@ -347,7 +331,7 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
                       <label className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={filters.activeStatuses.includes('false')}
+                          checked={currentFilters.activeStatuses.includes('false')}
                           onChange={() => toggleActiveStatus('false')}
                           className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                         />
@@ -365,8 +349,8 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
                 Expiration
               </label>
               <select
-                value={filters.expirationStatus}
-                onChange={(e) => setFilters({ ...filters, expirationStatus: e.target.value })}
+                value={currentFilters.expirationStatus}
+                onChange={(e) => setLocalChanges(prev => ({ ...prev, expirationStatus: e.target.value }))}
                 className="w-full rounded-lg border border-border px-3 py-2 text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
               >
                 <option value="">All</option>

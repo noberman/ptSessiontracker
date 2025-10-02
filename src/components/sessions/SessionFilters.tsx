@@ -29,29 +29,25 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
     return param ? param.split(',').filter(Boolean) : []
   }
   
-  const [filters, setFilters] = useState({
+  // Read filter values directly from URL params
+  const currentFilters = {
     clientIds: getArrayFromParam(searchParams.get('clientIds')),
     trainerIds: getArrayFromParam(searchParams.get('trainerIds')),
     locationIds: getArrayFromParam(searchParams.get('locationIds')),
     validatedStatuses: getArrayFromParam(searchParams.get('validatedStatuses')),
     startDate: searchParams.get('startDate') || '',
     endDate: searchParams.get('endDate') || '',
-  })
+  }
 
+  // Only use local state for temporary filter changes before applying
+  const [tempFilters, setTempFilters] = useState(currentFilters)
   const [isOpen, setIsOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-
-  // Sync filter state with URL when searchParams change
+  
+  // Reset temp filters when URL changes
   useEffect(() => {
-    setFilters({
-      clientIds: getArrayFromParam(searchParams.get('clientIds')),
-      trainerIds: getArrayFromParam(searchParams.get('trainerIds')),
-      locationIds: getArrayFromParam(searchParams.get('locationIds')),
-      validatedStatuses: getArrayFromParam(searchParams.get('validatedStatuses')),
-      startDate: searchParams.get('startDate') || '',
-      endDate: searchParams.get('endDate') || '',
-    })
+    setTempFilters(currentFilters)
   }, [searchParams])
 
   // Close dropdown when clicking outside
@@ -69,49 +65,36 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
   }, [])
 
   const applyFilters = () => {
-    console.log('🔍 SESSION FILTERS DEBUG - Apply Filters clicked')
-    console.log('Current filters state:', filters)
     
     const params = new URLSearchParams()
     
     // Handle array filters
-    if (filters.clientIds.length > 0) {
-      params.set('clientIds', filters.clientIds.join(','))
+    if (tempFilters.clientIds.length > 0) {
+      params.set('clientIds', tempFilters.clientIds.join(','))
     }
-    if (filters.trainerIds.length > 0) {
-      params.set('trainerIds', filters.trainerIds.join(','))
+    if (tempFilters.trainerIds.length > 0) {
+      params.set('trainerIds', tempFilters.trainerIds.join(','))
     }
-    if (filters.locationIds.length > 0) {
-      params.set('locationIds', filters.locationIds.join(','))
+    if (tempFilters.locationIds.length > 0) {
+      params.set('locationIds', tempFilters.locationIds.join(','))
     }
-    if (filters.validatedStatuses.length > 0) {
-      params.set('validatedStatuses', filters.validatedStatuses.join(','))
+    if (tempFilters.validatedStatuses.length > 0) {
+      params.set('validatedStatuses', tempFilters.validatedStatuses.join(','))
     }
     
     // Handle single value filters
-    if (filters.startDate) params.set('startDate', filters.startDate)
-    if (filters.endDate) params.set('endDate', filters.endDate)
+    if (tempFilters.startDate) params.set('startDate', tempFilters.startDate)
+    if (tempFilters.endDate) params.set('endDate', tempFilters.endDate)
     
     const newUrl = `/sessions?${params.toString()}`
-    console.log('🔍 SESSION FILTERS DEBUG - New URL:', newUrl)
-    console.log('🔍 SESSION FILTERS DEBUG - Current URL:', window.location.pathname + window.location.search)
     
     // Reset to page 1 when applying filters
-    // Use replace instead of push to avoid history issues
-    console.log('🔍 SESSION FILTERS DEBUG - Calling router.replace()')
-    router.replace(newUrl)
-    
-    // Small delay before refresh to ensure URL is updated
-    console.log('🔍 SESSION FILTERS DEBUG - Setting timeout for router.refresh()')
-    setTimeout(() => {
-      console.log('🔍 SESSION FILTERS DEBUG - Calling router.refresh()')
-      router.refresh()
-      console.log('🔍 SESSION FILTERS DEBUG - router.refresh() called')
-    }, 100)
+    router.push(newUrl)
+    router.refresh() // Force server component to re-fetch with new filters
   }
 
   const clearFilters = () => {
-    setFilters({
+    setTempFilters({
       clientIds: [],
       trainerIds: [],
       locationIds: [],
@@ -119,24 +102,21 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
       startDate: '',
       endDate: '',
     })
-    router.replace('/sessions')
-    // Small delay before refresh to ensure URL is updated
-    setTimeout(() => {
-      router.refresh()
-    }, 100)
+    router.push('/sessions')
+    router.refresh() // Force refresh to clear filters
   }
 
   const activeFilterCount = 
-    filters.clientIds.length + 
-    filters.trainerIds.length + 
-    filters.locationIds.length +
-    filters.validatedStatuses.length +
-    (filters.startDate ? 1 : 0) +
-    (filters.endDate ? 1 : 0)
+    currentFilters.clientIds.length + 
+    currentFilters.trainerIds.length + 
+    currentFilters.locationIds.length +
+    currentFilters.validatedStatuses.length +
+    (currentFilters.startDate ? 1 : 0) +
+    (currentFilters.endDate ? 1 : 0)
   
   // Toggle functions for multi-select
   const toggleClientId = (id: string) => {
-    setFilters(prev => ({
+    setTempFilters(prev => ({
       ...prev,
       clientIds: prev.clientIds.includes(id)
         ? prev.clientIds.filter(c => c !== id)
@@ -145,7 +125,7 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
   }
   
   const toggleTrainerId = (id: string) => {
-    setFilters(prev => ({
+    setTempFilters(prev => ({
       ...prev,
       trainerIds: prev.trainerIds.includes(id)
         ? prev.trainerIds.filter(t => t !== id)
@@ -154,7 +134,7 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
   }
   
   const toggleLocationId = (id: string) => {
-    setFilters(prev => ({
+    setTempFilters(prev => ({
       ...prev,
       locationIds: prev.locationIds.includes(id)
         ? prev.locationIds.filter(l => l !== id)
@@ -163,7 +143,7 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
   }
   
   const toggleValidatedStatus = (status: string) => {
-    setFilters(prev => ({
+    setTempFilters(prev => ({
       ...prev,
       validatedStatuses: prev.validatedStatuses.includes(status)
         ? prev.validatedStatuses.filter(s => s !== status)
@@ -208,8 +188,8 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
               </label>
               <Input
                 type="date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                value={tempFilters.startDate}
+                onChange={(e) => setTempFilters({ ...tempFilters, startDate: e.target.value })}
                 className="text-sm"
               />
             </div>
@@ -220,8 +200,8 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
               </label>
               <Input
                 type="date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                value={tempFilters.endDate}
+                onChange={(e) => setTempFilters({ ...tempFilters, endDate: e.target.value })}
                 className="text-sm"
               />
             </div>
@@ -238,9 +218,9 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
                   className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
                 >
                   <span>
-                    {filters.clientIds.length === 0 
+                    {tempFilters.clientIds.length === 0 
                       ? 'All Clients' 
-                      : `${filters.clientIds.length} selected`}
+                      : `${tempFilters.clientIds.length} selected`}
                   </span>
                   <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -259,7 +239,7 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
                           >
                             <input
                               type="checkbox"
-                              checked={filters.clientIds.includes(client.id)}
+                              checked={tempFilters.clientIds.includes(client.id)}
                               onChange={() => toggleClientId(client.id)}
                               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                             />
@@ -285,9 +265,9 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
                   className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
                 >
                   <span>
-                    {filters.trainerIds.length === 0 
+                    {tempFilters.trainerIds.length === 0 
                       ? 'All Trainers' 
-                      : `${filters.trainerIds.length} selected`}
+                      : `${tempFilters.trainerIds.length} selected`}
                   </span>
                   <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -306,7 +286,7 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
                           >
                             <input
                               type="checkbox"
-                              checked={filters.trainerIds.includes(trainer.id)}
+                              checked={tempFilters.trainerIds.includes(trainer.id)}
                               onChange={() => toggleTrainerId(trainer.id)}
                               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                             />
@@ -332,9 +312,9 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
                   className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
                 >
                   <span>
-                    {filters.locationIds.length === 0 
+                    {tempFilters.locationIds.length === 0 
                       ? 'All Locations' 
-                      : `${filters.locationIds.length} selected`}
+                      : `${tempFilters.locationIds.length} selected`}
                   </span>
                   <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -353,7 +333,7 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
                           >
                             <input
                               type="checkbox"
-                              checked={filters.locationIds.includes(location.id)}
+                              checked={tempFilters.locationIds.includes(location.id)}
                               onChange={() => toggleLocationId(location.id)}
                               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                             />
@@ -380,11 +360,11 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
                   className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
                 >
                   <span>
-                    {filters.validatedStatuses.length === 0 
+                    {tempFilters.validatedStatuses.length === 0 
                       ? 'All Status' 
-                      : filters.validatedStatuses.length === 2
+                      : tempFilters.validatedStatuses.length === 2
                       ? 'All Status'
-                      : filters.validatedStatuses.includes('true') 
+                      : tempFilters.validatedStatuses.includes('true') 
                       ? 'Validated' 
                       : 'Pending'}
                   </span>
@@ -398,7 +378,7 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
                       <label className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={filters.validatedStatuses.includes('true')}
+                          checked={tempFilters.validatedStatuses.includes('true')}
                           onChange={() => toggleValidatedStatus('true')}
                           className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                         />
@@ -407,7 +387,7 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
                       <label className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={filters.validatedStatuses.includes('false')}
+                          checked={tempFilters.validatedStatuses.includes('false')}
                           onChange={() => toggleValidatedStatus('false')}
                           className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                         />

@@ -25,7 +25,6 @@ export default async function SessionsPage({
   }>
 }) {
   const params = await searchParams
-  console.log('🔍 SESSIONS PAGE DEBUG - Server received params:', params)
   const session = await getServerSession(authOptions)
 
   if (!session) {
