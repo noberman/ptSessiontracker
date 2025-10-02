@@ -68,16 +68,27 @@ export async function GET(
     if (!session) {
       console.log('❌ Session not found for token:', token)
       return NextResponse.json(
-        { error: 'Invalid or expired validation token' },
+        { 
+          error: 'Invalid or expired validation token',
+          help: 'This validation link appears to be invalid. Please contact support for assistance.'
+        },
         { status: 404 }
       )
     }
 
     // Check if already validated
     if (session.validated) {
+      console.log('⚠️ Session already validated:', {
+        sessionId: session.id,
+        validatedAt: session.validatedAt,
+        clientEmail: session.client?.email,
+        trainerEmail: session.trainer?.email,
+        requestedToken: token
+      })
       return NextResponse.json({
         status: 'already_validated',
         validatedAt: session.validatedAt,
+        help: 'This session has already been validated. If you received this link in error, please contact support.',
         session: {
           id: session.id,
           sessionDate: session.sessionDate,

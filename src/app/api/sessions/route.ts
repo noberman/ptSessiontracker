@@ -447,7 +447,14 @@ export async function POST(request: Request) {
           }
         })
 
-        console.log(`Validation email sent to ${newSession.client.email} for session ${newSession.id}`)
+        console.log(`📧 Validation email sent:`, {
+          to: newSession.client.email,
+          sessionId: newSession.id,
+          validationToken: newSession.validationToken,
+          clientName: newSession.client.name,
+          trainerName: newSession.trainer.name,
+          validationUrl
+        })
       } catch (emailError) {
         // Log error but don't fail the session creation
         console.error('Failed to send validation email:', emailError)

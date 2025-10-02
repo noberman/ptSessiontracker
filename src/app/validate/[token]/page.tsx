@@ -31,6 +31,7 @@ interface ValidationState {
   session?: SessionData
   validatedAt?: string
   error?: string
+  help?: string
 }
 
 export default function ValidateSessionPage() {
@@ -58,7 +59,8 @@ export default function ValidateSessionPage() {
       if (!response.ok) {
         setState({ 
           status: 'error', 
-          error: data.error || 'Invalid validation link' 
+          error: data.error || 'Invalid validation link',
+          help: data.help || null
         })
         return
       }
@@ -67,6 +69,7 @@ export default function ValidateSessionPage() {
         status: data.status,
         session: data.session,
         validatedAt: data.validatedAt,
+        help: data.help || null,
       })
     } catch (error: any) {
       setState({ 
@@ -261,9 +264,16 @@ export default function ValidateSessionPage() {
                 <p className="text-sm text-error-600 mb-2">
                   {state.error}
                 </p>
-                <p className="text-sm text-text-secondary">
-                  Please contact support if you need assistance.
-                </p>
+                {state.help && (
+                  <p className="text-sm text-text-secondary mb-2">
+                    {state.help}
+                  </p>
+                )}
+                {!state.help && (
+                  <p className="text-sm text-text-secondary">
+                    Please contact support if you need assistance.
+                  </p>
+                )}
               </div>
             )}
           </CardContent>

@@ -451,12 +451,13 @@ export const authOptions: NextAuthOptions = {
         },
       }
       
-      console.log('📋 Session Callback:', {
-        email: enrichedSession.user.email,
-        role: enrichedSession.user.role,
-        onboardingCompletedAt: enrichedSession.user.onboardingCompletedAt,
-        organizationId: enrichedSession.user.organizationId
-      })
+      // Commented out verbose session logging to reduce clutter
+      // console.log('📋 Session Callback:', {
+      //   email: enrichedSession.user.email,
+      //   role: enrichedSession.user.role,
+      //   onboardingCompletedAt: enrichedSession.user.onboardingCompletedAt,
+      //   organizationId: enrichedSession.user.organizationId
+      // })
       
       return enrichedSession
     },
