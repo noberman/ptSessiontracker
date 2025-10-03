@@ -33,7 +33,8 @@ export function LocationsTab() {
       const response = await fetch('/api/locations')
       if (response.ok) {
         const data = await response.json()
-        setLocations(data)
+        // Handle both formats - array directly or object with locations property
+        setLocations(Array.isArray(data) ? data : (data.locations || []))
       } else {
         toast.error('Failed to load locations')
       }
