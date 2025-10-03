@@ -21,8 +21,8 @@ export async function GET() {
       organizationId // Filter by organization
     }
     
-    // For trainers and club managers, filter by accessible locations
-    if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER') {
+    // For trainers, club managers, and PT managers, filter by accessible locations
+    if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
       // Get user's accessible locations (both old locationId and new UserLocation records)
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
@@ -51,7 +51,7 @@ export async function GET() {
         whereClause.id = 'no-access' // This will return no results
       }
     }
-    // PT_MANAGER and ADMIN see all locations in their organization (no additional filter)
+    // Only ADMIN sees all locations in their organization (no additional filter)
 
     const locations = await prisma.location.findMany({
       where: whereClause,

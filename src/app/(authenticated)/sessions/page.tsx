@@ -65,9 +65,9 @@ export default async function SessionsPage({
     if (locationIds.length > 0) {
       where.locationId = { in: locationIds }
     }
-  } else if (session.user.role === 'CLUB_MANAGER') {
-    // Club managers see sessions at all their accessible locations
-    const manager = await prisma.user.findUnique({
+  } else if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+    // Club managers and PT managers see sessions at all their accessible locations
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
         locationId: true,
@@ -79,11 +79,11 @@ export default async function SessionsPage({
     
     // Collect all accessible location IDs
     const accessibleLocationIds: string[] = []
-    if (manager?.locationId) {
-      accessibleLocationIds.push(manager.locationId)
+    if (user?.locationId) {
+      accessibleLocationIds.push(user.locationId)
     }
-    if (manager?.locations) {
-      accessibleLocationIds.push(...manager.locations.map(l => l.locationId))
+    if (user?.locations) {
+      accessibleLocationIds.push(...user.locations.map(l => l.locationId))
     }
     
     // Filter sessions by accessible locations
@@ -91,6 +91,7 @@ export default async function SessionsPage({
       where.locationId = { in: accessibleLocationIds }
     }
   }
+  // Only ADMIN sees all sessions without location filter
 
   // Filter by validation status (multi-select)
   if (params.validatedStatuses) {

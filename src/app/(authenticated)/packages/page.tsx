@@ -108,9 +108,9 @@ export default async function PackagesPage({
   const organizationId = await getOrganizationId()
 
   // Restrict based on user role and accessible locations
-  if (session.user.role === 'TRAINER') {
-    // Get trainer's accessible locations
-    const trainer = await prisma.user.findUnique({
+  if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+    // Get user's accessible locations
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
         locationId: true,
@@ -122,11 +122,11 @@ export default async function PackagesPage({
     
     // Collect all accessible location IDs
     const accessibleLocationIds: string[] = []
-    if (trainer?.locationId) {
-      accessibleLocationIds.push(trainer.locationId)
+    if (user?.locationId) {
+      accessibleLocationIds.push(user.locationId)
     }
-    if (trainer?.locations) {
-      accessibleLocationIds.push(...trainer.locations.map(l => l.locationId))
+    if (user?.locations) {
+      accessibleLocationIds.push(...user.locations.map(l => l.locationId))
     }
     
     // Show packages for all clients at accessible locations
@@ -136,42 +136,19 @@ export default async function PackagesPage({
         locationId: { in: accessibleLocationIds }
       }
     } else {
-      // Fallback: only show packages for directly assigned clients
-      where.client = {
-        ...where.client,
-        primaryTrainerId: session.user.id
-      }
-    }
-  } else if (session.user.role === 'CLUB_MANAGER') {
-    // Get club manager's accessible locations
-    const manager = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        locationId: true,
-        locations: {
-          select: { locationId: true }
+      // Fallback for trainers: only show packages for directly assigned clients
+      if (session.user.role === 'TRAINER') {
+        where.client = {
+          ...where.client,
+          primaryTrainerId: session.user.id
         }
-      }
-    })
-    
-    // Collect all accessible location IDs
-    const accessibleLocationIds: string[] = []
-    if (manager?.locationId) {
-      accessibleLocationIds.push(manager.locationId)
-    }
-    if (manager?.locations) {
-      accessibleLocationIds.push(...manager.locations.map(l => l.locationId))
-    }
-    
-    // Show packages for all clients at accessible locations
-    if (accessibleLocationIds.length > 0) {
-      where.client = {
-        ...where.client,
-        locationId: { in: accessibleLocationIds }
+      } else {
+        // PT Managers and Club Managers with no locations see nothing
+        where.id = 'no-access' // This will return no results
       }
     }
   }
-  // PT_MANAGER and ADMIN see all packages in their organization (no location filter)
+  // Only ADMIN sees all packages in their organization (no location filter)
 
   // Get available clients for filter based on accessible locations
   let availableClients: any[] = []

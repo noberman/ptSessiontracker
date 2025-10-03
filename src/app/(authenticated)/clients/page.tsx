@@ -118,9 +118,9 @@ export default async function ClientsPage({
   }
 
   // Restrict based on user role
-  if (session.user.role === 'TRAINER') {
-    // Get trainer's accessible locations (both old locationId and new UserLocation records)
-    const trainer = await prisma.user.findUnique({
+  if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+    // Get user's accessible locations (both old locationId and new UserLocation records)
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
         locationId: true,
@@ -132,31 +132,27 @@ export default async function ClientsPage({
     
     // Collect all accessible location IDs
     const accessibleLocationIds: string[] = []
-    if (trainer?.locationId) {
-      accessibleLocationIds.push(trainer.locationId)
+    if (user?.locationId) {
+      accessibleLocationIds.push(user.locationId)
     }
-    if (trainer?.locations) {
-      accessibleLocationIds.push(...trainer.locations.map(l => l.locationId))
+    if (user?.locations) {
+      accessibleLocationIds.push(...user.locations.map(l => l.locationId))
     }
     
     // Filter clients by accessible locations
     if (accessibleLocationIds.length > 0) {
       where.locationId = { in: accessibleLocationIds }
     } else {
-      // If no locations, show only directly assigned clients as fallback
-      where.primaryTrainerId = session.user.id
+      // If no locations, show only directly assigned clients as fallback (for trainers)
+      if (session.user.role === 'TRAINER') {
+        where.primaryTrainerId = session.user.id
+      } else {
+        // PT Managers and Club Managers with no locations see nothing
+        where.id = 'no-access' // This will return no results
+      }
     }
-  } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    // Only restrict to manager's location if no location filter is applied
-    if (!locationIds.length) {
-      where.locationId = session.user.locationId
-    }
-    // If location filter is applied, let them see only clients from their location
-    // that match the filter (intersection of filtered locations and their location)
-  } else {
-    // Admins and PT Managers - filter by organization directly
-    where.organizationId = session.user.organizationId // Direct filter - no JOIN needed!
   }
+  // Only ADMIN role gets organization-wide access without location restrictions
 
   const [clients, total, locations, trainers] = await Promise.all([
     prisma.client.findMany({
