@@ -9,6 +9,7 @@ interface CreateInvitationParams {
   role: Role
   organizationId: string
   invitedById: string
+  locationIds?: string[]
 }
 
 interface InvitationWithRelations {
@@ -36,6 +37,7 @@ export async function createInvitation({
   role,
   organizationId,
   invitedById,
+  locationIds = [],
 }: CreateInvitationParams) {
   // Check if user already exists in this organization
   const existingUser = await prisma.user.findFirst({
@@ -126,6 +128,7 @@ export async function createInvitation({
       token,
       expiresAt,
       status: 'PENDING',
+      locationIds,
     },
     include: {
       invitedBy: {
@@ -268,6 +271,17 @@ export async function acceptInvitation(token: string, userId?: string) {
         role: invitation.role,
       },
     })
+
+    // Add location access if specified
+    if (invitation.locationIds && invitation.locationIds.length > 0) {
+      await prisma.userLocation.createMany({
+        data: invitation.locationIds.map(locationId => ({
+          userId,
+          locationId,
+        })),
+        skipDuplicates: true,
+      })
+    }
   }
 
   // Mark invitation as accepted

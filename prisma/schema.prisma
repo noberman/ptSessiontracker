@@ -239,6 +239,7 @@ model Invitation {
   token          String           @unique @default(cuid())
   expiresAt      DateTime
   acceptedAt     DateTime?
+  locationIds    String[]         @default([]) // Stores location IDs for the invited user
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   

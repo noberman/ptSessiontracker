@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { getOrganizationId } from '@/lib/organization-context'
 import { canAddLocation } from '@/lib/usage-limits'
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions)
   
   if (!session) {
@@ -16,13 +16,18 @@ export async function GET() {
     // Get organization context
     const organizationId = await getOrganizationId()
     
+    // Check if requesting all locations (for admins inviting users)
+    const url = new URL(request.url)
+    const showAll = url.searchParams.get('all') === 'true'
+    
     // Build query based on user role and accessible locations
     const whereClause: any = {
       organizationId // Filter by organization
     }
     
     // For trainers, club managers, and PT managers, filter by accessible locations
-    if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+    // Unless they're an admin requesting all locations for invitations
+    if ((session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') && !(session.user.role === 'ADMIN' && showAll)) {
       // Get user's accessible locations (both old locationId and new UserLocation records)
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
@@ -124,7 +129,7 @@ export async function GET() {
       })
     )
 
-    return NextResponse.json(locationsWithDetails)
+    return NextResponse.json({ locations: locationsWithDetails })
   } catch (error) {
     console.error('Error fetching locations:', error)
     return NextResponse.json(

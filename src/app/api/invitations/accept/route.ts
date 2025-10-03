@@ -119,6 +119,17 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      // Add location access if specified in invitation
+      if (invitation.locationIds && invitation.locationIds.length > 0) {
+        await prisma.userLocation.createMany({
+          data: invitation.locationIds.map(locationId => ({
+            userId: newOrgUser.id,
+            locationId,
+          })),
+          skipDuplicates: true,
+        })
+      }
+
       // Accept invitation
       await acceptInvitation(token, newOrgUser.id)
 
@@ -187,6 +198,17 @@ export async function POST(request: NextRequest) {
           active: true,
         },
       })
+
+      // Add location access if specified in invitation
+      if (invitation.locationIds && invitation.locationIds.length > 0) {
+        await prisma.userLocation.createMany({
+          data: invitation.locationIds.map(locationId => ({
+            userId: newUser.id,
+            locationId,
+          })),
+          skipDuplicates: true,
+        })
+      }
 
       // Accept invitation
       await acceptInvitation(token, newUser.id)

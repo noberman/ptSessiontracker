@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { email, role = 'TRAINER' } = body
+    const { email, role = 'TRAINER', locationIds = [] } = body
 
     // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       role,
       organizationId: user.organizationId,
       invitedById: user.id,
+      locationIds,
     })
 
     console.log('✅ Invitation created:', {

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
-import { X, Mail, UserPlus, AlertCircle } from 'lucide-react'
+import { X, Mail, UserPlus, AlertCircle, ChevronDown, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 
@@ -32,6 +32,57 @@ export default function InviteModal({
   const [success, setSuccess] = useState(false)
   const [bulkEmails, setBulkEmails] = useState<string[]>([])
   const [bulkMode, setBulkMode] = useState(false)
+  const [locations, setLocations] = useState<Array<{ id: string; name: string }>>([])
+  const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([])
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Fetch locations based on user's role and access
+  useEffect(() => {
+    const fetchLocations = async () => {
+      if (!isOpen) return
+      
+      try {
+        // For invitations, admins should see all locations
+        // PT Managers and Club Managers should see only their accessible locations
+        const url = session?.user?.role === 'ADMIN' 
+          ? '/api/locations?all=true'  // Fetch all organization locations
+          : '/api/locations'  // Fetch only accessible locations
+        
+        const response = await fetch(url)
+        if (!response.ok) throw new Error('Failed to fetch locations')
+        
+        const data = await response.json()
+        setLocations(data.locations || [])
+        
+        // Pre-select all locations for admins by default
+        if (session?.user?.role === 'ADMIN' && data.locations) {
+          setSelectedLocationIds(data.locations.map((loc: any) => loc.id))
+        }
+      } catch (err) {
+        console.error('Failed to fetch locations:', err)
+      }
+    }
+    
+    fetchLocations()
+  }, [isOpen, session?.user?.role])
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setLocationDropdownOpen(false)
+      }
+    }
+
+    if (locationDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [locationDropdownOpen])
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -119,6 +170,7 @@ export default function InviteModal({
           body: JSON.stringify({
             email: emailToInvite,
             role,
+            locationIds: selectedLocationIds,
           }),
         })
 
@@ -295,6 +347,81 @@ export default function InviteModal({
                   )}
                 </select>
               </div>
+
+              {/* Location Selector */}
+              {locations.length > 0 && (
+                <div className="mb-4" ref={dropdownRef}>
+                  <label className="block text-sm font-medium text-text-primary mb-1">
+                    Location Access
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
+                      className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary flex items-center justify-between bg-white"
+                    >
+                      <span className="text-sm">
+                        {selectedLocationIds.length === 0
+                          ? 'Select locations'
+                          : selectedLocationIds.length === locations.length
+                          ? 'All locations'
+                          : `${selectedLocationIds.length} location${selectedLocationIds.length !== 1 ? 's' : ''} selected`}
+                      </span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${locationDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {locationDropdownOpen && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {/* Select All Option */}
+                        <label className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b">
+                          <input
+                            type="checkbox"
+                            checked={selectedLocationIds.length === locations.length}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedLocationIds(locations.map(l => l.id))
+                              } else {
+                                setSelectedLocationIds([])
+                              }
+                            }}
+                            className="mr-2"
+                          />
+                          <span className="text-sm font-medium">Select All</span>
+                        </label>
+                        
+                        {/* Individual Locations */}
+                        {locations.map((location) => (
+                          <label
+                            key={location.id}
+                            className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              value={location.id}
+                              checked={selectedLocationIds.includes(location.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedLocationIds([...selectedLocationIds, location.id])
+                                } else {
+                                  setSelectedLocationIds(selectedLocationIds.filter(id => id !== location.id))
+                                }
+                              }}
+                              className="mr-2"
+                            />
+                            <span className="text-sm">{location.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-secondary mt-1">
+                    {role === 'TRAINER' && 'Select locations where this trainer can log sessions'}
+                    {role === 'PT_MANAGER' && 'Select locations this PT Manager will manage'}
+                    {role === 'CLUB_MANAGER' && 'Select locations this Club Manager will oversee'}
+                    {role === 'ADMIN' && 'Admin users have access to all locations by default'}
+                  </p>
+                </div>
+              )}
 
               {/* Error Message */}
               {error && (
