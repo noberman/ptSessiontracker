@@ -233,12 +233,12 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
           {locations.length > 0 && (
             <div className="relative" ref={dropdownRef}>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                {formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' 
+                {formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' || formData.role === 'CLUB_MANAGER'
                   ? 'Assigned Locations' 
                   : 'Location'}
               </label>
               
-              {formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' ? (
+              {formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' || formData.role === 'CLUB_MANAGER' ? (
                 <>
                   <button
                     type="button"
@@ -279,7 +279,13 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
                   )}
                   
                   <p className="mt-1 text-xs text-text-secondary">
-                    Select all locations where this user can work. The first selected will be their primary location.
+                    {formData.role === 'TRAINER' 
+                      ? 'Select all locations where this trainer can work.'
+                      : formData.role === 'PT_MANAGER'
+                        ? 'Select all locations this PT Manager oversees.'
+                        : formData.role === 'CLUB_MANAGER'
+                          ? 'Select all locations this Club Manager manages.'
+                          : 'Select all locations where this user can work.'}
                   </p>
                 </>
               ) : (
