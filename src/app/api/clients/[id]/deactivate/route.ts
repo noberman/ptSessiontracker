@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { userHasLocationAccess } from '@/lib/user-locations'
 
 // POST - Deactivate (soft delete) a client
 export async function POST(
@@ -58,12 +59,19 @@ export async function POST(
       )
     }
 
-    // Check for club manager permissions
-    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId !== client.locationId) {
-      return NextResponse.json(
-        { error: 'You can only deactivate clients from your location' },
-        { status: 403 }
+    // Check for club manager and PT manager permissions
+    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      const hasAccess = await userHasLocationAccess(
+        session.user.id,
+        session.user.role,
+        client.locationId
       )
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: 'You can only deactivate clients from your accessible locations' },
+          { status: 403 }
+        )
+      }
     }
 
     // Warn if client has active packages
@@ -174,12 +182,19 @@ export async function PUT(
       )
     }
 
-    // Check for club manager permissions
-    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId !== client.locationId) {
-      return NextResponse.json(
-        { error: 'You can only reactivate clients from your location' },
-        { status: 403 }
+    // Check for club manager and PT manager permissions
+    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      const hasAccess = await userHasLocationAccess(
+        session.user.id,
+        session.user.role,
+        client.locationId
       )
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: 'You can only reactivate clients from your accessible locations' },
+          { status: 403 }
+        )
+      }
     }
 
     // Reactivate the client

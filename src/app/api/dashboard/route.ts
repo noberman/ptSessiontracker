@@ -224,19 +224,50 @@ export async function GET(request: Request) {
         userRole: session.user.role
       })
       
-    } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-      // Club manager sees their location's data
-      sessionsWhere.locationId = session.user.locationId
-      clientsWhere.locationId = session.user.locationId
-      trainersWhere.locationId = session.user.locationId
+    } else if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      // Club managers and PT Managers see data from their accessible locations
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          locationId: true,
+          locations: {
+            select: { locationId: true }
+          }
+        }
+      })
       
-    } else if (session.user.role === 'PT_MANAGER') {
-      // PT Manager sees all locations (no filter needed)
-      // But can filter by location if specified
-      if (filterLocationId) {
-        sessionsWhere.locationId = filterLocationId
-        clientsWhere.locationId = filterLocationId
-        trainersWhere.locationId = filterLocationId
+      // Collect all accessible location IDs
+      const accessibleLocationIds: string[] = []
+      if (user?.locationId) {
+        accessibleLocationIds.push(user.locationId)
+      }
+      if (user?.locations) {
+        accessibleLocationIds.push(...user.locations.map(l => l.locationId))
+      }
+      
+      if (accessibleLocationIds.length > 0) {
+        // If filter is specified, use it only if it's in the accessible locations
+        if (filterLocationId && accessibleLocationIds.includes(filterLocationId)) {
+          sessionsWhere.locationId = filterLocationId
+          clientsWhere.locationId = filterLocationId
+          trainersWhere.OR = [
+            { locationId: filterLocationId },
+            { locations: { some: { locationId: filterLocationId } } }
+          ]
+        } else {
+          // Otherwise show all accessible locations
+          sessionsWhere.locationId = { in: accessibleLocationIds }
+          clientsWhere.locationId = { in: accessibleLocationIds }
+          trainersWhere.OR = [
+            { locationId: { in: accessibleLocationIds } },
+            { locations: { some: { locationId: { in: accessibleLocationIds } } } }
+          ]
+        }
+      } else {
+        // No locations accessible - show nothing
+        sessionsWhere.id = 'no-access'
+        clientsWhere.id = 'no-access'
+        trainersWhere.id = 'no-access'
       }
     }
     // Admin sees everything (no additional filters)

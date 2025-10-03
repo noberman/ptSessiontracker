@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { userHasLocationAccess } from '@/lib/user-locations'
 
 // GET /api/packages/[id] - Get single package details
 export async function GET(
@@ -59,8 +60,13 @@ export async function GET(
       if (packageData.client.primaryTrainerId !== session.user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
-    } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-      if (packageData.client.locationId !== session.user.locationId) {
+    } else if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      const hasAccess = await userHasLocationAccess(
+        session.user.id,
+        session.user.role,
+        packageData.client.locationId
+      )
+      if (!hasAccess) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
     }
@@ -122,9 +128,14 @@ export async function PUT(
       return NextResponse.json({ error: 'Package not found' }, { status: 404 })
     }
 
-    // Check permissions for club managers
-    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-      if (currentPackage.client.locationId !== session.user.locationId) {
+    // Check permissions for club managers and PT managers
+    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      const hasAccess = await userHasLocationAccess(
+        session.user.id,
+        session.user.role,
+        currentPackage.client.locationId
+      )
+      if (!hasAccess) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
     }

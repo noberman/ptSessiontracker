@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { userHasLocationAccess } from '@/lib/user-locations'
 
 // GET /api/clients/[id] - Get single client details
 export async function GET(
@@ -70,9 +71,14 @@ export async function GET(
       if (client.primaryTrainerId !== session.user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
-    } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-      // Club managers can only view clients at their location
-      if (client.locationId !== session.user.locationId) {
+    } else if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      // Club managers and PT Managers can only view clients at their accessible locations
+      const hasAccess = await userHasLocationAccess(
+        session.user.id,
+        session.user.role,
+        client.locationId
+      )
+      if (!hasAccess) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
     }
@@ -118,17 +124,31 @@ export async function PUT(
       return NextResponse.json({ error: 'Client not found' }, { status: 404 })
     }
 
-    // Check permissions for club managers
-    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-      if (currentClient.locationId !== session.user.locationId) {
+    // Check permissions for club managers and PT managers
+    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      // Check if user has access to client's current location
+      const hasCurrentLocationAccess = await userHasLocationAccess(
+        session.user.id,
+        session.user.role,
+        currentClient.locationId
+      )
+      if (!hasCurrentLocationAccess) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
-      // Club managers can't move clients to other locations
-      if (locationId && locationId !== session.user.locationId) {
-        return NextResponse.json(
-          { error: 'Cannot move client to another location' },
-          { status: 403 }
+      
+      // If trying to move client to a new location, check access to that location too
+      if (locationId && locationId !== currentClient.locationId) {
+        const hasNewLocationAccess = await userHasLocationAccess(
+          session.user.id,
+          session.user.role,
+          locationId
         )
+        if (!hasNewLocationAccess) {
+          return NextResponse.json(
+            { error: 'Cannot move client to a location you don\'t have access to' },
+            { status: 403 }
+          )
+        }
       }
     }
 

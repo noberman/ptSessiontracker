@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { EmailService } from '@/lib/email/sender'
 import { renderSessionValidationEmail } from '@/lib/email/render'
+import { userHasLocationAccess } from '@/lib/user-locations'
 import crypto from 'crypto'
 
 export async function POST(
@@ -46,11 +47,19 @@ export async function POST(
     }
 
     // Check permissions
-    const canResend = 
-      session.user.role === 'ADMIN' ||
-      session.user.role === 'PT_MANAGER' ||
-      (session.user.role === 'CLUB_MANAGER' && session.user.locationId === sessionData.locationId) ||
-      (session.user.role === 'TRAINER' && session.user.id === sessionData.trainerId)
+    let canResend = false
+    
+    if (session.user.role === 'ADMIN') {
+      canResend = true
+    } else if (session.user.role === 'PT_MANAGER' || session.user.role === 'CLUB_MANAGER') {
+      canResend = await userHasLocationAccess(
+        session.user.id,
+        session.user.role,
+        sessionData.locationId
+      )
+    } else if (session.user.role === 'TRAINER') {
+      canResend = session.user.id === sessionData.trainerId
+    }
 
     if (!canResend) {
       return NextResponse.json(

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { userHasLocationAccess } from '@/lib/user-locations'
 import { getOrganizationId } from '@/lib/organization-context'
 
 export async function GET(
@@ -81,11 +82,18 @@ export async function GET(
       )
     }
 
-    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId !== trainingSession.locationId) {
-      return NextResponse.json(
-        { error: 'You can only view sessions at your location' },
-        { status: 403 }
+    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      const hasAccess = await userHasLocationAccess(
+        session.user.id,
+        session.user.role,
+        trainingSession.locationId
       )
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: 'You can only view sessions at your accessible locations' },
+          { status: 403 }
+        )
+      }
     }
 
     return NextResponse.json(trainingSession)
@@ -162,10 +170,15 @@ export async function PUT(
       }
     }
 
-    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-      if (existingSession.locationId !== session.user.locationId) {
+    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      const hasAccess = await userHasLocationAccess(
+        session.user.id,
+        session.user.role,
+        existingSession.locationId
+      )
+      if (!hasAccess) {
         return NextResponse.json(
-          { error: 'You can only edit sessions at your location' },
+          { error: 'You can only edit sessions at your accessible locations' },
           { status: 403 }
         )
       }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parse } from 'csv-parse/sync'
+import { getUserAccessibleLocations } from '@/lib/user-locations'
 
 interface ImportRow {
   name: string
@@ -202,10 +203,18 @@ export async function POST(request: Request) {
     })
 
     // Get locations based on user role
-    // Club managers can only import to their own location
-    const locationFilter = session.user.role === 'CLUB_MANAGER' && session.user.locationId
-      ? { id: session.user.locationId, active: true }
-      : { active: true }
+    // Club managers and PT managers can only import to their accessible locations
+    let locationFilter: any = { active: true }
+    
+    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+      if (accessibleLocations && accessibleLocations.length > 0) {
+        locationFilter.id = { in: accessibleLocations }
+      } else {
+        // No accessible locations
+        locationFilter.id = 'no-access'
+      }
+    }
 
     // Get organization context
     const organizationId = session.user.organizationId || 'default'
@@ -216,28 +225,36 @@ export async function POST(request: Request) {
       [locations, trainers, existingClients, packageTypes, existingPackages] = await Promise.all([
         prisma.location.findMany({ where: locationFilter }),
         prisma.user.findMany({ 
-          where: { 
-            role: { in: ['TRAINER', 'PT_MANAGER'] },  // Include PT Managers who can also train
-            active: true,
-            organizationId,  // Filter by organization
-            // If club manager, only show trainers from their location
-            ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId
-              ? {
-                  OR: [
-                    // Check old system (locationId field)
-                    { locationId: session.user.locationId },
-                    // Check new system (junction table)
-                    {
-                      locations: {
-                        some: {
-                          locationId: session.user.locationId
-                        }
+          where: await (async () => {
+            const baseWhere: any = {
+              role: { in: ['TRAINER', 'PT_MANAGER'] },  // Include PT Managers who can also train
+              active: true,
+              organizationId,  // Filter by organization
+            }
+            
+            // If club manager or PT manager, only show trainers from their accessible locations
+            if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+              const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+              if (accessibleLocations && accessibleLocations.length > 0) {
+                baseWhere.OR = [
+                  // Check old system (locationId field)
+                  { locationId: { in: accessibleLocations } },
+                  // Check new system (junction table)
+                  {
+                    locations: {
+                      some: {
+                        locationId: { in: accessibleLocations }
                       }
                     }
-                  ]
-                }
-              : {})
-          },
+                  }
+                ]
+              } else {
+                baseWhere.id = 'no-access'  // No trainers if no accessible locations
+              }
+            }
+            
+            return baseWhere
+          })(),
           include: {
             locations: true  // Include junction table data
           }
@@ -329,10 +346,10 @@ export async function POST(request: Request) {
       }
       
       if (!location && row.location) {
-        // Provide more helpful error message for club managers
-        if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-          const userLocation = locations[0]?.name || 'your location'
-          errors.push(`Location '${row.location}' not available. You can only import to ${userLocation}`)
+        // Provide more helpful error message for club managers and PT managers
+        if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+          const locationNames = locations.map(l => l.name).join(', ') || 'your accessible locations'
+          errors.push(`Location '${row.location}' not available. You can only import to: ${locationNames}`)
         } else {
           errors.push(`Location '${row.location}' not found`)
         }
