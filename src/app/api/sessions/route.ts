@@ -305,15 +305,26 @@ export async function POST(request: Request) {
 
     // For trainers, verify they have permission to create sessions for this client
     if (session.user.role === 'TRAINER') {
-      // Check if trainer is at the same location as the client
+      // Check if trainer has access to the client's location (via primary location OR UserLocation)
       const trainer = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { locationId: true, organizationId: true }
+        select: { 
+          locationId: true, 
+          organizationId: true,
+          locations: {
+            select: { locationId: true }
+          }
+        }
       })
 
-      if (trainer?.locationId !== client.locationId) {
+      // Check both old system (locationId) and new system (UserLocation records)
+      const hasLocationAccess = 
+        trainer?.locationId === client.locationId || 
+        trainer?.locations.some(loc => loc.locationId === client.locationId)
+
+      if (!hasLocationAccess) {
         return NextResponse.json(
-          { error: 'You can only create sessions for clients at your location' },
+          { error: 'You can only create sessions for clients at locations you have access to' },
           { status: 403 }
         )
       }

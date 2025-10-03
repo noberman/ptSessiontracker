@@ -153,18 +153,31 @@ export async function PUT(
 
     // Validate trainer assignment (PT Managers can also be trainers)
     if (primaryTrainerId) {
+      const targetLocationId = locationId || currentClient.locationId
       const trainer = await prisma.user.findFirst({
         where: {
           id: primaryTrainerId,
           role: { in: ['TRAINER', 'PT_MANAGER'] },
           active: true,
-          locationId: locationId || currentClient.locationId || undefined,
+          organizationId: session.user.organizationId,
+          OR: [
+            // Check old system (locationId field)
+            { locationId: targetLocationId },
+            // Check new system (UserLocation records)
+            {
+              locations: {
+                some: {
+                  locationId: targetLocationId
+                }
+              }
+            }
+          ]
         },
       })
 
       if (!trainer) {
         return NextResponse.json(
-          { error: 'Invalid trainer selection' },
+          { error: 'Invalid trainer selection - trainer must have access to the client\'s location' },
           { status: 400 }
         )
       }
