@@ -119,7 +119,33 @@ export default async function ClientsPage({
 
   // Restrict based on user role
   if (session.user.role === 'TRAINER') {
-    where.primaryTrainerId = session.user.id
+    // Get trainer's accessible locations (both old locationId and new UserLocation records)
+    const trainer = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        locationId: true,
+        locations: {
+          select: { locationId: true }
+        }
+      }
+    })
+    
+    // Collect all accessible location IDs
+    const accessibleLocationIds: string[] = []
+    if (trainer?.locationId) {
+      accessibleLocationIds.push(trainer.locationId)
+    }
+    if (trainer?.locations) {
+      accessibleLocationIds.push(...trainer.locations.map(l => l.locationId))
+    }
+    
+    // Filter clients by accessible locations
+    if (accessibleLocationIds.length > 0) {
+      where.locationId = { in: accessibleLocationIds }
+    } else {
+      // If no locations, show only directly assigned clients as fallback
+      where.primaryTrainerId = session.user.id
+    }
   } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
     // Only restrict to manager's location if no location filter is applied
     if (!locationIds.length) {
