@@ -24,25 +24,46 @@ export default async function NewPackagePage({
   const preselectedClientId = params.clientId
 
   // Get clients for the form
-  let clients = []
+  let clients: Array<{ id: string; name: string; email: string }> = []
   
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    // Club managers can only see clients at their location
-    clients = await prisma.client.findMany({
-      where: {
-        organizationId: session.user.organizationId,
-        locationId: session.user.locationId,
-        active: true,
-      },
+  if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+    // Club managers and PT Managers can only see clients at their accessible locations
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
       select: {
-        id: true,
-        name: true,
-        email: true,
-      },
-      orderBy: { name: 'asc' },
+        locationId: true,
+        locations: {
+          select: { locationId: true }
+        }
+      }
     })
+    
+    // Collect all accessible location IDs
+    const accessibleLocationIds: string[] = []
+    if (user?.locationId) {
+      accessibleLocationIds.push(user.locationId)
+    }
+    if (user?.locations) {
+      accessibleLocationIds.push(...user.locations.map(l => l.locationId))
+    }
+    
+    if (accessibleLocationIds.length > 0) {
+      clients = await prisma.client.findMany({
+        where: {
+          organizationId: session.user.organizationId,
+          locationId: { in: accessibleLocationIds },
+          active: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+        orderBy: { name: 'asc' },
+      })
+    }
   } else {
-    // Admins and PT Managers can see all clients in their organization
+    // Only Admins can see all clients in their organization
     clients = await prisma.client.findMany({
       where: {
         organizationId: session.user.organizationId,

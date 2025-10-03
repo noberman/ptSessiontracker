@@ -115,13 +115,33 @@ export default async function NewSessionPage({
       })
       clients = myClients
     }
-  } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    // Club managers can create sessions for any client at their location
-    clients = await prisma.client.findMany({
-      where: {
-        locationId: session.user.locationId,
-        active: true,
-      },
+  } else if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+    // Club managers and PT Managers see clients at their accessible locations
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        locationId: true,
+        locations: {
+          select: { locationId: true }
+        }
+      }
+    })
+    
+    // Collect all accessible location IDs
+    const accessibleLocationIds: string[] = []
+    if (user?.locationId) {
+      accessibleLocationIds.push(user.locationId)
+    }
+    if (user?.locations) {
+      accessibleLocationIds.push(...user.locations.map(l => l.locationId))
+    }
+    
+    if (accessibleLocationIds.length > 0) {
+      clients = await prisma.client.findMany({
+        where: {
+          locationId: { in: accessibleLocationIds },
+          active: true,
+        },
       select: {
         id: true,
         name: true,
@@ -147,8 +167,9 @@ export default async function NewSessionPage({
       },
       orderBy: { name: 'asc' },
     })
+    }
   } else {
-    // Admins and PT Managers can see all clients in their organization
+    // Only Admins can see all clients in their organization
     clients = await prisma.client.findMany({
       where: {
         active: true,
@@ -184,22 +205,68 @@ export default async function NewSessionPage({
   // Get trainers list for managers/admins
   let trainers: any[] = []
   if (session.user.role !== 'TRAINER') {
-    trainers = await prisma.user.findMany({
-      where: {
-        role: { in: ['TRAINER', 'PT_MANAGER'] },
-        active: true,
-        organizationId: session.user.organizationId,
-        ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId
-          ? { locationId: session.user.locationId }
-          : {}),
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
-      orderBy: { name: 'asc' },
-    })
+    // For PT Managers and Club Managers, filter by accessible locations
+    if (session.user.role === 'PT_MANAGER' || session.user.role === 'CLUB_MANAGER') {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          locationId: true,
+          locations: {
+            select: { locationId: true }
+          }
+        }
+      })
+      
+      // Collect all accessible location IDs
+      const accessibleLocationIds: string[] = []
+      if (user?.locationId) {
+        accessibleLocationIds.push(user.locationId)
+      }
+      if (user?.locations) {
+        accessibleLocationIds.push(...user.locations.map(l => l.locationId))
+      }
+      
+      if (accessibleLocationIds.length > 0) {
+        trainers = await prisma.user.findMany({
+          where: {
+            role: { in: ['TRAINER', 'PT_MANAGER'] },
+            active: true,
+            organizationId: session.user.organizationId,
+            OR: [
+              { locationId: { in: accessibleLocationIds } },
+              { 
+                locations: {
+                  some: {
+                    locationId: { in: accessibleLocationIds }
+                  }
+                }
+              }
+            ]
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+          orderBy: { name: 'asc' },
+        })
+      }
+    } else {
+      // Admins see all trainers
+      trainers = await prisma.user.findMany({
+        where: {
+          role: { in: ['TRAINER', 'PT_MANAGER'] },
+          active: true,
+          organizationId: session.user.organizationId,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+        orderBy: { name: 'asc' },
+      })
+    }
   }
 
   return (

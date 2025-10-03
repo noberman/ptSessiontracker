@@ -20,29 +20,61 @@ export default async function NewClientPage() {
   let locations: Array<{ id: string; name: string }> = []
   let trainers: Array<{ id: string; name: string; email: string; locationId?: string | null }> = []
 
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    // Club managers can only see their location and trainers
-    locations = await prisma.location.findMany({
-      where: { id: session.user.locationId },
-      select: { id: true, name: true },
+  if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+    // Club managers and PT Managers only see their accessible locations and trainers
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        locationId: true,
+        locations: {
+          select: { locationId: true }
+        }
+      }
     })
     
-    trainers = await prisma.user.findMany({
-      where: {
-        role: { in: ['TRAINER', 'PT_MANAGER'] },
-        active: true,
-        locationId: session.user.locationId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        locationId: true,
-      },
-      orderBy: { name: 'asc' },
-    })
+    // Collect all accessible location IDs
+    const accessibleLocationIds: string[] = []
+    if (user?.locationId) {
+      accessibleLocationIds.push(user.locationId)
+    }
+    if (user?.locations) {
+      accessibleLocationIds.push(...user.locations.map(l => l.locationId))
+    }
+    
+    if (accessibleLocationIds.length > 0) {
+      locations = await prisma.location.findMany({
+        where: { id: { in: accessibleLocationIds } },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      })
+      
+      trainers = await prisma.user.findMany({
+        where: {
+          role: { in: ['TRAINER', 'PT_MANAGER'] },
+          active: true,
+          organizationId: session.user.organizationId,
+          OR: [
+            { locationId: { in: accessibleLocationIds } },
+            { 
+              locations: {
+                some: {
+                  locationId: { in: accessibleLocationIds }
+                }
+              }
+            }
+          ]
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          locationId: true,
+        },
+        orderBy: { name: 'asc' },
+      })
+    }
   } else {
-    // Admins and PT Managers can see all locations and trainers in their organization
+    // Only Admins can see all locations and trainers in their organization
     [locations, trainers] = await Promise.all([
       prisma.location.findMany({
         where: { organizationId: session.user.organizationId },
