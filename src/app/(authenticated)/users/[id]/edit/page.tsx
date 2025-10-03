@@ -96,7 +96,10 @@ export default async function EditUserPage({
             ...user,
             locationId: user.locationId || undefined,
             role: user.role as string,
-            locationIds: user.locations.map(l => l.locationId), // Pass current multi-locations
+            locationIds: [
+              ...(user.locationId ? [user.locationId] : []), // Include primary location
+              ...user.locations.map(l => l.locationId).filter(id => id !== user.locationId) // Add other locations
+            ],
           }}
           locations={locations}
           currentUserRole={session.user.role}

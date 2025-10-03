@@ -34,8 +34,7 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
     password: '',
     confirmPassword: '',
     role: user?.role || 'TRAINER',
-    locationId: user?.locationId || '',
-    locationIds: user?.locationIds || [],  // Multi-location support
+    locationIds: user?.locationIds || (user?.locationId ? [user.locationId] : []),  // All locations in one array
     active: user?.active !== false,
   })
 
@@ -68,8 +67,8 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
         name: formData.name,
         email: formData.email,
         role: formData.role,
-        locationId: formData.locationId || null,
-        locationIds: formData.locationIds,  // Include multi-locations
+        locationId: formData.locationIds[0] || null,  // First selected location becomes primary
+        locationIds: formData.locationIds,  // All selected locations
       }
 
       if (!isEdit || formData.password) {
@@ -208,15 +207,38 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
           </div>
 
           {locations.length > 0 && (
-            <>
-              <div>
-                <label htmlFor="location" className="block text-sm font-medium text-text-primary mb-1">
-                  Primary Location
-                </label>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                {formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' 
+                  ? 'Assigned Locations' 
+                  : 'Location'}
+                {(formData.role === 'TRAINER' || formData.role === 'PT_MANAGER') && (
+                  <span className="text-xs text-text-secondary ml-2">
+                    (Hold Ctrl/Cmd to select multiple)
+                  </span>
+                )}
+              </label>
+              
+              {formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' ? (
                 <select
-                  id="location"
-                  value={formData.locationId}
-                  onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
+                  multiple
+                  value={formData.locationIds}
+                  onChange={(e) => {
+                    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value)
+                    setFormData({ ...formData, locationIds: selectedOptions })
+                  }}
+                  className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm min-h-[120px]"
+                >
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select
+                  value={formData.locationIds[0] || ''}
+                  onChange={(e) => setFormData({ ...formData, locationIds: e.target.value ? [e.target.value] : [] })}
                   className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 >
                   <option value="">No location</option>
@@ -226,38 +248,14 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* Multi-location selector for trainers and PT managers */}
-              {(formData.role === 'TRAINER' || formData.role === 'PT_MANAGER') && (
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
-                    Additional Locations
-                    <span className="text-xs text-text-secondary ml-2">
-                      (Hold Ctrl/Cmd to select multiple)
-                    </span>
-                  </label>
-                  <select
-                    multiple
-                    value={formData.locationIds}
-                    onChange={(e) => {
-                      const selectedOptions = Array.from(e.target.selectedOptions, option => option.value)
-                      setFormData({ ...formData, locationIds: selectedOptions })
-                    }}
-                    className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm min-h-[120px]"
-                  >
-                    {locations.map((location) => (
-                      <option key={location.id} value={location.id}>
-                        {location.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-text-secondary">
-                    Select locations where this user can work. Primary location will be included automatically.
-                  </p>
-                </div>
               )}
-            </>
+              
+              {(formData.role === 'TRAINER' || formData.role === 'PT_MANAGER') && (
+                <p className="mt-1 text-xs text-text-secondary">
+                  Select all locations where this user can work. The first selected will be their primary location.
+                </p>
+              )}
+            </div>
           )}
 
           {isEdit && currentUserRole === 'ADMIN' && (
