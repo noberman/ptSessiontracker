@@ -16,20 +16,42 @@ export async function GET() {
     // Get organization context
     const organizationId = await getOrganizationId()
     
-    // Build query based on user role
+    // Build query based on user role and accessible locations
     const whereClause: any = {
       organizationId // Filter by organization
     }
     
-    // Club managers can only see their location
-    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-      whereClause.id = session.user.locationId
+    // For trainers and club managers, filter by accessible locations
+    if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER') {
+      // Get user's accessible locations (both old locationId and new UserLocation records)
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          locationId: true,
+          locations: {
+            select: { locationId: true }
+          }
+        }
+      })
+      
+      // Collect all accessible location IDs
+      const accessibleLocationIds: string[] = []
+      if (user?.locationId) {
+        accessibleLocationIds.push(user.locationId)
+      }
+      if (user?.locations) {
+        accessibleLocationIds.push(...user.locations.map(l => l.locationId))
+      }
+      
+      // Filter locations by accessible IDs
+      if (accessibleLocationIds.length > 0) {
+        whereClause.id = { in: accessibleLocationIds }
+      } else {
+        // If no locations accessible, return empty result
+        whereClause.id = 'no-access' // This will return no results
+      }
     }
-    
-    // Trainers can only see their assigned location
-    if (session.user.role === 'TRAINER' && session.user.locationId) {
-      whereClause.id = session.user.locationId
-    }
+    // PT_MANAGER and ADMIN see all locations in their organization (no additional filter)
 
     const locations = await prisma.location.findMany({
       where: whereClause,
@@ -56,12 +78,29 @@ export async function GET() {
     // Get trainer details for each location
     const locationsWithDetails = await Promise.all(
       locations.map(async (location) => {
+        // Get trainers with access to this location (both old locationId and new UserLocation)
         const trainers = await prisma.user.findMany({
           where: {
-            locationId: location.id,
-            role: 'TRAINER',
-            active: true,
-            organizationId // Filter trainers by org
+            OR: [
+              // Old system: locationId field
+              {
+                locationId: location.id,
+                role: 'TRAINER',
+                active: true,
+                organizationId
+              },
+              // New system: UserLocation junction table
+              {
+                locations: {
+                  some: {
+                    locationId: location.id
+                  }
+                },
+                role: 'TRAINER',
+                active: true,
+                organizationId
+              }
+            ]
           },
           select: {
             id: true,
@@ -70,10 +109,15 @@ export async function GET() {
           }
         })
 
+        // Remove duplicates (users might match both conditions)
+        const uniqueTrainers = trainers.filter((trainer, index, self) =>
+          index === self.findIndex((t) => t.id === trainer.id)
+        )
+
         return {
           ...location,
-          trainers,
-          trainerCount: location._count.users,
+          trainers: uniqueTrainers,
+          trainerCount: uniqueTrainers.length,
           clientCount: location._count.clients,
           sessionsThisMonth: location._count.sessions
         }
