@@ -32,12 +32,13 @@ async function main() {
   
   console.log('✅ Created 2 organizations')
 
-  // Create or find locations (prevent duplicates)
+  // Create or find locations (prevent duplicates) - tied to Snap Fitness organization
   const woodSquare = await prisma.location.upsert({
     where: { name: 'Wood Square' },
     update: {},
     create: {
       name: 'Wood Square',
+      organizationId: snapFitness.id,  // Location belongs to Snap Fitness
       active: true
     }
   })
@@ -47,6 +48,7 @@ async function main() {
     update: {},
     create: {
       name: '888 Plaza',
+      organizationId: snapFitness.id,  // Location belongs to Snap Fitness
       active: true
     }
   })
@@ -56,6 +58,7 @@ async function main() {
     update: {},
     create: {
       name: 'Woodlands Health',
+      organizationId: snapFitness.id,  // Location belongs to Snap Fitness
       active: true
     }
   })
@@ -70,6 +73,7 @@ async function main() {
       password: adminPassword,
       name: 'Admin User',
       role: Role.ADMIN,
+      organizationId: snapFitness.id,  // Admin needs to belong to an organization
       active: true
     }
   })
@@ -85,6 +89,7 @@ async function main() {
       password: managerPassword,
       name: 'Sarah Manager',
       role: Role.CLUB_MANAGER,
+      organizationId: snapFitness.id,  // Club Manager needs to belong to an organization
       locationId: woodSquare.id,
       active: true
     }
@@ -96,6 +101,8 @@ async function main() {
       password: managerPassword,
       name: 'Mike PT Manager',
       role: Role.PT_MANAGER,
+      organizationId: snapFitness.id,  // PT Manager needs to belong to an organization
+      locationId: woodSquare.id,  // PT Manager can have a primary location
       active: true
     }
   })
@@ -124,6 +131,7 @@ async function main() {
           ...trainer,
           password: trainerPassword,
           role: Role.TRAINER,
+          organizationId: snapFitness.id,  // Trainers need to belong to an organization
           active: true
         }
       })
@@ -148,6 +156,7 @@ async function main() {
         data: {
           ...client,
           phone: '555-0100',
+          organizationId: snapFitness.id,  // Clients need to belong to an organization
           active: true
         }
       })
@@ -170,6 +179,7 @@ async function main() {
         data: {
           ...pkg,
           sessionValue: pkg.totalValue / pkg.totalSessions,
+          organizationId: snapFitness.id,  // Packages need to belong to an organization
           active: true
         }
       })
@@ -227,6 +237,7 @@ async function main() {
       prisma.session.create({
         data: {
           ...session,
+          organizationId: snapFitness.id,  // Sessions need to belong to an organization
           validationToken: session.validatedAt ? null : `token_${Math.random().toString(36).substr(2, 9)}`,
           validationExpiry: session.validatedAt ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
         }
@@ -247,7 +258,12 @@ async function main() {
 
   await Promise.all(
     tiersData.map(tier =>
-      prisma.commissionTier.create({ data: tier })
+      prisma.commissionTier.create({ 
+        data: {
+          ...tier,
+          organizationId: snapFitness.id  // Commission tiers belong to an organization
+        }
+      })
     )
   )
 
