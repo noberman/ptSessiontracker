@@ -24,50 +24,45 @@ export default async function NewSessionPage({
   let otherClients: any[] = []
   
   if (session.user.role === 'TRAINER') {
-    // Get clients where trainer is primary trainer
-    myClients = await prisma.client.findMany({
-      where: {
-        primaryTrainerId: session.user.id,
-        active: true,
-      },
+    // Get trainer's accessible locations (both old locationId and new UserLocation records)
+    const trainer = await prisma.user.findUnique({
+      where: { id: session.user.id },
       select: {
-        id: true,
-        name: true,
-        email: true,
         locationId: true,
-        location: {
-          select: {
-            id: true,
-            name: true
-          }
-        },
-        packages: {
-          where: { active: true },
-          select: {
-            id: true,
-            name: true,
-            packageType: true,
-            remainingSessions: true,
-            totalSessions: true,
-            expiresAt: true,
-          }
+        locations: {
+          select: { locationId: true }
         }
-      },
-      orderBy: { name: 'asc' },
+      }
     })
-
-    // Get other clients at the same location (for substitute sessions)
-    if (session.user.locationId) {
-      otherClients = await prisma.client.findMany({
+    
+    // Collect all accessible location IDs
+    const accessibleLocationIds: string[] = []
+    if (trainer?.locationId) {
+      accessibleLocationIds.push(trainer.locationId)
+    }
+    if (trainer?.locations) {
+      accessibleLocationIds.push(...trainer.locations.map(l => l.locationId))
+    }
+    
+    // Get all clients at trainer's accessible locations
+    if (accessibleLocationIds.length > 0) {
+      clients = await prisma.client.findMany({
         where: {
-          locationId: session.user.locationId,
-          primaryTrainerId: { not: session.user.id },
+          locationId: { in: accessibleLocationIds },
           active: true,
         },
         select: {
           id: true,
           name: true,
           email: true,
+          locationId: true,
+          primaryTrainerId: true,  // Need this for filtering
+          location: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
           packages: {
             where: { active: true },
             select: {
@@ -82,9 +77,44 @@ export default async function NewSessionPage({
         },
         orderBy: { name: 'asc' },
       })
+      
+      // Separate into "my clients" (assigned to me) and "other clients" (at my locations but not assigned to me)
+      myClients = clients.filter(c => c.primaryTrainerId === session.user.id)
+      otherClients = clients.filter(c => c.primaryTrainerId !== session.user.id)
+    } else {
+      // Fallback: if no locations set, just show directly assigned clients
+      myClients = await prisma.client.findMany({
+        where: {
+          primaryTrainerId: session.user.id,
+          active: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          locationId: true,
+          location: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          packages: {
+            where: { active: true },
+            select: {
+              id: true,
+              name: true,
+              packageType: true,
+              remainingSessions: true,
+              totalSessions: true,
+              expiresAt: true,
+            }
+          }
+        },
+        orderBy: { name: 'asc' },
+      })
+      clients = myClients
     }
-
-    clients = [...myClients, ...otherClients]
   } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
     // Club managers can create sessions for any client at their location
     clients = await prisma.client.findMany({
