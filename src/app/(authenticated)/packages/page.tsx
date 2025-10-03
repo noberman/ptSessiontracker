@@ -107,49 +107,113 @@ export default async function PackagesPage({
   // Get organization context
   const organizationId = await getOrganizationId()
 
-  // Restrict based on user role
+  // Restrict based on user role and accessible locations
   if (session.user.role === 'TRAINER') {
-    where.client = {
-      primaryTrainerId: session.user.id,
+    // Get trainer's accessible locations
+    const trainer = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        locationId: true,
+        locations: {
+          select: { locationId: true }
+        }
+      }
+    })
+    
+    // Collect all accessible location IDs
+    const accessibleLocationIds: string[] = []
+    if (trainer?.locationId) {
+      accessibleLocationIds.push(trainer.locationId)
     }
-  } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    where.client = {
-      locationId: session.user.locationId,
+    if (trainer?.locations) {
+      accessibleLocationIds.push(...trainer.locations.map(l => l.locationId))
+    }
+    
+    // Show packages for all clients at accessible locations
+    if (accessibleLocationIds.length > 0) {
+      where.client = {
+        ...where.client,
+        locationId: { in: accessibleLocationIds }
+      }
+    } else {
+      // Fallback: only show packages for directly assigned clients
+      where.client = {
+        ...where.client,
+        primaryTrainerId: session.user.id
+      }
+    }
+  } else if (session.user.role === 'CLUB_MANAGER') {
+    // Get club manager's accessible locations
+    const manager = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        locationId: true,
+        locations: {
+          select: { locationId: true }
+        }
+      }
+    })
+    
+    // Collect all accessible location IDs
+    const accessibleLocationIds: string[] = []
+    if (manager?.locationId) {
+      accessibleLocationIds.push(manager.locationId)
+    }
+    if (manager?.locations) {
+      accessibleLocationIds.push(...manager.locations.map(l => l.locationId))
+    }
+    
+    // Show packages for all clients at accessible locations
+    if (accessibleLocationIds.length > 0) {
+      where.client = {
+        ...where.client,
+        locationId: { in: accessibleLocationIds }
+      }
     }
   }
+  // PT_MANAGER and ADMIN see all packages in their organization (no location filter)
 
-  // Get available clients for filter
+  // Get available clients for filter based on accessible locations
   let availableClients: any[] = []
   let availableLocations: any[] = []
   
-  if (session.user.role === 'TRAINER') {
-    availableClients = await prisma.client.findMany({
-      where: {
-        organizationId: session.user.organizationId,
-        primaryTrainerId: session.user.id,
-        active: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
-      orderBy: { name: 'asc' },
-    })
-  } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    availableClients = await prisma.client.findMany({
-      where: {
-        organizationId: session.user.organizationId,
-        locationId: session.user.locationId,
-        active: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
-      orderBy: { name: 'asc' },
-    })
+  // Get user's accessible locations for filtering
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      locationId: true,
+      locations: {
+        select: { locationId: true }
+      }
+    }
+  })
+  
+  // Collect all accessible location IDs
+  const userAccessibleLocationIds: string[] = []
+  if (user?.locationId) {
+    userAccessibleLocationIds.push(user.locationId)
+  }
+  if (user?.locations) {
+    userAccessibleLocationIds.push(...user.locations.map(l => l.locationId))
+  }
+  
+  if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER') {
+    // Show clients at accessible locations
+    if (userAccessibleLocationIds.length > 0) {
+      availableClients = await prisma.client.findMany({
+        where: {
+          organizationId: session.user.organizationId,
+          locationId: { in: userAccessibleLocationIds },
+          active: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+        orderBy: { name: 'asc' },
+      })
+    }
   } else {
     // Admin and PT Manager can see all in their organization
     availableClients = await prisma.client.findMany({
