@@ -97,33 +97,8 @@ export async function GET(request: Request) {
         organizationId 
       }
       
-      // Get trainer's accessible locations for client filtering
-      const trainer = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: {
-          locationId: true,
-          locations: {
-            select: { locationId: true }
-          }
-        }
-      })
-      
-      // Collect all accessible location IDs
-      const accessibleLocationIds: string[] = []
-      if (trainer?.locationId) {
-        accessibleLocationIds.push(trainer.locationId)
-      }
-      if (trainer?.locations) {
-        accessibleLocationIds.push(...trainer.locations.map(l => l.locationId))
-      }
-      
-      // Show all clients at accessible locations
-      if (accessibleLocationIds.length > 0) {
-        clientsWhere.locationId = { in: accessibleLocationIds }
-      } else {
-        // Fallback to only directly assigned clients if no locations
-        clientsWhere.primaryTrainerId = session.user.id
-      }
+      // For "My Clients" card - show only clients where trainer is primary trainer
+      clientsWhere.primaryTrainerId = session.user.id
       
       // Get trainer's own stats
       const [
