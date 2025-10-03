@@ -51,7 +51,8 @@ export function LocationsTable({ userRole, canEdit }: LocationsTableProps) {
         throw new Error(data.error || 'Failed to fetch locations')
       }
 
-      setLocations(data)
+      // Handle both formats - array directly or object with locations property
+      setLocations(Array.isArray(data) ? data : (data.locations || []))
     } catch (err: any) {
       setError(err.message || 'Failed to fetch locations')
     } finally {
