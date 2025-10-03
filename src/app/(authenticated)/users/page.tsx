@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { checkInvitationLimit } from '@/lib/invitation-service'
+import { getUserAccessibleLocations } from '@/lib/user-locations'
 import UsersPageClient from './UsersPageClient'
 
 export default async function UsersPage({
@@ -65,11 +66,40 @@ export default async function UsersPage({
     where.locationId = locationId
   }
 
-  // Restrict club managers to their location
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    where.locationId = session.user.locationId
+  // Restrict club managers and PT managers to their accessible locations
+  if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+    const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+    if (accessibleLocations && accessibleLocations.length > 0) {
+      // Show users at accessible locations or users with access to those locations
+      where.OR = [
+        { locationId: { in: accessibleLocations } },
+        { 
+          locations: {
+            some: {
+              locationId: { in: accessibleLocations }
+            }
+          }
+        }
+      ]
+    } else {
+      // No accessible locations
+      where.id = 'no-access'
+    }
   }
+  // ADMIN sees all (no additional filter)
 
+  // Get accessible locations for filtering the dropdown
+  let locationFilter: any = { organizationId: currentUser.organizationId }
+  
+  if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+    const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+    if (accessibleLocations && accessibleLocations.length > 0) {
+      locationFilter.id = { in: accessibleLocations }
+    } else {
+      locationFilter.id = 'no-access' // No locations
+    }
+  }
+  
   const [users, total, locations] = await Promise.all([
     prisma.user.findMany({
       where,
@@ -106,9 +136,7 @@ export default async function UsersPage({
     }),
     prisma.user.count({ where }),
     prisma.location.findMany({
-      where: {
-        organizationId: currentUser.organizationId,
-      },
+      where: locationFilter,
       select: {
         id: true,
         name: true,
