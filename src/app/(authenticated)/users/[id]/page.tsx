@@ -23,6 +23,11 @@ export default async function UserDetailPage({
     where: { id },
     include: {
       location: true,
+      locations: {
+        include: {
+          location: true,
+        },
+      },
       assignedClients: {
         take: 10,
       },
@@ -113,10 +118,52 @@ export default async function UserDetailPage({
                 </div>
 
                 <div>
-                  <p className="text-sm text-text-secondary">Location</p>
-                  <p className="text-base font-medium text-text-primary mt-1">
-                    {user.location?.name || 'No location assigned'}
-                  </p>
+                  <p className="text-sm text-text-secondary">Location{(() => {
+                    // Count total locations
+                    const locationCount = new Set([
+                      ...(user.location ? [user.location.id] : []),
+                      ...(user.locations?.map((l: any) => l.location.id) || [])
+                    ]).size
+                    return locationCount > 1 ? 's' : ''
+                  })()}</p>
+                  <div className="mt-1">
+                    {user.role === 'ADMIN' ? (
+                      <span className="text-base text-text-tertiary italic">All locations (organization-wide access)</span>
+                    ) : (() => {
+                      // Collect all unique locations
+                      const locationMap = new Map()
+                      
+                      // Add primary location
+                      if (user.location) {
+                        locationMap.set(user.location.id, user.location.name)
+                      }
+                      
+                      // Add locations from junction table
+                      user.locations?.forEach((loc: any) => {
+                        if (loc.location) {
+                          locationMap.set(loc.location.id, loc.location.name)
+                        }
+                      })
+                      
+                      const uniqueLocations = Array.from(locationMap.values())
+                      
+                      if (uniqueLocations.length === 0) {
+                        return <span className="text-base text-text-secondary">No location assigned</span>
+                      } else if (uniqueLocations.length === 1) {
+                        return <span className="text-base font-medium text-text-primary">{uniqueLocations[0]}</span>
+                      } else {
+                        return (
+                          <div className="flex flex-wrap gap-2">
+                            {uniqueLocations.map((name, idx) => (
+                              <Badge key={idx} variant="secondary" size="sm">
+                                {name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )
+                      }
+                    })()}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

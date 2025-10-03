@@ -18,6 +18,12 @@ interface User {
   location?: {
     name: string
   } | null
+  locations?: Array<{
+    location: {
+      id: string
+      name: string
+    }
+  }>
   createdAt: string | Date
   updatedAt: string | Date
 }
@@ -157,9 +163,49 @@ export function UserTable({
                     {user.role}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4">
                   <div className="text-sm text-text-secondary">
-                    {user.location?.name || '-'}
+                    {(() => {
+                      // For ADMIN, show organization-wide access
+                      if (user.role === 'ADMIN') {
+                        return <span className="text-text-tertiary italic">All locations</span>
+                      }
+                      
+                      // Collect all locations (both old locationId and new UserLocation)
+                      const locationNames = new Set<string>()
+                      
+                      // Add primary location if exists
+                      if (user.location?.name) {
+                        locationNames.add(user.location.name)
+                      }
+                      
+                      // Add locations from junction table
+                      if (user.locations && user.locations.length > 0) {
+                        user.locations.forEach(loc => {
+                          if (loc.location?.name) {
+                            locationNames.add(loc.location.name)
+                          }
+                        })
+                      }
+                      
+                      // Convert to array and display
+                      const uniqueLocations = Array.from(locationNames)
+                      
+                      if (uniqueLocations.length === 0) {
+                        return '-'
+                      } else if (uniqueLocations.length === 1) {
+                        return uniqueLocations[0]
+                      } else {
+                        return (
+                          <div className="flex items-center gap-1">
+                            <span>{uniqueLocations[0]}</span>
+                            <Badge variant="secondary" size="sm">
+                              +{uniqueLocations.length - 1} more
+                            </Badge>
+                          </div>
+                        )
+                      }
+                    })()}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

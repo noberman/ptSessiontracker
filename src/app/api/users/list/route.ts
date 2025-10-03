@@ -70,6 +70,16 @@ export async function GET(request: NextRequest) {
               name: true,
             },
           },
+          locations: {
+            select: {
+              location: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
           createdAt: true,
           updatedAt: true,
         },

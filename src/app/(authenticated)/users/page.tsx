@@ -87,6 +87,16 @@ export default async function UsersPage({
             name: true,
           },
         },
+        locations: {
+          select: {
+            location: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
         createdAt: true,
         updatedAt: true,
       },
