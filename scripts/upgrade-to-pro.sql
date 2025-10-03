@@ -12,7 +12,7 @@ SET
   "subscriptionStatus" = 'ACTIVE',
   "updatedAt" = NOW()
 WHERE email = 'admin@snapfitness.sg'  -- Change this to target specific org
-OR name = 'Staging Org';   -- Or use name
+OR name = 'Testing Org Staging';   -- Or use name
 
 -- Verify the change
 SELECT id, name, email, "subscriptionTier", "subscriptionStatus" 
