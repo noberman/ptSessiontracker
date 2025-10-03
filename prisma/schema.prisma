@@ -49,6 +49,7 @@ model Location {
   organization   Organization? @relation(fields: [organizationId], references: [id])
   sessions       Session[]
   users          User[]
+  userAccess     UserLocation[]  // Users with access to this location
 
   @@map("locations")
 }
@@ -73,6 +74,7 @@ model User {
   usedTokens      TempAuthToken[] @relation("TokenUser")
   location        Location?     @relation(fields: [locationId], references: [id])
   organization    Organization? @relation(fields: [organizationId], references: [id])
+  locations       UserLocation[]  // Many-to-many via junction table
 
   @@unique([email, organizationId])
   @@map("users")
@@ -307,4 +309,19 @@ model TempAuthToken {
   @@index([token])
   @@index([expiresAt])
   @@map("temp_auth_tokens")
+}
+
+model UserLocation {
+  id          String   @id @default(cuid())
+  userId      String
+  locationId  String
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, locationId])
+  @@index([userId])
+  @@index([locationId])
+  @@map("user_locations")
 }
