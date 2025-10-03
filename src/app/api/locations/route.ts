@@ -26,8 +26,8 @@ export async function GET(request: Request) {
     }
     
     // For trainers, club managers, and PT managers, filter by accessible locations
-    // Unless they're an admin requesting all locations for invitations
-    if ((session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') && !(session.user.role === 'ADMIN' && showAll)) {
+    // Admins with all=true see all locations (for invitations)
+    if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
       // Get user's accessible locations (both old locationId and new UserLocation records)
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
