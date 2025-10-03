@@ -50,7 +50,10 @@ export default async function EditPackagePage({
   }
 
   // Fetch available clients
-  const where: any = { active: true }
+  const where: any = { 
+    active: true,
+    organizationId: session.user.organizationId // Always filter by organization
+  }
   
   if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
     where.locationId = session.user.locationId

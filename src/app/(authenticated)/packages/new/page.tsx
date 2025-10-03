@@ -30,6 +30,7 @@ export default async function NewPackagePage({
     // Club managers can only see clients at their location
     clients = await prisma.client.findMany({
       where: {
+        organizationId: session.user.organizationId,
         locationId: session.user.locationId,
         active: true,
       },
@@ -41,9 +42,10 @@ export default async function NewPackagePage({
       orderBy: { name: 'asc' },
     })
   } else {
-    // Admins and PT Managers can see all clients
+    // Admins and PT Managers can see all clients in their organization
     clients = await prisma.client.findMany({
       where: {
+        organizationId: session.user.organizationId,
         active: true,
       },
       select: {

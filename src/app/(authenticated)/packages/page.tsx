@@ -125,6 +125,7 @@ export default async function PackagesPage({
   if (session.user.role === 'TRAINER') {
     availableClients = await prisma.client.findMany({
       where: {
+        organizationId: session.user.organizationId,
         primaryTrainerId: session.user.id,
         active: true,
       },
@@ -138,6 +139,7 @@ export default async function PackagesPage({
   } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
     availableClients = await prisma.client.findMany({
       where: {
+        organizationId: session.user.organizationId,
         locationId: session.user.locationId,
         active: true,
       },
