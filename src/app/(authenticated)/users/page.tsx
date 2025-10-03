@@ -89,7 +89,7 @@ export default async function UsersPage({
   // ADMIN sees all (no additional filter)
 
   // Get accessible locations for filtering the dropdown
-  let locationFilter: any = { organizationId: currentUser.organizationId }
+  const locationFilter: any = { organizationId: currentUser.organizationId }
   
   if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
     const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)

@@ -204,7 +204,7 @@ export async function POST(request: Request) {
 
     // Get locations based on user role
     // Club managers and PT managers can only import to their accessible locations
-    let locationFilter: any = { active: true }
+    const locationFilter: any = { active: true }
     
     if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
       const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
