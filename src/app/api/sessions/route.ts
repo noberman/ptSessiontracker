@@ -255,16 +255,19 @@ export async function POST(request: Request) {
       }
       
       // Verify the trainer exists, is active, and belongs to the organization
+      // PT Managers can also log sessions
       const trainer = await prisma.user.findUnique({
         where: { 
           id: trainerId, 
-          role: 'TRAINER', 
           active: true,
           organizationId: orgId
         }
       })
       
-      if (!trainer) {
+      // Check if user is either a TRAINER or PT_MANAGER
+      const validTrainerRole = trainer && ['TRAINER', 'PT_MANAGER'].includes(trainer.role)
+      
+      if (!trainer || !validTrainerRole) {
         return NextResponse.json(
           { error: 'Invalid trainer selected or trainer not in your organization' },
           { status: 400 }
