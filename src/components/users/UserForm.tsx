@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -27,6 +27,8 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -39,6 +41,28 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
   })
 
   const isEdit = !!user
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setLocationDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Toggle location selection
+  const toggleLocation = (locationId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      locationIds: prev.locationIds.includes(locationId)
+        ? prev.locationIds.filter(id => id !== locationId)
+        : [...prev.locationIds, locationId]
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -207,34 +231,57 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
           </div>
 
           {locations.length > 0 && (
-            <div>
+            <div className="relative" ref={dropdownRef}>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 {formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' 
                   ? 'Assigned Locations' 
                   : 'Location'}
-                {(formData.role === 'TRAINER' || formData.role === 'PT_MANAGER') && (
-                  <span className="text-xs text-text-secondary ml-2">
-                    (Hold Ctrl/Cmd to select multiple)
-                  </span>
-                )}
               </label>
               
               {formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' ? (
-                <select
-                  multiple
-                  value={formData.locationIds}
-                  onChange={(e) => {
-                    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value)
-                    setFormData({ ...formData, locationIds: selectedOptions })
-                  }}
-                  className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm min-h-[120px]"
-                >
-                  {locations.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-white hover:bg-gray-50 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
+                  >
+                    <span>
+                      {formData.locationIds.length === 0 
+                        ? 'Select locations' 
+                        : formData.locationIds.length === 1
+                          ? locations.find(l => l.id === formData.locationIds[0])?.name || 'Select locations'
+                          : `${formData.locationIds.length} locations selected`}
+                    </span>
+                    <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {locationDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-white shadow-lg">
+                      <div className="max-h-60 overflow-y-auto p-2">
+                        {locations.map((location) => (
+                          <label
+                            key={location.id}
+                            className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.locationIds.includes(location.id)}
+                              onChange={() => toggleLocation(location.id)}
+                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm text-text-primary">{location.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <p className="mt-1 text-xs text-text-secondary">
+                    Select all locations where this user can work. The first selected will be their primary location.
+                  </p>
+                </>
               ) : (
                 <select
                   value={formData.locationIds[0] || ''}
@@ -248,12 +295,6 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
                     </option>
                   ))}
                 </select>
-              )}
-              
-              {(formData.role === 'TRAINER' || formData.role === 'PT_MANAGER') && (
-                <p className="mt-1 text-xs text-text-secondary">
-                  Select all locations where this user can work. The first selected will be their primary location.
-                </p>
               )}
             </div>
           )}
