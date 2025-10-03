@@ -219,11 +219,28 @@ export async function POST(request: Request) {
           where: { 
             role: { in: ['TRAINER', 'PT_MANAGER'] },  // Include PT Managers who can also train
             active: true,
+            organizationId,  // Filter by organization
             // If club manager, only show trainers from their location
             ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId
-              ? { locationId: session.user.locationId }
+              ? {
+                  OR: [
+                    // Check old system (locationId field)
+                    { locationId: session.user.locationId },
+                    // Check new system (junction table)
+                    {
+                      locations: {
+                        some: {
+                          locationId: session.user.locationId
+                        }
+                      }
+                    }
+                  ]
+                }
               : {})
-          } 
+          },
+          include: {
+            locations: true  // Include junction table data
+          }
         }),
         prisma.client.findMany({
           where: { organizationId },
@@ -428,7 +445,12 @@ export async function POST(request: Request) {
           id: t.id, 
           name: t.name, 
           email: t.email,
-          locationId: t.locationId 
+          locationId: t.locationId,
+          // Include all locations this trainer has access to
+          locationIds: [
+            ...(t.locationId ? [t.locationId] : []),  // Old system
+            ...(t.locations ? t.locations.map(l => l.locationId) : [])  // New system
+          ].filter((id, index, self) => self.indexOf(id) === index)  // Remove duplicates
         })),
         packageTypes: packageTypes.map(t => ({
           id: t.id,

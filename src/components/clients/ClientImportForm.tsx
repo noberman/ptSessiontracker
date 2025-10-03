@@ -83,7 +83,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
   const [validationResults, setValidationResults] = useState<ValidationResult[] | null>(null)
   const [summary, setSummary] = useState<ImportSummary | null>(null)
   const [locations, setLocations] = useState<Array<{ id: string; name: string }>>([])
-  const [trainers, setTrainers] = useState<Array<{ id: string; name: string; email: string; locationId?: string }>>([])
+  const [trainers, setTrainers] = useState<Array<{ id: string; name: string; email: string; locationId?: string; locationIds?: string[] }>>([])
   const [packageTypes, setPackageTypes] = useState<Array<{ id: string; name: string; defaultSessions?: number | null; defaultPrice?: number | null }>>([])
   const [trainerAssignments, setTrainerAssignments] = useState<Record<string, string>>({})
   const [locationAssignments, setLocationAssignments] = useState<Record<string, string>>({})
@@ -721,9 +721,17 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                               const effectiveLocationId = locationAssignments[result.row.email] || result.location?.id
                               
                               // Filter trainers by the effective location
+                              // Check BOTH old locationId AND new locationIds array
                               const filteredTrainers = effectiveLocationId 
-                                ? trainers.filter(t => t.locationId === effectiveLocationId)
-                                : []
+                                ? trainers.filter(t => {
+                                    // Check if trainer has access to this location
+                                    // Via old system (locationId field)
+                                    if (t.locationId === effectiveLocationId) return true
+                                    // Via new system (locationIds array from junction table)
+                                    if (t.locationIds && t.locationIds.includes(effectiveLocationId)) return true
+                                    return false
+                                  })
+                                : [] // If no location, show no trainers (they need a location)
                               
                               if (filteredTrainers.length === 0 && effectiveLocationId) {
                                 return [
