@@ -20,6 +20,11 @@ interface Client {
   id: string
   name: string
   email: string
+  locationId?: string
+  location?: {
+    id: string
+    name: string
+  }
   packages: Package[]
 }
 
@@ -35,7 +40,6 @@ interface SessionFormProps {
   preselectedClientId?: string
   currentUserRole: string
   currentUserId: string
-  userLocation?: { id: string; name: string } | null
 }
 
 export function SessionForm({ 
@@ -45,8 +49,7 @@ export function SessionForm({
   trainers = [],
   preselectedClientId,
   currentUserRole,
-  currentUserId,
-  userLocation
+  currentUserId
 }: SessionFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -362,18 +365,6 @@ export function SessionForm({
               />
             </div>
           </div>
-
-          {/* Location Display */}
-          {userLocation && (
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Location
-              </label>
-              <div className="block w-full rounded-lg border border-border px-3 py-2 bg-background-secondary text-text-secondary text-sm">
-                {userLocation.name}
-              </div>
-            </div>
-          )}
 
           {/* Notes */}
           <div>

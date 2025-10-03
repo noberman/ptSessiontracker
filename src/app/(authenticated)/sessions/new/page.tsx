@@ -34,6 +34,13 @@ export default async function NewSessionPage({
         id: true,
         name: true,
         email: true,
+        locationId: true,
+        location: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         packages: {
           where: { active: true },
           select: {
@@ -89,6 +96,13 @@ export default async function NewSessionPage({
         id: true,
         name: true,
         email: true,
+        locationId: true,
+        location: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         packages: {
           where: { active: true },
           select: {
@@ -114,6 +128,13 @@ export default async function NewSessionPage({
         id: true,
         name: true,
         email: true,
+        locationId: true,
+        location: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         packages: {
           where: { active: true },
           select: {
@@ -129,12 +150,6 @@ export default async function NewSessionPage({
       orderBy: { name: 'asc' },
     })
   }
-
-  // Get user's location for display
-  const userLocation = session.user.locationId ? await prisma.location.findUnique({
-    where: { id: session.user.locationId },
-    select: { id: true, name: true }
-  }) : null
 
   // Get trainers list for managers/admins
   let trainers: any[] = []
@@ -175,7 +190,6 @@ export default async function NewSessionPage({
           preselectedClientId={preselectedClientId}
           currentUserRole={session.user.role}
           currentUserId={session.user.id}
-          userLocation={userLocation}
         />
       </div>
     </div>
