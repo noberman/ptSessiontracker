@@ -200,10 +200,10 @@ git merge feature/multi-location-access
 git push origin staging
 
 # Apply to staging database
-DATABASE_URL="postgresql://postgres:ACyQysrYpxpwXqsPagIgKmPUylApGhQR@turntable.proxy.rlwy.net:24999/railway" npx prisma migrate deploy
+DATABASE_URL="[STAGING_DATABASE_URL]" npx prisma migrate deploy
 
 # Verify staging
-DATABASE_URL="postgresql://postgres:ACyQysrYpxpwXqsPagIgKmPUylApGhQR@turntable.proxy.rlwy.net:24999/railway" npx prisma migrate status
+DATABASE_URL="[STAGING_DATABASE_URL]" npx prisma migrate status
 ```
 
 #### Phase 3: Production Deployment (Port 44961):

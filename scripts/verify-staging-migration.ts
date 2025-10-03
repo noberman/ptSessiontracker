@@ -1,10 +1,11 @@
 import { PrismaClient } from '@prisma/client'
 
 // Connect to staging database
+// Use environment variable for security
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://postgres:zVYayjKtiuqGOvsaVrDqkODNUSVGSfuD@turntable.proxy.rlwy.net:24999/railway"
+      url: process.env.STAGING_DATABASE_URL || process.env.DATABASE_URL
     }
   }
 })
