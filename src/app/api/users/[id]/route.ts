@@ -83,7 +83,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { name, email, password, role, locationId, active } = body
+    const { name, email, password, role, locationId, locationIds, active } = body
 
     // Get organization context
     const organizationId = await getOrganizationId()
@@ -186,19 +186,52 @@ export async function PUT(
       updateData.password = await bcrypt.hash(password, 10)
     }
 
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        locationId: true,
-        active: true,
-        updatedAt: true,
-      },
+    // Update user and manage location associations in a transaction
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      // Update the user
+      const user = await tx.user.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          locationId: true,
+          active: true,
+          updatedAt: true,
+        },
+      })
+
+      // Handle multi-location updates for trainers and PT managers
+      if (locationIds !== undefined && (user.role === 'TRAINER' || user.role === 'PT_MANAGER')) {
+        // Remove existing UserLocation records
+        await tx.userLocation.deleteMany({
+          where: { userId: id }
+        })
+
+        // Add new UserLocation records
+        if (locationIds.length > 0) {
+          await tx.userLocation.createMany({
+            data: locationIds.map((locId: string) => ({
+              userId: id,
+              locationId: locId
+            }))
+          })
+        }
+
+        // If primary locationId is set, ensure it's also in UserLocation
+        if (user.locationId && !locationIds.includes(user.locationId)) {
+          await tx.userLocation.create({
+            data: {
+              userId: id,
+              locationId: user.locationId
+            }
+          })
+        }
+      }
+
+      return user
     })
 
     // Create audit log

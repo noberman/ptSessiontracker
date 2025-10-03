@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, email, password, role, locationId } = body
+    const { name, email, password, role, locationId, locationIds } = body
 
     // Validate required fields
     if (!name || !email || !password || !role) {
@@ -207,25 +207,49 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role,
-        locationId,
-        organizationId, // Set organization for new user
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        locationId: true,
-        active: true,
-        createdAt: true,
-      },
+    // Create user with multi-location support in a transaction
+    const user = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role,
+          locationId,
+          organizationId, // Set organization for new user
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          locationId: true,
+          active: true,
+          createdAt: true,
+        },
+      })
+
+      // Create UserLocation records for trainers and PT managers
+      if (locationIds && locationIds.length > 0 && (role === 'TRAINER' || role === 'PT_MANAGER')) {
+        await tx.userLocation.createMany({
+          data: locationIds.map((locId: string) => ({
+            userId: newUser.id,
+            locationId: locId
+          }))
+        })
+
+        // If primary locationId is set, ensure it's also in UserLocation
+        if (locationId && !locationIds.includes(locationId)) {
+          await tx.userLocation.create({
+            data: {
+              userId: newUser.id,
+              locationId: locationId
+            }
+          })
+        }
+      }
+
+      return newUser
     })
 
     // Create audit log

@@ -16,7 +16,7 @@ export default async function EditUserPage({
     redirect('/login')
   }
 
-  // Get the user to edit
+  // Get the user to edit with their locations
   const user = await prisma.user.findUnique({
     where: { id },
     select: {
@@ -26,6 +26,11 @@ export default async function EditUserPage({
       role: true,
       locationId: true,
       active: true,
+      locations: {
+        select: {
+          locationId: true
+        }
+      }
     },
   })
 
@@ -91,6 +96,7 @@ export default async function EditUserPage({
             ...user,
             locationId: user.locationId || undefined,
             role: user.role as string,
+            locationIds: user.locations.map(l => l.locationId), // Pass current multi-locations
           }}
           locations={locations}
           currentUserRole={session.user.role}
