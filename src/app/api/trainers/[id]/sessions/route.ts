@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getUserAccessibleLocations } from '@/lib/user-locations'
 
 export async function GET(
   request: Request,
@@ -34,14 +35,23 @@ export async function GET(
     }
 
     // Get all sessions for the trainer
+    // Get location filter for Club Managers and PT Managers
+    let locationFilter: any = {}
+    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+      if (accessibleLocations && accessibleLocations.length > 0) {
+        locationFilter = { locationId: { in: accessibleLocations } }
+      } else {
+        // No accessible locations - return empty result
+        return NextResponse.json([])
+      }
+    }
+    
     const sessions = await prisma.session.findMany({
       where: {
         trainerId: params.id,
         ...(startDate || endDate ? { sessionDate: dateFilter } : {}),
-        // Apply location filter for club managers
-        ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId
-          ? { locationId: session.user.locationId }
-          : {})
+        ...locationFilter
       },
       include: {
         client: {

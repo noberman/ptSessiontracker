@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getUserAccessibleLocations } from '@/lib/user-locations'
 
 // GET /api/clients - List all clients with pagination and filters
 export async function GET(request: NextRequest) {
@@ -79,10 +80,17 @@ export async function GET(request: NextRequest) {
         // If no locations, show only directly assigned clients as fallback
         where.primaryTrainerId = session.user.id
       }
-    } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-      // Club managers can only see clients at their location
-      where.locationId = session.user.locationId
+    } else if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      // Club managers and PT managers can only see clients at their accessible locations
+      const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+      if (accessibleLocations && accessibleLocations.length > 0) {
+        where.locationId = { in: accessibleLocations }
+      } else {
+        // No accessible locations - show nothing
+        where.id = 'no-access'
+      }
     }
+    // ADMIN sees all (no additional filter)
 
     const [clients, total] = await Promise.all([
       prisma.client.findMany({
@@ -182,11 +190,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For club managers, ensure they can only create clients at their location
-    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-      if (locationId !== session.user.locationId) {
+    // For club managers and PT managers, ensure they can only create clients at their accessible locations
+    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+      if (!accessibleLocations || !accessibleLocations.includes(locationId)) {
         return NextResponse.json(
-          { error: 'Can only create clients at your location' },
+          { error: 'Can only create clients at your accessible locations' },
           { status: 403 }
         )
       }

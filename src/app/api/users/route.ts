@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getUserAccessibleLocations } from '@/lib/user-locations'
 import bcrypt from 'bcryptjs'
 import { getOrganizationId } from '@/lib/organization-context'
 import { canAddTrainer } from '@/lib/usage-limits'
@@ -56,10 +57,27 @@ export async function GET(request: NextRequest) {
       where.locationId = locationId
     }
 
-    // Restrict club managers to their location
-    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-      where.locationId = session.user.locationId
+    // Restrict club managers and PT managers to their accessible locations
+    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+      if (accessibleLocations && accessibleLocations.length > 0) {
+        // Show users at accessible locations or users with access to those locations
+        where.OR = [
+          { locationId: { in: accessibleLocations } },
+          { 
+            locations: {
+              some: {
+                locationId: { in: accessibleLocations }
+              }
+            }
+          }
+        ]
+      } else {
+        // No accessible locations
+        where.id = 'no-access'
+      }
     }
+    // ADMIN sees all (no additional filter)
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({

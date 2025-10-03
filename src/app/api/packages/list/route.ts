@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getUserAccessibleLocations } from '@/lib/user-locations'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -56,12 +57,19 @@ export async function GET(request: NextRequest) {
     where.client = {
       primaryTrainerId: session.user.id
     }
-  } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    // Club managers see packages for clients at their location
-    where.client = {
-      locationId: session.user.locationId
+  } else if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+    // Club managers and PT managers see packages for clients at their accessible locations
+    const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+    if (accessibleLocations && accessibleLocations.length > 0) {
+      where.client = {
+        locationId: { in: accessibleLocations }
+      }
+    } else {
+      // No accessible locations
+      where.id = 'no-access'
     }
   }
+  // ADMIN sees all (no additional filter)
   
   try {
     const [packages, total] = await Promise.all([
