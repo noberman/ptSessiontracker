@@ -11,7 +11,7 @@ export async function GET() {
   }
 
   try {
-    const templates = await prisma.packageTemplate.findMany({
+    const templates = await prisma.packageType.findMany({
       where: { active: true },
       orderBy: { sortOrder: 'asc' }
     })
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     // Calculate session value
     const sessionValue = data.price / data.sessions
 
-    const template = await prisma.packageTemplate.create({
+    const template = await prisma.packageType.create({
       data: {
         name: data.name,
         displayName: data.displayName,

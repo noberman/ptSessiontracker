@@ -23,7 +23,7 @@ export async function GET(
   }
 
   try {
-    const template = await prisma.packageTemplate.findUnique({
+    const template = await prisma.packageType.findUnique({
       where: { id }
     })
 
@@ -78,7 +78,7 @@ export async function PUT(
     // Calculate session value
     const sessionValue = data.price / data.sessions
 
-    const template = await prisma.packageTemplate.update({
+    const template = await prisma.packageType.update({
       where: { id },
       data: {
         name: data.name,
@@ -137,7 +137,7 @@ export async function DELETE(
   }
 
   try {
-    await prisma.packageTemplate.delete({
+    await prisma.packageType.delete({
       where: { id }
     })
 

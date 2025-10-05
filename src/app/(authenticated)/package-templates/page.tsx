@@ -18,7 +18,7 @@ export default async function PackageTemplatesPage() {
     redirect('/dashboard')
   }
 
-  const templates = await prisma.packageTemplate.findMany({
+  const templates = await prisma.packageType.findMany({
     orderBy: [
       { category: 'asc' },
       { sortOrder: 'asc' }
