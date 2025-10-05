@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         commissions,
         month: monthParam || month.toISOString().slice(0, 7),
         method,
-        location: userLocationId
+        location: targetLocationId
       })
     }
     
