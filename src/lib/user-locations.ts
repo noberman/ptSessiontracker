@@ -11,26 +11,20 @@ export async function getUserAccessibleLocations(userId: string, userRole: strin
     return null
   }
 
-  // For all other roles, get their accessible locations
+  // For all other roles, get their accessible locations from UserLocation table only
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
-      locationId: true,
       locations: {
         select: { locationId: true }
       }
     }
   })
 
-  // Collect all accessible location IDs (both old and new system)
+  // Collect all accessible location IDs from junction table
   const accessibleLocationIds: string[] = []
   
-  // Add primary location if exists (old system)
-  if (user?.locationId) {
-    accessibleLocationIds.push(user.locationId)
-  }
-  
-  // Add locations from junction table (new system)
+  // Add locations from junction table (new system only)
   if (user?.locations) {
     user.locations.forEach(loc => {
       if (!accessibleLocationIds.includes(loc.locationId)) {

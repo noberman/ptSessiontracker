@@ -51,18 +51,28 @@ export async function GET(request: NextRequest) {
     
     // Club managers can only see their location
     if (userRole === 'CLUB_MANAGER') {
-      const userLocationId = session.user.locationId
-      if (!userLocationId) {
+      // Get club manager's accessible locations from UserLocation table
+      const manager = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: { locations: true }
+      })
+      
+      if (!manager?.locations || manager.locations.length === 0) {
         return NextResponse.json({ error: 'No location assigned' }, { status: 400 })
       }
       
-      if (locationId && locationId !== userLocationId) {
+      const accessibleLocationIds = manager.locations.map(l => l.locationId)
+      
+      if (locationId && !accessibleLocationIds.includes(locationId)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
       
+      // Use the locationId from query or the first accessible location
+      const targetLocationId = locationId || accessibleLocationIds[0]
+      
       const commissions = await calculateMonthlyCommissions(
         month, 
-        userLocationId,
+        targetLocationId,
         method,
         session.user.organizationId ?? undefined
       )

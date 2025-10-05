@@ -36,7 +36,7 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
     password: '',
     confirmPassword: '',
     role: user?.role || 'TRAINER',
-    locationIds: user?.locationIds || (user?.locationId ? [user.locationId] : []),  // All locations in one array
+    locationIds: user?.locationIds || [],  // User locations from UserLocation table
     active: user?.active !== false,
   })
 

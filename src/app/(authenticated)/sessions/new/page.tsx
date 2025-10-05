@@ -28,18 +28,14 @@ export default async function NewSessionPage({
     const trainer = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
-        locationId: true,
         locations: {
           select: { locationId: true }
         }
       }
     })
     
-    // Collect all accessible location IDs
+    // Collect all accessible location IDs from UserLocation table
     const accessibleLocationIds: string[] = []
-    if (trainer?.locationId) {
-      accessibleLocationIds.push(trainer.locationId)
-    }
     if (trainer?.locations) {
       accessibleLocationIds.push(...trainer.locations.map(l => l.locationId))
     }
@@ -120,18 +116,14 @@ export default async function NewSessionPage({
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
-        locationId: true,
         locations: {
           select: { locationId: true }
         }
       }
     })
     
-    // Collect all accessible location IDs
+    // Collect all accessible location IDs from UserLocation table
     const accessibleLocationIds: string[] = []
-    if (user?.locationId) {
-      accessibleLocationIds.push(user.locationId)
-    }
     if (user?.locations) {
       accessibleLocationIds.push(...user.locations.map(l => l.locationId))
     }
@@ -210,18 +202,14 @@ export default async function NewSessionPage({
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
         select: {
-          locationId: true,
           locations: {
             select: { locationId: true }
           }
         }
       })
       
-      // Collect all accessible location IDs
+      // Collect all accessible location IDs from UserLocation table
       const accessibleLocationIds: string[] = []
-      if (user?.locationId) {
-        accessibleLocationIds.push(user.locationId)
-      }
       if (user?.locations) {
         accessibleLocationIds.push(...user.locations.map(l => l.locationId))
       }

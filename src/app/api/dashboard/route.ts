@@ -229,18 +229,14 @@ export async function GET(request: Request) {
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
         select: {
-          locationId: true,
           locations: {
             select: { locationId: true }
           }
         }
       })
       
-      // Collect all accessible location IDs
+      // Collect all accessible location IDs from UserLocation table
       const accessibleLocationIds: string[] = []
-      if (user?.locationId) {
-        accessibleLocationIds.push(user.locationId)
-      }
       if (user?.locations) {
         accessibleLocationIds.push(...user.locations.map(l => l.locationId))
       }
@@ -250,18 +246,12 @@ export async function GET(request: Request) {
         if (filterLocationId && accessibleLocationIds.includes(filterLocationId)) {
           sessionsWhere.locationId = filterLocationId
           clientsWhere.locationId = filterLocationId
-          trainersWhere.OR = [
-            { locationId: filterLocationId },
-            { locations: { some: { locationId: filterLocationId } } }
-          ]
+          trainersWhere.locations = { some: { locationId: filterLocationId } }
         } else {
           // Otherwise show all accessible locations
           sessionsWhere.locationId = { in: accessibleLocationIds }
           clientsWhere.locationId = { in: accessibleLocationIds }
-          trainersWhere.OR = [
-            { locationId: { in: accessibleLocationIds } },
-            { locations: { some: { locationId: { in: accessibleLocationIds } } } }
-          ]
+          trainersWhere.locations = { some: { locationId: { in: accessibleLocationIds } } }
         }
       } else {
         // No locations accessible - show nothing

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 interface ClientFormProps {
   client?: {
@@ -25,6 +26,9 @@ interface ClientFormProps {
     name: string
     email: string
     locationId?: string | null
+    locations?: Array<{
+      locationId: string
+    }>
   }>
   currentUserRole: string
 }
@@ -49,13 +53,27 @@ export function ClientForm({
   })
 
   const [filteredTrainers, setFilteredTrainers] = useState(trainers)
+  
+  // Convert trainers to searchable options
+  const trainerOptions = useMemo(() => {
+    return filteredTrainers.map(trainer => ({
+      value: trainer.id,
+      label: trainer.name,
+      subLabel: trainer.email
+    }))
+  }, [filteredTrainers])
 
   // Filter trainers based on selected location
   useEffect(() => {
     if (formData.locationId) {
-      const locationTrainers = trainers.filter(t => 
-        !t.locationId || t.locationId === formData.locationId
-      )
+      const locationTrainers = trainers.filter(t => {
+        // Check if trainer has access to this location through UserLocation
+        if (t.locations && t.locations.length > 0) {
+          return t.locations.some(loc => loc.locationId === formData.locationId)
+        }
+        // Fallback to old locationId field if no UserLocation records
+        return t.locationId === formData.locationId
+      })
       setFilteredTrainers(locationTrainers)
       
       // Reset trainer selection if current trainer is not at the selected location
@@ -215,20 +233,15 @@ export function ClientForm({
             <label htmlFor="trainer" className="block text-sm font-medium text-text-primary mb-1">
               Primary Trainer
             </label>
-            <select
+            <SearchableSelect
               id="trainer"
+              options={trainerOptions}
               value={formData.primaryTrainerId}
-              onChange={(e) => setFormData({ ...formData, primaryTrainerId: e.target.value })}
-              className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              onChange={(value) => setFormData({ ...formData, primaryTrainerId: value })}
+              placeholder="No trainer assigned"
+              searchPlaceholder="Type trainer name or email..."
               disabled={!formData.locationId && locations.length > 0}
-            >
-              <option value="">No trainer assigned</option>
-              {filteredTrainers.map((trainer) => (
-                <option key={trainer.id} value={trainer.id}>
-                  {trainer.name} ({trainer.email})
-                </option>
-              ))}
-            </select>
+            />
             {!formData.locationId && locations.length > 0 && (
               <p className="text-xs text-text-secondary mt-1">
                 Select a location first to see available trainers

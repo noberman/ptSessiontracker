@@ -47,11 +47,27 @@ export default async function EditUserPage({
     // Club managers can only edit users in their location or themselves
     const userWithLocation = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { locationId: true },
+      select: { 
+        locations: {
+          select: { locationId: true }
+        }
+      },
     })
     
-    if (userWithLocation?.locationId !== session.user.locationId && 
-        user.id !== session.user.id) {
+    const managerWithLocations = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        locations: {
+          select: { locationId: true }
+        }
+      }
+    })
+    
+    const userLocationIds = userWithLocation?.locations.map(l => l.locationId) || []
+    const managerLocationIds = managerWithLocations?.locations.map(l => l.locationId) || []
+    const hasSharedLocation = userLocationIds.some(loc => managerLocationIds.includes(loc))
+    
+    if (!hasSharedLocation && user.id !== session.user.id) {
       redirect('/dashboard')
     }
   }

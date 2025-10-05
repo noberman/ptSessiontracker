@@ -123,18 +123,14 @@ export default async function ClientsPage({
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
-        locationId: true,
         locations: {
           select: { locationId: true }
         }
       }
     })
     
-    // Collect all accessible location IDs
+    // Collect all accessible location IDs from UserLocation table
     const accessibleLocationIds: string[] = []
-    if (user?.locationId) {
-      accessibleLocationIds.push(user.locationId)
-    }
     if (user?.locations) {
       accessibleLocationIds.push(...user.locations.map(l => l.locationId))
     }

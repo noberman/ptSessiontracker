@@ -81,8 +81,14 @@ export default async function ViewPackagePage({
     if (!isTheirClient) {
       redirect('/packages')
     }
-  } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    if (packageData.client.locationId !== session.user.locationId) {
+  } else if (session.user.role === 'CLUB_MANAGER') {
+    const manager = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { locations: true }
+    })
+    
+    const hasAccess = manager?.locations.some(l => l.locationId === packageData.client.locationId)
+    if (!hasAccess) {
       redirect('/packages')
     }
   }

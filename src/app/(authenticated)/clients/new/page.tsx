@@ -25,18 +25,14 @@ export default async function NewClientPage() {
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
-        locationId: true,
         locations: {
           select: { locationId: true }
         }
       }
     })
     
-    // Collect all accessible location IDs
+    // Collect all accessible location IDs from UserLocation table
     const accessibleLocationIds: string[] = []
-    if (user?.locationId) {
-      accessibleLocationIds.push(user.locationId)
-    }
     if (user?.locations) {
       accessibleLocationIds.push(...user.locations.map(l => l.locationId))
     }
@@ -53,22 +49,22 @@ export default async function NewClientPage() {
           role: { in: ['TRAINER', 'PT_MANAGER'] },
           active: true,
           organizationId: session.user.organizationId,
-          OR: [
-            { locationId: { in: accessibleLocationIds } },
-            { 
-              locations: {
-                some: {
-                  locationId: { in: accessibleLocationIds }
-                }
-              }
+          locations: {
+            some: {
+              locationId: { in: accessibleLocationIds }
             }
-          ]
+          }
         },
         select: {
           id: true,
           name: true,
           email: true,
           locationId: true,
+          locations: {
+            select: {
+              locationId: true
+            }
+          }
         },
         orderBy: { name: 'asc' },
       })
@@ -92,6 +88,11 @@ export default async function NewClientPage() {
           name: true,
           email: true,
           locationId: true,
+          locations: {
+            select: {
+              locationId: true
+            }
+          }
         },
         orderBy: { name: 'asc' },
       }),

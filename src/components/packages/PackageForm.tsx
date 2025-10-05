@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 interface PackageType {
   id: string
@@ -79,6 +80,15 @@ export function PackageForm({
   })
 
   const [sessionValue, setSessionValue] = useState(0)
+  
+  // Convert clients to searchable options
+  const clientOptions = useMemo(() => {
+    return clients.map(client => ({
+      value: client.id,
+      label: client.name,
+      subLabel: client.email
+    }))
+  }, [clients])
 
   // Fetch package types
   useEffect(() => {
@@ -253,20 +263,15 @@ export function PackageForm({
               <label htmlFor="client" className="block text-sm font-medium text-text-primary mb-1">
                 Client *
               </label>
-              <select
+              <SearchableSelect
                 id="client"
-                required
+                options={clientOptions}
                 value={formData.clientId}
-                onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
-                className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              >
-                <option value="">Select a client</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name} ({client.email})
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFormData({ ...formData, clientId: value })}
+                placeholder="Select a client"
+                searchPlaceholder="Type client name or email..."
+                required
+              />
             </div>
           )}
 

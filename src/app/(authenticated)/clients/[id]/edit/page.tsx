@@ -40,8 +40,14 @@ export default async function EditClientPage({
   }
 
   // Check permissions for club managers
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    if (client.locationId !== session.user.locationId) {
+  if (session.user.role === 'CLUB_MANAGER') {
+    const manager = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { locations: true }
+    })
+    
+    const hasAccess = manager?.locations.some(l => l.locationId === client.locationId)
+    if (!hasAccess) {
       redirect('/clients')
     }
   }
@@ -50,9 +56,16 @@ export default async function EditClientPage({
   let locations: Array<{ id: string; name: string }> = []
   let trainers: Array<{ id: string; name: string; email: string; locationId?: string | null }> = []
 
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
+  if (session.user.role === 'CLUB_MANAGER') {
+    const manager = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { locations: true }
+    })
+    
+    const accessibleLocationIds = manager?.locations.map(l => l.locationId) || []
+    
     locations = await prisma.location.findMany({
-      where: { id: session.user.locationId },
+      where: { id: { in: accessibleLocationIds } },
       select: { id: true, name: true },
     })
     
@@ -60,13 +73,23 @@ export default async function EditClientPage({
       where: {
         role: { in: ['TRAINER', 'PT_MANAGER'] },
         active: true,
-        locationId: session.user.locationId,
+        organizationId: session.user.organizationId,
+        locations: {
+          some: {
+            locationId: { in: accessibleLocationIds }
+          }
+        }
       },
       select: {
         id: true,
         name: true,
         email: true,
         locationId: true,
+        locations: {
+          select: {
+            locationId: true
+          }
+        }
       },
       orderBy: { name: 'asc' },
     })
@@ -88,6 +111,11 @@ export default async function EditClientPage({
           name: true,
           email: true,
           locationId: true,
+          locations: {
+            select: {
+              locationId: true
+            }
+          }
         },
         orderBy: { name: 'asc' },
       }),

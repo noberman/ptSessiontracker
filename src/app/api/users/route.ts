@@ -214,7 +214,13 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         )
       }
-      if (locationId !== session.user.locationId) {
+      // Check if club manager has access to the specified location
+      const manager = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: { locations: true }
+      })
+      const hasAccess = manager?.locations.some(l => l.locationId === locationId)
+      if (!hasAccess) {
         return NextResponse.json(
           { error: 'Can only create users in your location' },
           { status: 403 }

@@ -53,8 +53,21 @@ export default async function CommissionPage({
   
   // Get location filter for club managers
   let locationId = params.locationId
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    locationId = session.user.locationId
+  if (session.user.role === 'CLUB_MANAGER') {
+    const manager = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { locations: true }
+    })
+    
+    // Use first accessible location if no locationId provided
+    if (manager?.locations && manager.locations.length > 0) {
+      locationId = locationId || manager.locations[0].locationId
+      // Verify they have access to the requested location
+      const hasAccess = manager.locations.some(l => l.locationId === locationId)
+      if (!hasAccess) {
+        locationId = manager.locations[0].locationId
+      }
+    }
   }
   
   // Calculate commissions

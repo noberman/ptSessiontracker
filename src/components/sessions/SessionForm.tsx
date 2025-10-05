@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { SearchableSelect, type Option } from '@/components/ui/SearchableSelect'
 
 interface Package {
   id: string
@@ -68,6 +69,40 @@ export function SessionForm({
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null)
   const [isSubstitute, setIsSubstitute] = useState(false)
+  
+  // Convert clients to searchable options
+  const clientOptions = useMemo(() => {
+    if (currentUserRole === 'TRAINER' && myClients.length > 0 && otherClients.length > 0) {
+      return [
+        ...myClients.map(client => ({
+          value: client.id,
+          label: client.name,
+          subLabel: client.email,
+          group: 'My Clients'
+        })),
+        ...otherClients.map(client => ({
+          value: client.id,
+          label: client.name,
+          subLabel: client.email,
+          group: 'Other Clients (Substitute)'
+        }))
+      ]
+    }
+    return clients.map(client => ({
+      value: client.id,
+      label: client.name,
+      subLabel: `${client.email}${client.location ? ` • ${client.location.name}` : ''}`
+    }))
+  }, [clients, myClients, otherClients, currentUserRole])
+  
+  // Convert trainers to searchable options
+  const trainerOptions = useMemo(() => {
+    return trainers.map(trainer => ({
+      value: trainer.id,
+      label: trainer.name,
+      subLabel: trainer.email
+    }))
+  }, [trainers])
 
   // Update selected client when clientId changes
   useEffect(() => {
@@ -200,20 +235,15 @@ export function SessionForm({
               <label htmlFor="trainer" className="block text-sm font-medium text-text-primary mb-1">
                 Select Trainer *
               </label>
-              <select
+              <SearchableSelect
                 id="trainer"
-                required
+                options={trainerOptions}
                 value={formData.trainerId}
-                onChange={(e) => setFormData({ ...formData, trainerId: e.target.value })}
-                className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              >
-                <option value="">Select a trainer</option>
-                {trainers.map((trainer) => (
-                  <option key={trainer.id} value={trainer.id}>
-                    {trainer.name} ({trainer.email})
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFormData({ ...formData, trainerId: value })}
+                placeholder="Select a trainer"
+                searchPlaceholder="Type trainer name or email..."
+                required
+              />
             </div>
           )}
 
@@ -222,50 +252,16 @@ export function SessionForm({
             <label htmlFor="client" className="block text-sm font-medium text-text-primary mb-1">
               Select Client *
             </label>
-            {currentUserRole === 'TRAINER' && myClients.length > 0 && otherClients.length > 0 ? (
-              <select
-                id="client"
-                required
-                value={formData.clientId}
-                onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
-                className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              >
-                <option value="">Select a client</option>
-                {myClients.length > 0 && (
-                  <optgroup label="My Clients">
-                    {myClients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name} ({client.email})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {otherClients.length > 0 && (
-                  <optgroup label="Other Clients (Substitute)">
-                    {otherClients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name} ({client.email})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            ) : (
-              <select
-                id="client"
-                required
-                value={formData.clientId}
-                onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
-                className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              >
-                <option value="">Select a client</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name} ({client.email})
-                  </option>
-                ))}
-              </select>
-            )}
+            <SearchableSelect
+              id="client"
+              options={clientOptions}
+              value={formData.clientId}
+              onChange={(value) => setFormData({ ...formData, clientId: value })}
+              placeholder="Select a client"
+              searchPlaceholder="Type client name or email..."
+              required
+              showGroups={currentUserRole === 'TRAINER' && myClients.length > 0 && otherClients.length > 0}
+            />
             {isSubstitute && (
               <div className="mt-2">
                 <Badge variant="warning" size="sm">

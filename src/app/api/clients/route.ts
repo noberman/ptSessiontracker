@@ -53,22 +53,18 @@ export async function GET(request: NextRequest) {
     
     // Additional role-based restrictions
     if (session.user.role === 'TRAINER') {
-      // Get trainer's accessible locations (both old locationId and new UserLocation records)
+      // Get trainer's accessible locations from UserLocation table
       const trainer = await prisma.user.findUnique({
         where: { id: session.user.id },
         select: {
-          locationId: true,
           locations: {
             select: { locationId: true }
           }
         }
       })
       
-      // Collect all accessible location IDs
+      // Collect all accessible location IDs from UserLocation table
       const accessibleLocationIds: string[] = []
-      if (trainer?.locationId) {
-        accessibleLocationIds.push(trainer.locationId)
-      }
       if (trainer?.locations) {
         accessibleLocationIds.push(...trainer.locations.map(l => l.locationId))
       }
@@ -201,27 +197,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // If no locationId provided, get user's first accessible location
+    let finalLocationId = locationId
+    if (!finalLocationId && session.user.role !== 'ADMIN') {
+      const userWithLocations = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: { locations: true }
+      })
+      if (userWithLocations?.locations && userWithLocations.locations.length > 0) {
+        finalLocationId = userWithLocations.locations[0].locationId
+      }
+    }
+    
     // Validate trainer assignment (PT Managers can also be trainers)
-    if (primaryTrainerId) {
-      const targetLocationId = locationId || session.user.locationId
+    if (primaryTrainerId && finalLocationId) {
       const trainer = await prisma.user.findFirst({
         where: {
           id: primaryTrainerId,
           role: { in: ['TRAINER', 'PT_MANAGER'] },
           active: true,
           organizationId: session.user.organizationId, // Ensure trainer is in same org
-          OR: [
-            // Check old system (locationId field)
-            { locationId: targetLocationId },
-            // Check new system (UserLocation records)
-            {
-              locations: {
-                some: {
-                  locationId: targetLocationId
-                }
-              }
+          // Check UserLocation records only
+          locations: {
+            some: {
+              locationId: finalLocationId
             }
-          ]
+          }
         },
       })
 
@@ -239,7 +240,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         phone: phone || null,
-        locationId: locationId || session.user.locationId || null, // Default to user's location
+        locationId: finalLocationId || null, // Use provided or user's first location
         primaryTrainerId: primaryTrainerId || null,
         organizationId: session.user.organizationId, // Set organizationId directly
         isDemo, // Add isDemo flag

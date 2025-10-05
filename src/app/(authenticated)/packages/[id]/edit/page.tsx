@@ -43,8 +43,14 @@ export default async function EditPackagePage({
   }
 
   // Check permissions for club managers
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    if (packageData.client.locationId !== session.user.locationId) {
+  if (session.user.role === 'CLUB_MANAGER') {
+    const manager = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { locations: true }
+    })
+    
+    const hasAccess = manager?.locations.some(l => l.locationId === packageData.client.locationId)
+    if (!hasAccess) {
       redirect('/packages')
     }
   }
@@ -55,8 +61,16 @@ export default async function EditPackagePage({
     organizationId: session.user.organizationId // Always filter by organization
   }
   
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    where.locationId = session.user.locationId
+  if (session.user.role === 'CLUB_MANAGER') {
+    const manager = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { locations: true }
+    })
+    
+    const accessibleLocationIds = manager?.locations.map(l => l.locationId) || []
+    if (accessibleLocationIds.length > 0) {
+      where.locationId = { in: accessibleLocationIds }
+    }
   }
 
   const clients = await prisma.client.findMany({

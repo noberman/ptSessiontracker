@@ -116,7 +116,13 @@ export default async function LocationDetailsPage({
 
   // Check permissions
   if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER') {
-    if (session.user.locationId !== id) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { locations: true }
+    })
+    
+    const hasAccess = user?.locations.some(l => l.locationId === id)
+    if (!hasAccess) {
       redirect('/locations')
     }
   }
