@@ -60,7 +60,12 @@ export default async function NewSessionPage({
             }
           },
           packages: {
-            where: { active: true },
+            where: { 
+              active: true,
+              remainingSessions: {
+                gt: 0
+              }
+            },
             select: {
               id: true,
               name: true,
@@ -96,7 +101,12 @@ export default async function NewSessionPage({
             }
           },
           packages: {
-            where: { active: true },
+            where: { 
+              active: true,
+              remainingSessions: {
+                gt: 0
+              }
+            },
             select: {
               id: true,
               name: true,
@@ -146,7 +156,12 @@ export default async function NewSessionPage({
           }
         },
         packages: {
-          where: { active: true },
+          where: { 
+            active: true,
+            remainingSessions: {
+              gt: 0
+            }
+          },
           select: {
             id: true,
             name: true,
@@ -179,7 +194,12 @@ export default async function NewSessionPage({
           }
         },
         packages: {
-          where: { active: true },
+          where: { 
+            active: true,
+            remainingSessions: {
+              gt: 0
+            }
+          },
           select: {
             id: true,
             name: true,
