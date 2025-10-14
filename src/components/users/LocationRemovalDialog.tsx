@@ -240,7 +240,7 @@ export function LocationRemovalDialog({
                   {group.availableTrainers.length === 0 && (
                     <div className="mt-2 p-2 bg-yellow-50 text-yellow-700 text-sm rounded">
                       ⚠️ No other trainers have access to {group.locationName}. 
-                      You'll need to assign trainers to this location first.
+                      You&apos;ll need to assign trainers to this location first.
                     </div>
                   )}
                 </div>
