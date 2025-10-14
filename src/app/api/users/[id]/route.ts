@@ -199,6 +199,46 @@ export async function PUT(
       }
     }
 
+    // Check if removing locations would orphan clients (for trainers)
+    if (currentUser.role === 'TRAINER' && locationIds !== undefined) {
+      // Get current locations for this user
+      const currentUserLocations = await prisma.userLocation.findMany({
+        where: { userId: id },
+        select: { locationId: true }
+      })
+      const currentLocationIds = currentUserLocations.map(ul => ul.locationId)
+      
+      // Find locations being removed
+      const removedLocationIds = currentLocationIds.filter(locId => !locationIds.includes(locId))
+      
+      // Check if any clients would be orphaned
+      for (const locationId of removedLocationIds) {
+        const location = await prisma.location.findUnique({
+          where: { id: locationId },
+          select: { name: true }
+        })
+        
+        const affectedClients = await prisma.client.count({
+          where: {
+            primaryTrainerId: id,
+            locationId: locationId,
+            active: true
+          }
+        })
+        
+        if (affectedClients > 0) {
+          return NextResponse.json(
+            { 
+              error: `Cannot remove access to ${location?.name || 'location'}: ${affectedClients} active client${affectedClients > 1 ? 's are' : ' is'} assigned to this trainer at that location. Please reassign ${affectedClients > 1 ? 'them' : 'this client'} first.`,
+              affectedCount: affectedClients,
+              locationName: location?.name
+            },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
     if (email !== undefined) updateData.email = email
