@@ -113,14 +113,26 @@ export default function ValidateSessionPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Debug logging to see what we're receiving
+    console.log('Raw dateString received:', dateString)
+    const date = new Date(dateString)
+    console.log('Parsed Date object:', date.toString())
+    console.log('ISO String:', date.toISOString())
+    console.log('Local time:', date.toLocaleString())
+    
+    // Format the date and time properly
+    const dateFormatted = date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     })
+    const timeFormatted = date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+    return `${dateFormatted} at ${timeFormatted}`
   }
 
   const formatCurrency = (amount: number) => {

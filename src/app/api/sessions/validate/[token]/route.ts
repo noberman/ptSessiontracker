@@ -119,6 +119,10 @@ export async function GET(
     }
 
     // Token is valid and ready for validation
+    console.log('📅 Session date from DB:', session.sessionDate)
+    console.log('📅 Session date ISO string:', session.sessionDate.toISOString())
+    console.log('📅 Session date local string:', session.sessionDate.toLocaleString())
+    
     return NextResponse.json({
       status: 'pending',
       session: {
