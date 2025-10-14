@@ -34,29 +34,18 @@ export async function GET(
       )
     }
 
-    // Get all trainers with access to this location
-    // This includes trainers with explicit access via UserLocation and ADMINs (who have universal access)
+    // Get all trainers and PT managers with access to this location
+    // Admins should NOT be included as they don't typically have clients assigned
     const trainers = await prisma.user.findMany({
       where: {
         active: true,
         organizationId: location.organizationId,
-        OR: [
-          // Admins have access to all locations
-          { role: 'ADMIN' },
-          // PT Managers and Trainers with explicit access
-          {
-            AND: [
-              { role: { in: ['TRAINER', 'PT_MANAGER'] } },
-              {
-                locations: {
-                  some: {
-                    locationId: locationId
-                  }
-                }
-              }
-            ]
+        role: { in: ['TRAINER', 'PT_MANAGER'] },
+        locations: {
+          some: {
+            locationId: locationId
           }
-        ]
+        }
       },
       select: {
         id: true,

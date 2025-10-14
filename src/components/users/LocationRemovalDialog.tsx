@@ -38,6 +38,9 @@ interface LocationRemovalDialogProps {
   affectedClients: AffectedClient[]
   currentTrainerId: string
   currentTrainerName: string
+  title?: string
+  description?: string
+  confirmButtonText?: string
 }
 
 export function LocationRemovalDialog({
@@ -46,7 +49,10 @@ export function LocationRemovalDialog({
   onConfirm,
   affectedClients,
   currentTrainerId,
-  currentTrainerName
+  currentTrainerName,
+  title = "Reassign Clients Before Removing Location Access",
+  description,
+  confirmButtonText = "Reassign & Remove Access"
 }: LocationRemovalDialogProps) {
   const [loading, setLoading] = useState(false)
   const [loadingTrainers, setLoadingTrainers] = useState(false)
@@ -153,11 +159,11 @@ export function LocationRemovalDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <CardHeader>
-          <CardTitle>Reassign Clients Before Removing Location Access</CardTitle>
+          <CardTitle>{title}</CardTitle>
           <p className="text-sm text-gray-500 mt-2">
-            {currentTrainerName} has {affectedClients.length} client{affectedClients.length > 1 ? 's' : ''} at 
-            the location{locationGroups.length > 1 ? 's' : ''} you're removing. 
-            Please reassign {affectedClients.length > 1 ? 'them' : 'this client'} to other trainers.
+            {description || `${currentTrainerName} has ${affectedClients.length} client${affectedClients.length > 1 ? 's' : ''} at 
+            the location${locationGroups.length > 1 ? 's' : ''} you're removing. 
+            Please reassign ${affectedClients.length > 1 ? 'them' : 'this client'} to other trainers.`}
           </p>
         </CardHeader>
         <CardContent>
@@ -256,7 +262,7 @@ export function LocationRemovalDialog({
               onClick={handleConfirm}
               disabled={loading || loadingTrainers}
             >
-              {loading ? 'Reassigning...' : 'Reassign & Remove Access'}
+              {loading ? 'Reassigning...' : confirmButtonText}
             </Button>
           </div>
         </CardContent>

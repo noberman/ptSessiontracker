@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
 import { ActionsDropdown } from '@/components/ui/ActionsDropdown'
+import { LocationRemovalDialog } from './LocationRemovalDialog'
+import { DeleteUserDialog } from './DeleteUserDialog'
 
 interface User {
   id: string
@@ -59,6 +61,14 @@ export function UserTable({
   const router = useRouter()
   const searchParams = useSearchParams()
   
+  // State for deletion flow
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showReassignDialog, setShowReassignDialog] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [affectedClients, setAffectedClients] = useState<any[]>([])
+  const [deleteClientCount, setDeleteClientCount] = useState(0)
+  const [checkingDelete, setCheckingDelete] = useState(false)
+  
   // Fetch users when page or limit changes
   const fetchUsers = async (targetPage: number, targetLimit?: number) => {
     setLoading(true)
@@ -90,20 +100,75 @@ export function UserTable({
     fetchUsers(1, newLimit)
   }
 
+  // Step 1: Initial delete button click - check if user has clients
   const handleDelete = async (userId: string) => {
-    if (!confirm('Are you sure you want to deactivate this user?')) {
-      return
+    const user = users.find(u => u.id === userId)
+    if (!user) return
+
+    setUserToDelete(user)
+    setCheckingDelete(true)
+
+    // Check if trainer has clients (for showing in confirmation dialog)
+    if (user.role === 'TRAINER') {
+      try {
+        const clientsResponse = await fetch(`/api/users/${userId}/clients`)
+        if (clientsResponse.ok) {
+          const clientData = await clientsResponse.json()
+          setDeleteClientCount(clientData.totalCount || 0)
+        } else {
+          setDeleteClientCount(0)
+        }
+      } catch {
+        setDeleteClientCount(0)
+      }
+    } else {
+      setDeleteClientCount(0)
     }
 
+    setCheckingDelete(false)
+    setShowDeleteDialog(true)
+  }
+
+  // Step 2: User confirms deletion in our custom dialog
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return
+    
+    setShowDeleteDialog(false)
+
+    // If user has clients, go to reassignment
+    if (deleteClientCount > 0 && userToDelete.role === 'TRAINER') {
+      try {
+        const clientsResponse = await fetch(`/api/users/${userToDelete.id}/clients`)
+        if (clientsResponse.ok) {
+          const clientData = await clientsResponse.json()
+          setAffectedClients(clientData.clients || [])
+          setShowReassignDialog(true)
+        }
+      } catch (error) {
+        console.error('Error fetching clients:', error)
+        alert('Failed to fetch client details')
+      }
+    } else {
+      // No clients, proceed with deletion
+      await performDelete()
+    }
+  }
+
+  // Step 3: Actually delete the user (called directly or after reassignment)
+  const performDelete = async () => {
+    if (!userToDelete) return
+
     try {
-      const response = await fetch(`/api/users/${userId}`, {
+      const response = await fetch(`/api/users/${userToDelete.id}`, {
         method: 'DELETE',
       })
 
       if (response.ok) {
-        setUsers(users.filter(u => u.id !== userId))
+        setUsers(users.filter(u => u.id !== userToDelete.id))
+        setUserToDelete(null)
+        setAffectedClients([])
+        setDeleteClientCount(0)
       } else {
-        // Get the actual error message from the response
         const error = await response.json()
         alert(error.error || 'Failed to delete user')
       }
@@ -113,7 +178,44 @@ export function UserTable({
     }
   }
 
+  // Handle reassignment and deletion after successful reassignment
+  const handleReassignmentComplete = async (reassignments: Record<string, string>) => {
+    if (!userToDelete) return
+
+    try {
+      // Build reassignment array for API
+      const reassignmentArray = Object.entries(reassignments).map(([clientId, toTrainerId]) => {
+        const client = affectedClients.find(c => c.id === clientId)
+        return {
+          clientId,
+          fromTrainerId: userToDelete.id,
+          toTrainerId,
+          locationId: client.locationId
+        }
+      })
+
+      // Call bulk reassignment API
+      const reassignResponse = await fetch('/api/clients/bulk-reassign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reassignments: reassignmentArray })
+      })
+
+      if (!reassignResponse.ok) {
+        const error = await reassignResponse.json()
+        throw new Error(error.error || 'Failed to reassign clients')
+      }
+
+      // Now delete the user
+      setShowReassignDialog(false)
+      await performDelete()
+    } catch (err: any) {
+      alert(err.message || 'Failed to complete reassignment and deletion')
+    }
+  }
+
   return (
+    <>
     <Card padding="none">
       <div className="overflow-x-auto relative">
         {loading && (
@@ -282,5 +384,42 @@ export function UserTable({
         </div>
       </div>
     </Card>
+
+    {/* Delete Confirmation Dialog */}
+    {userToDelete && (
+      <DeleteUserDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false)
+          setUserToDelete(null)
+          setDeleteClientCount(0)
+        }}
+        onConfirm={handleDeleteConfirm}
+        userName={userToDelete.name}
+        userRole={userToDelete.role}
+        clientCount={deleteClientCount}
+        isLoading={checkingDelete}
+      />
+    )}
+
+    {/* Reassignment Dialog for Deletion */}
+    {userToDelete && (
+      <LocationRemovalDialog
+        isOpen={showReassignDialog}
+        onClose={() => {
+          setShowReassignDialog(false)
+          setUserToDelete(null)
+          setAffectedClients([])
+        }}
+        onConfirm={handleReassignmentComplete}
+        affectedClients={affectedClients}
+        currentTrainerId={userToDelete.id}
+        currentTrainerName={userToDelete.name}
+        title="Reassign Clients Before User Deletion"
+        description={`Before deleting ${userToDelete.name}, all ${affectedClients.length} active client${affectedClients.length > 1 ? 's' : ''} must be reassigned to other trainers. Once reassigned, the user will be marked as inactive.`}
+        confirmButtonText="Reassign & Delete User"
+      />
+    )}
+    </>
   )
 }
