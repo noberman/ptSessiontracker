@@ -16,10 +16,10 @@ This document outlines critical edge cases in the multi-location access system a
 
 ### ❌ What Still Needs Work:
 - Old `locationId` field still exists in schema (but unused by app)
-- No safeguards when removing location access from trainers
-- Locations can be hard deleted (no soft delete)
-- No audit trail for access changes
-- Missing validation for location requirements
+- ~~No safeguards when removing location access from trainers~~ ✅ Completed
+- ~~Locations can be hard deleted (no soft delete)~~ ✅ Completed
+- ~~No audit trail for access changes~~ ✅ Completed (audit logs implemented)
+- ~~Missing validation for location requirements~~ ✅ Completed
 
 ## Critical Edge Cases & Solutions
 
@@ -44,9 +44,9 @@ if (role !== 'ADMIN' && (!locationIds || locationIds.length === 0)) {
 ```
 
 **Implementation Tasks:**
-- [ ] Add validation to `/api/users/route.ts` POST endpoint
-- [ ] Add validation to `/api/users/[id]/route.ts` PUT endpoint  
-- [ ] Add database check constraint or application-level validation
+- [x] Add validation to `/api/users/route.ts` POST endpoint
+- [x] Add validation to `/api/users/[id]/route.ts` PUT endpoint  
+- [x] Add database check constraint or application-level validation
 - [ ] Create cleanup script for existing users without locations
 - [ ] Add warning banner in UI for affected users
 
@@ -78,11 +78,11 @@ if (affectedClients.length > 0) {
 ```
 
 **Implementation Tasks:**
-- [ ] Create `/api/locations/[id]/removal-impact` endpoint
-- [ ] Build warning dialog component
-- [ ] Implement bulk reassignment API
-- [ ] Add audit logging for trainer changes
-- [ ] Create orphaned client report for admins
+- [x] Create `/api/users/[id]/clients` endpoint (checks affected clients)
+- [x] Build warning dialog component (LocationRemovalDialog)
+- [x] Implement bulk reassignment API
+- [x] Add audit logging for trainer changes
+- [x] Create orphaned client report for admins
 
 ---
 
@@ -109,11 +109,13 @@ model Location {
 ```
 
 **Implementation Tasks:**
-- [ ] Add soft delete fields to Location model
-- [ ] Create migration for soft delete columns
-- [ ] Update all queries to exclude archived by default
-- [ ] Build archive/unarchive UI in Settings > Locations
-- [ ] Add archive warning dialog with impact summary
+- [x] Add soft delete fields to Location model (archivedAt, archivedBy)
+- [x] Create migration for soft delete columns
+- [x] Update all queries to exclude archived by default
+- [x] Build archive/unarchive UI in Settings > Locations
+- [x] Add archive warning dialog with impact summary
+- [x] Implement archive-impact endpoint for dependency checking
+- [x] Add restore functionality for archived locations
 
 ---
 
