@@ -83,6 +83,13 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
       return
     }
 
+    // Validate location requirement for non-admin users
+    if (formData.role !== 'ADMIN' && formData.locationIds.length === 0) {
+      setError('Non-admin users must be assigned to at least one location')
+      setLoading(false)
+      return
+    }
+
     try {
       const url = isEdit ? `/api/users/${user.id}` : '/api/users'
       const method = isEdit ? 'PUT' : 'POST'
@@ -233,12 +240,16 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
           {locations.length > 0 && (
             <div className="relative" ref={dropdownRef}>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                {formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' || formData.role === 'CLUB_MANAGER'
-                  ? 'Assigned Locations' 
-                  : 'Location'}
+                {formData.role === 'ADMIN' 
+                  ? 'Location (Optional for Admins)'
+                  : 'Assigned Locations *'}
               </label>
               
-              {formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' || formData.role === 'CLUB_MANAGER' ? (
+              {formData.role === 'ADMIN' ? (
+                <div className="rounded-lg border border-border px-3 py-2 bg-gray-50">
+                  <p className="text-sm text-text-primary">Admins have automatic access to all locations</p>
+                </div>
+              ) : formData.role === 'TRAINER' || formData.role === 'PT_MANAGER' || formData.role === 'CLUB_MANAGER' ? (
                 <>
                   <button
                     type="button"
@@ -280,12 +291,12 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
                   
                   <p className="mt-1 text-xs text-text-secondary">
                     {formData.role === 'TRAINER' 
-                      ? 'Select all locations where this trainer can work.'
+                      ? 'Select all locations where this trainer can work. At least one required.'
                       : formData.role === 'PT_MANAGER'
-                        ? 'Select all locations this PT Manager oversees.'
+                        ? 'Select all locations this PT Manager oversees. At least one required.'
                         : formData.role === 'CLUB_MANAGER'
-                          ? 'Select all locations this Club Manager manages.'
-                          : 'Select all locations where this user can work.'}
+                          ? 'Select all locations this Club Manager manages. At least one required.'
+                          : 'Select all locations where this user can work. At least one required.'}
                   </p>
                 </>
               ) : (

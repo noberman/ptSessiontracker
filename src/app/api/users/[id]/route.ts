@@ -174,6 +174,31 @@ export async function PUT(
       }
     }
 
+    // Validate that non-admin users maintain at least one location
+    const targetRole = role !== undefined ? role : currentUser.role
+    if (targetRole !== 'ADMIN') {
+      // Check if they're trying to remove all locations
+      if (locationIds !== undefined && locationIds.length === 0) {
+        return NextResponse.json(
+          { error: 'Non-admin users must have at least one location assigned' },
+          { status: 400 }
+        )
+      }
+      // If locationIds is not provided but locationId is being cleared
+      if (locationIds === undefined && locationId === null) {
+        // Check if user has any locations in junction table
+        const userLocations = await prisma.userLocation.count({
+          where: { userId: id }
+        })
+        if (userLocations === 0) {
+          return NextResponse.json(
+            { error: 'Non-admin users must have at least one location assigned' },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
     if (email !== undefined) updateData.email = email
@@ -203,8 +228,8 @@ export async function PUT(
         },
       })
 
-      // Handle multi-location updates for trainers and PT managers
-      if (locationIds !== undefined && (user.role === 'TRAINER' || user.role === 'PT_MANAGER')) {
+      // Handle multi-location updates for all non-admin users
+      if (locationIds !== undefined && user.role !== 'ADMIN') {
         // Remove existing UserLocation records
         await tx.userLocation.deleteMany({
           where: { userId: id }

@@ -149,6 +149,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate that non-admin users have at least one location
+    if (role !== 'ADMIN') {
+      const hasLocations = (locationIds && locationIds.length > 0) || locationId
+      if (!hasLocations) {
+        return NextResponse.json(
+          { error: 'Non-admin users must be assigned to at least one location' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Get organization context
     const organizationId = await getOrganizationId()
     
@@ -253,8 +264,8 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Create UserLocation records for trainers and PT managers
-      if (locationIds && locationIds.length > 0 && (role === 'TRAINER' || role === 'PT_MANAGER')) {
+      // Create UserLocation records for all non-admin users
+      if (locationIds && locationIds.length > 0 && role !== 'ADMIN') {
         await tx.userLocation.createMany({
           data: locationIds.map((locId: string) => ({
             userId: newUser.id,
