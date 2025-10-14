@@ -42,6 +42,9 @@ model Location {
   id             String        @id @default(cuid())
   name           String        @unique
   active         Boolean       @default(true)
+  archivedAt     DateTime?     // When the location was archived
+  archivedBy     String?       // User ID who archived it
+  archivedReason String?       // Optional reason for archiving
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   organizationId String?
@@ -51,6 +54,8 @@ model Location {
   users          User[]
   userAccess     UserLocation[]  // Users with access to this location
 
+  @@index([active])
+  @@index([archivedAt])
   @@map("locations")
 }
 

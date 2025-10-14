@@ -65,7 +65,10 @@ export default async function EditClientPage({
     const accessibleLocationIds = manager?.locations.map(l => l.locationId) || []
     
     locations = await prisma.location.findMany({
-      where: { id: { in: accessibleLocationIds } },
+      where: { 
+        id: { in: accessibleLocationIds },
+        active: true
+      },
       select: { id: true, name: true },
     })
     
@@ -96,7 +99,10 @@ export default async function EditClientPage({
   } else {
     [locations, trainers] = await Promise.all([
       prisma.location.findMany({
-        where: { organizationId: session.user.organizationId },
+        where: { 
+          organizationId: session.user.organizationId,
+          active: true
+        },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),

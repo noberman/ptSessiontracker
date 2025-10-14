@@ -202,6 +202,7 @@ export default async function PackagesPage({
     availableLocations = await prisma.location.findMany({
       where: {
         organizationId: session.user.organizationId,
+        active: true,
       },
       select: {
         id: true,

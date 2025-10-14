@@ -223,7 +223,12 @@ export async function POST(request: Request) {
     
     try {
       [locations, trainers, existingClients, packageTypes, existingPackages] = await Promise.all([
-        prisma.location.findMany({ where: locationFilter }),
+        prisma.location.findMany({ 
+          where: {
+            ...locationFilter,
+            active: true
+          }
+        }),
         prisma.user.findMany({ 
           where: await (async () => {
             const baseWhere: any = {

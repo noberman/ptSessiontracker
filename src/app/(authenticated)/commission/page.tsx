@@ -82,7 +82,10 @@ export default async function CommissionPage({
   let locations: Array<{ id: string; name: string }> = []
   if (session.user.role === 'ADMIN' || session.user.role === 'PT_MANAGER') {
     locations = await prisma.location.findMany({
-      where: { organizationId }, // Filter locations by organization
+      where: { 
+        organizationId,
+        active: true
+      },
       select: { id: true, name: true },
       orderBy: { name: 'asc' }
     })

@@ -187,59 +187,77 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Only admins can delete locations
+  // Only admins can archive locations
   if (session.user.role !== 'ADMIN') {
     return NextResponse.json(
-      { error: 'Only administrators can delete locations' },
+      { error: 'Only administrators can archive locations' },
       { status: 403 }
     )
   }
 
   try {
-    // Check if location exists and has dependencies
-    const location = await prisma.location.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: {
-            users: true,
-            clients: true,
-            sessions: true
-          }
-        }
+    // Parse request body for archive reason
+    const body = await request.json().catch(() => ({}))
+    const { reason } = body
+
+    // First, check archive impact
+    const impactResponse = await fetch(
+      `${request.url.replace(/\/[^\/]*$/, '')}/archive-impact`,
+      {
+        headers: request.headers
       }
-    })
+    )
+    const impactData = await impactResponse.json()
 
-    if (!location) {
+    // If location cannot be archived, return the blockers
+    if (!impactData.canArchive) {
       return NextResponse.json(
-        { error: 'Location not found' },
-        { status: 404 }
-      )
-    }
-
-    // Don't allow deletion if there are associated records
-    if (location._count.users > 0 || location._count.clients > 0 || location._count.sessions > 0) {
-      return NextResponse.json(
-        { 
-          error: 'Cannot delete location with associated trainers, clients, or sessions. Deactivate instead.' 
+        {
+          error: 'Cannot archive location with active dependencies',
+          blockers: impactData.blockers,
+          summary: impactData.summary
         },
         { status: 400 }
       )
     }
 
-    // Soft delete by setting inactive
-    await prisma.location.update({
+    // Proceed with soft delete (archive)
+    const archivedLocation = await prisma.location.update({
       where: { id },
-      data: { active: false }
+      data: {
+        active: false,
+        archivedAt: new Date(),
+        archivedBy: session.user.id,
+        archivedReason: reason || 'No reason provided'
+      }
     })
 
-    // TODO: Add audit log
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: 'LOCATION_ARCHIVED',
+        entityType: 'location',
+        entityId: id,
+        metadata: {
+          locationName: archivedLocation.name,
+          reason: reason || 'No reason provided'
+        },
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+        userAgent: request.headers.get('user-agent') || 'unknown'
+      }
+    })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      message: 'Location archived successfully',
+      location: archivedLocation
+    })
+
   } catch (error) {
-    console.error('Error deleting location:', error)
+    console.error('Error archiving location:', error)
     return NextResponse.json(
-      { error: 'Failed to delete location' },
+      { error: 'Failed to archive location' },
       { status: 500 }
     )
   }

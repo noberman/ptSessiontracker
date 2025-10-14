@@ -76,7 +76,10 @@ export default async function EditUserPage({
   let locations: Array<{ id: string; name: string }> = []
   if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
     locations = await prisma.location.findMany({
-      where: { id: session.user.locationId },
+      where: { 
+        id: session.user.locationId,
+        active: true
+      },
       select: {
         id: true,
         name: true,
@@ -86,6 +89,7 @@ export default async function EditUserPage({
     locations = await prisma.location.findMany({
       where: {
         organizationId: session.user.organizationId,
+        active: true,
       },
       select: {
         id: true,

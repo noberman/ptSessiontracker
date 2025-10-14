@@ -19,10 +19,13 @@ export async function GET(request: Request) {
     // Check if requesting all locations (for admins inviting users)
     const url = new URL(request.url)
     const showAll = url.searchParams.get('all') === 'true'
+    const includeArchived = url.searchParams.get('includeArchived') === 'true'
     
     // Build query based on user role and accessible locations
     const whereClause: any = {
-      organizationId // Filter by organization
+      organizationId, // Filter by organization
+      // Only show active locations unless explicitly requesting archived
+      ...(!includeArchived && { active: true })
     }
     
     // For trainers, club managers, and PT managers, filter by accessible locations

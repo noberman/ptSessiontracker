@@ -32,8 +32,9 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Get all locations
+    // Get all active locations
     const locations = await prisma.location.findMany({
+      where: { active: true },
       select: {
         id: true,
         name: true,

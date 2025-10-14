@@ -39,7 +39,10 @@ export default async function NewClientPage() {
     
     if (accessibleLocationIds.length > 0) {
       locations = await prisma.location.findMany({
-        where: { id: { in: accessibleLocationIds } },
+        where: { 
+          id: { in: accessibleLocationIds },
+          active: true
+        },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       })
@@ -73,7 +76,10 @@ export default async function NewClientPage() {
     // Only Admins can see all locations and trainers in their organization
     [locations, trainers] = await Promise.all([
       prisma.location.findMany({
-        where: { organizationId: session.user.organizationId },
+        where: { 
+          organizationId: session.user.organizationId,
+          active: true
+        },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),

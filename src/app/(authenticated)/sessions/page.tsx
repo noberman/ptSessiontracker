@@ -187,7 +187,10 @@ export default async function SessionsPage({
         orderBy: { name: 'asc' },
       }),
       prisma.location.findMany({
-        where: { organizationId: session.user.organizationId },
+        where: { 
+          organizationId: session.user.organizationId,
+          active: true
+        },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),

@@ -136,7 +136,10 @@ export default async function UsersPage({
     }),
     prisma.user.count({ where }),
     prisma.location.findMany({
-      where: locationFilter,
+      where: {
+        ...locationFilter,
+        active: true,
+      },
       select: {
         id: true,
         name: true,

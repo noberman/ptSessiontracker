@@ -190,11 +190,17 @@ export default async function ClientsPage({
     // Get locations for filter
     session.user.role === 'CLUB_MANAGER' && session.user.locationId
       ? prisma.location.findMany({
-          where: { id: session.user.locationId },
+          where: { 
+            id: session.user.locationId,
+            active: true
+          },
           select: { id: true, name: true },
         })
       : prisma.location.findMany({
-          where: { organizationId: session.user.organizationId },
+          where: { 
+            organizationId: session.user.organizationId,
+            active: true
+          },
           select: { id: true, name: true },
           orderBy: { name: 'asc' },
         }),
