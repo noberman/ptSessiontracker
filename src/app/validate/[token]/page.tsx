@@ -113,12 +113,18 @@ export default function ValidateSessionPage() {
   }
 
   const formatDate = (dateString: string) => {
-    // Debug logging to see what we're receiving
-    console.log('Raw dateString received:', dateString)
-    const date = new Date(dateString)
-    console.log('Parsed Date object:', date.toString())
-    console.log('ISO String:', date.toISOString())
-    console.log('Local time:', date.toLocaleString())
+    // The date is stored in the database as if it's UTC, but it's actually already in local time
+    // So we need to parse it without timezone conversion
+    // Remove the 'Z' if present and treat as local time
+    const localDateString = dateString.replace('Z', '')
+    
+    // Parse as local time by not including timezone info
+    const [datePart, timePart] = localDateString.split('T')
+    const [year, month, day] = datePart.split('-').map(Number)
+    const [hour, minute, second] = timePart.split(':').map(s => Number(s.split('.')[0]))
+    
+    // Create date in local timezone
+    const date = new Date(year, month - 1, day, hour, minute, second)
     
     // Format the date and time properly
     const dateFormatted = date.toLocaleDateString('en-US', {
