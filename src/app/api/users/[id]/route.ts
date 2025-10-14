@@ -211,31 +211,48 @@ export async function PUT(
       // Find locations being removed
       const removedLocationIds = currentLocationIds.filter(locId => !locationIds.includes(locId))
       
-      // Check if any clients would be orphaned
+      // Collect all affected clients across all removed locations
+      const allAffectedClients = []
+      
       for (const locationId of removedLocationIds) {
         const location = await prisma.location.findUnique({
           where: { id: locationId },
           select: { name: true }
         })
         
-        const affectedClients = await prisma.client.count({
+        const affectedClients = await prisma.client.findMany({
           where: {
             primaryTrainerId: id,
             locationId: locationId,
             active: true
+          },
+          select: {
+            id: true,
+            name: true,
+            locationId: true
           }
         })
         
-        if (affectedClients > 0) {
-          return NextResponse.json(
-            { 
-              error: `Cannot remove access to ${location?.name || 'location'}: ${affectedClients} active client${affectedClients > 1 ? 's are' : ' is'} assigned to this trainer at that location. Please reassign ${affectedClients > 1 ? 'them' : 'this client'} first.`,
-              affectedCount: affectedClients,
-              locationName: location?.name
-            },
-            { status: 400 }
-          )
+        if (affectedClients.length > 0) {
+          allAffectedClients.push(...affectedClients.map(client => ({
+            ...client,
+            locationName: location?.name || 'Unknown Location'
+          })))
         }
+      }
+      
+      // If there are affected clients, return them for reassignment dialog
+      if (allAffectedClients.length > 0) {
+        return NextResponse.json(
+          { 
+            error: 'reassignment_required',
+            message: `${allAffectedClients.length} client${allAffectedClients.length > 1 ? 's need' : ' needs'} to be reassigned before removing location access.`,
+            requiresReassignment: true,
+            affectedClients: allAffectedClients,
+            removedLocationIds
+          },
+          { status: 409 } // 409 Conflict - indicates action needed
+        )
       }
     }
 
@@ -370,6 +387,26 @@ export async function DELETE(
       if (adminCount <= 1) {
         return NextResponse.json(
           { error: 'Cannot deactivate last admin from system' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Check if trainer has assigned clients
+    if (userToDelete?.role === 'TRAINER') {
+      const assignedClients = await prisma.client.count({
+        where: {
+          primaryTrainerId: id,
+          active: true
+        }
+      })
+      
+      if (assignedClients > 0) {
+        return NextResponse.json(
+          { 
+            error: `Cannot delete trainer: ${assignedClients} active client${assignedClients > 1 ? 's are' : ' is'} assigned. Please reassign ${assignedClients > 1 ? 'them' : 'this client'} first.`,
+            assignedClients
+          },
           { status: 400 }
         )
       }

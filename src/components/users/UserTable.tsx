@@ -103,7 +103,9 @@ export function UserTable({
       if (response.ok) {
         setUsers(users.filter(u => u.id !== userId))
       } else {
-        alert('Failed to delete user')
+        // Get the actual error message from the response
+        const error = await response.json()
+        alert(error.error || 'Failed to delete user')
       }
     } catch (error) {
       console.error('Error deleting user:', error)

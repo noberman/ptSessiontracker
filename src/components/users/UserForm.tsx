@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { LocationRemovalDialog } from './LocationRemovalDialog'
 
 interface UserFormProps {
   user?: {
@@ -29,6 +30,11 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
   const [error, setError] = useState('')
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  // Reassignment dialog state
+  const [showReassignmentDialog, setShowReassignmentDialog] = useState(false)
+  const [affectedClients, setAffectedClients] = useState<any[]>([])
+  const [pendingLocationIds, setPendingLocationIds] = useState<string[]>([])
   
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -121,7 +127,15 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save user')
+        // Check if reassignment is required
+        if (response.status === 409 && data.requiresReassignment) {
+          setAffectedClients(data.affectedClients)
+          setPendingLocationIds(formData.locationIds)
+          setShowReassignmentDialog(true)
+          setLoading(false)
+          return
+        }
+        throw new Error(data.message || data.error || 'Failed to save user')
       }
 
       router.push('/users')
@@ -147,8 +161,63 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
 
   const roleOptions = getRoleOptions()
 
+  // Handle reassignment confirmation
+  const handleReassignment = async (reassignments: Record<string, string>) => {
+    try {
+      // Build reassignment array for API
+      const reassignmentArray = Object.entries(reassignments).map(([clientId, toTrainerId]) => {
+        const client = affectedClients.find(c => c.id === clientId)
+        return {
+          clientId,
+          fromTrainerId: user!.id,
+          toTrainerId,
+          locationId: client.locationId
+        }
+      })
+
+      // Call bulk reassignment API
+      const reassignResponse = await fetch('/api/clients/bulk-reassign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reassignments: reassignmentArray })
+      })
+
+      if (!reassignResponse.ok) {
+        const error = await reassignResponse.json()
+        throw new Error(error.error || 'Failed to reassign clients')
+      }
+
+      // Now update the user with the new locations
+      const updateResponse = await fetch(`/api/users/${user!.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          locationId: pendingLocationIds[0] || null,
+          locationIds: pendingLocationIds,
+          active: formData.active
+        })
+      })
+
+      if (!updateResponse.ok) {
+        const error = await updateResponse.json()
+        throw new Error(error.error || 'Failed to update user locations')
+      }
+
+      // Success - redirect
+      router.push('/users')
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || 'Failed to complete reassignment')
+      setShowReassignmentDialog(false)
+    }
+  }
+
   return (
-    <Card>
+    <>
+      <Card>
       <CardHeader>
         <CardTitle>{isEdit ? 'Edit User' : 'Create New User'}</CardTitle>
       </CardHeader>
@@ -351,5 +420,22 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
         </form>
       </CardContent>
     </Card>
+    
+    {/* Reassignment Dialog */}
+    {isEdit && user && (
+      <LocationRemovalDialog
+        isOpen={showReassignmentDialog}
+        onClose={() => {
+          setShowReassignmentDialog(false)
+          setAffectedClients([])
+          setPendingLocationIds([])
+        }}
+        onConfirm={handleReassignment}
+        affectedClients={affectedClients}
+        currentTrainerId={user.id}
+        currentTrainerName={user.name}
+      />
+    )}
+    </>
   )
 }
