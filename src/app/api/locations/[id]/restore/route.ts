@@ -66,8 +66,7 @@ export async function POST(
       data: {
         active: true,
         archivedAt: null,
-        archivedBy: null,
-        archivedReason: null
+        archivedBy: null
       }
     })
 
@@ -78,9 +77,15 @@ export async function POST(
         action: 'LOCATION_RESTORED',
         entityType: 'location',
         entityId: locationId,
-        metadata: {
-          locationName: restoredLocation.name,
-          previouslyArchivedAt: location.archivedAt
+        oldValue: {
+          active: false,
+          name: restoredLocation.name,
+          archivedAt: location.archivedAt
+        },
+        newValue: {
+          active: true,
+          name: restoredLocation.name,
+          archivedAt: null
         },
         ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown'

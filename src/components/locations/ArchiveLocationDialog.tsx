@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
 
 interface Blocker {
   type: string
@@ -36,7 +35,7 @@ interface ArchiveImpact {
 interface ArchiveLocationDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (reason: string) => Promise<void>
+  onConfirm: () => Promise<void>
   locationId: string
   locationName: string
 }
@@ -51,7 +50,6 @@ export function ArchiveLocationDialog({
   const [loading, setLoading] = useState(false)
   const [checkingImpact, setCheckingImpact] = useState(false)
   const [impact, setImpact] = useState<ArchiveImpact | null>(null)
-  const [reason, setReason] = useState('')
   const [confirmChecked, setConfirmChecked] = useState(false)
 
   useEffect(() => {
@@ -89,8 +87,7 @@ export function ArchiveLocationDialog({
     
     setLoading(true)
     try {
-      await onConfirm(reason)
-      setReason('')
+      await onConfirm()
       setConfirmChecked(false)
       onClose()
     } catch (error) {
@@ -101,7 +98,6 @@ export function ArchiveLocationDialog({
   }
 
   const handleClose = () => {
-    setReason('')
     setConfirmChecked(false)
     setImpact(null)
     onClose()
@@ -166,20 +162,6 @@ export function ArchiveLocationDialog({
                         ))}
                       </div>
                     )}
-
-                    {/* Reason input */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Reason for archiving (optional)
-                      </label>
-                      <Input
-                        type="text"
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        placeholder="e.g., Location closed, Moved to new building"
-                        className="w-full"
-                      />
-                    </div>
 
                     {/* Confirmation checkbox */}
                     <div className="flex items-start space-x-2">

@@ -61,6 +61,8 @@ export async function GET(
       })
     }
 
+    console.log('🔍 Checking archive impact for location:', locationId, location.name)
+    
     // Check all dependencies in parallel
     const [
       activeUsers,
@@ -97,11 +99,14 @@ export async function GET(
         }
       }),
       
-      // Count active packages at this location
+      // Count active packages for clients at this location
       prisma.package.count({
         where: {
-          locationId,
-          status: 'ACTIVE'
+          client: {
+            locationId,
+            active: true
+          },
+          active: true
         }
       }),
       
@@ -119,11 +124,24 @@ export async function GET(
       })
     ])
 
+    // Log the results
+    console.log('📊 Archive impact results:', {
+      locationId,
+      locationName: location.name,
+      activeUsers,
+      activeClients,
+      upcomingSessions,
+      activePackages,
+      totalActiveLocations,
+      historicalSessions
+    })
+
     // Build blockers array
     const blockers = []
 
     // Check if this is the last active location
     if (totalActiveLocations <= 1) {
+      console.log('❌ Blocking: Last active location in organization')
       blockers.push({
         type: 'last_location',
         count: 1,
@@ -133,6 +151,7 @@ export async function GET(
 
     // Check for active users
     if (activeUsers > 0) {
+      console.log('❌ Blocking: Active users found:', activeUsers)
       blockers.push({
         type: 'users',
         count: activeUsers,
@@ -142,6 +161,7 @@ export async function GET(
 
     // Check for active clients
     if (activeClients > 0) {
+      console.log('❌ Blocking: Active clients found:', activeClients)
       blockers.push({
         type: 'clients',
         count: activeClients,
@@ -151,6 +171,7 @@ export async function GET(
 
     // Check for upcoming sessions
     if (upcomingSessions > 0) {
+      console.log('❌ Blocking: Upcoming sessions found:', upcomingSessions)
       blockers.push({
         type: 'upcoming_sessions',
         count: upcomingSessions,
@@ -160,6 +181,7 @@ export async function GET(
 
     // Check for active packages
     if (activePackages > 0) {
+      console.log('❌ Blocking: Active packages found:', activePackages)
       blockers.push({
         type: 'packages',
         count: activePackages,
@@ -180,6 +202,12 @@ export async function GET(
 
     // Determine if location can be archived
     const canArchive = blockers.length === 0
+    
+    console.log('📋 Final archive decision:', {
+      canArchive,
+      blockerCount: blockers.length,
+      blockers: blockers.map(b => `${b.type}: ${b.count}`)
+    })
 
     return NextResponse.json({
       canArchive,

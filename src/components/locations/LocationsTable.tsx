@@ -73,14 +73,12 @@ export function LocationsTable({ userRole, canEdit }: LocationsTableProps) {
     setArchiveDialogOpen(true)
   }
 
-  const confirmArchive = async (reason: string) => {
+  const confirmArchive = async () => {
     if (!selectedLocation) return
 
     try {
       const response = await fetch(`/api/locations/${selectedLocation.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason })
+        method: 'DELETE'
       })
 
       if (!response.ok) {
