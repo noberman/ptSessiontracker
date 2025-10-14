@@ -37,7 +37,7 @@ export function DeleteUserDialog({
 
   if (!isOpen) return null
 
-  const hasClients = clientCount > 0 && userRole === 'TRAINER'
+  const hasClients = clientCount > 0 && (userRole === 'TRAINER' || userRole === 'PT_MANAGER')
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -64,8 +64,8 @@ export function DeleteUserDialog({
                     Active Clients Require Reassignment
                   </p>
                   <p className="text-sm text-amber-700 mt-1">
-                    This trainer has <strong>{clientCount} active {clientCount === 1 ? 'client' : 'clients'}</strong> that 
-                    must be reassigned to other trainers before deletion.
+                    This user has <strong>{clientCount} active {clientCount === 1 ? 'client' : 'clients'}</strong> that 
+                    must be reassigned before deletion.
                   </p>
                 </div>
               </div>

@@ -199,8 +199,8 @@ export async function PUT(
       }
     }
 
-    // Check if removing locations would orphan clients (for trainers)
-    if (currentUser.role === 'TRAINER' && locationIds !== undefined) {
+    // Check if removing locations would orphan clients (for trainers and PT managers)
+    if ((currentUser.role === 'TRAINER' || currentUser.role === 'PT_MANAGER') && locationIds !== undefined) {
       // Get current locations for this user
       const currentUserLocations = await prisma.userLocation.findMany({
         where: { userId: id },
@@ -392,8 +392,8 @@ export async function DELETE(
       }
     }
 
-    // Check if trainer has assigned clients
-    if (userToDelete?.role === 'TRAINER') {
+    // Check if trainer or PT manager has assigned clients
+    if (userToDelete?.role === 'TRAINER' || userToDelete?.role === 'PT_MANAGER') {
       const assignedClients = await prisma.client.count({
         where: {
           primaryTrainerId: id,
@@ -404,7 +404,7 @@ export async function DELETE(
       if (assignedClients > 0) {
         return NextResponse.json(
           { 
-            error: `Cannot delete trainer: ${assignedClients} active client${assignedClients > 1 ? 's are' : ' is'} assigned. Please reassign ${assignedClients > 1 ? 'them' : 'this client'} first.`,
+            error: `Cannot delete user: ${assignedClients} active client${assignedClients > 1 ? 's are' : ' is'} assigned. Please reassign ${assignedClients > 1 ? 'them' : 'this client'} first.`,
             assignedClients
           },
           { status: 400 }

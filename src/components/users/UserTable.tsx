@@ -108,8 +108,8 @@ export function UserTable({
     setUserToDelete(user)
     setCheckingDelete(true)
 
-    // Check if trainer has clients (for showing in confirmation dialog)
-    if (user.role === 'TRAINER') {
+    // Check if trainer or PT_MANAGER has clients (for showing in confirmation dialog)
+    if (user.role === 'TRAINER' || user.role === 'PT_MANAGER') {
       try {
         const clientsResponse = await fetch(`/api/users/${userId}/clients`)
         if (clientsResponse.ok) {
@@ -136,7 +136,7 @@ export function UserTable({
     setShowDeleteDialog(false)
 
     // If user has clients, go to reassignment
-    if (deleteClientCount > 0 && userToDelete.role === 'TRAINER') {
+    if (deleteClientCount > 0 && (userToDelete.role === 'TRAINER' || userToDelete.role === 'PT_MANAGER')) {
       try {
         const clientsResponse = await fetch(`/api/users/${userToDelete.id}/clients`)
         if (clientsResponse.ok) {
