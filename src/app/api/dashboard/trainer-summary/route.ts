@@ -50,9 +50,13 @@ export async function GET(request: Request) {
         active: true
       },
       include: {
-        location: {
-          select: {
-            name: true
+        locations: {
+          include: {
+            location: {
+              select: {
+                name: true
+              }
+            }
           }
         }
       },
@@ -98,7 +102,8 @@ export async function GET(request: Request) {
           id: trainer.id,
           name: trainer.name,
           email: trainer.email,
-          location: trainer.location
+          locations: trainer.locations.map(l => l.location.name),
+          location: trainer.locations.length > 0 ? trainer.locations[0].location.name : null // Backward compatibility
         },
         period: `${dateFrom.toLocaleDateString()} - ${dateTo.toLocaleDateString()}`,
         sessionCount,
