@@ -143,9 +143,12 @@ export default async function SessionsPage({
         orderBy: { name: 'asc' },
       })
       
-      // Get locations for filter
+      // Get locations for filter (only active locations)
       filterLocations = await prisma.location.findMany({
-        where: { id: { in: trainerLocationIds } },
+        where: { 
+          id: { in: trainerLocationIds },
+          active: true
+        },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       })
@@ -191,7 +194,10 @@ export default async function SessionsPage({
       })
       
       filterLocations = await prisma.location.findMany({
-        where: { id: { in: managerLocationIds } },
+        where: { 
+          id: { in: managerLocationIds },
+          active: true
+        },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       })
