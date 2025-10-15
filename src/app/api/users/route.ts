@@ -90,9 +90,13 @@ export async function GET(request: NextRequest) {
           email: true,
           role: true,
           active: true,
-          location: {
+          locations: {
             select: {
-              name: true,
+              location: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
           createdAt: true,
@@ -105,8 +109,15 @@ export async function GET(request: NextRequest) {
       prisma.user.count({ where }),
     ])
 
+    // Transform users to maintain backward compatibility
+    const transformedUsers = users.map(user => ({
+      ...user,
+      location: user.locations?.[0]?.location || null,
+      locations: undefined, // Remove the junction table from response
+    }))
+
     return NextResponse.json({
-      users,
+      users: transformedUsers,
       pagination: {
         page,
         limit,
