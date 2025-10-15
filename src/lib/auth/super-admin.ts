@@ -100,7 +100,11 @@ export async function validateTempToken(token: string) {
       user: {
         include: {
           organization: true,
-          location: true
+          locations: {
+            include: {
+              location: true
+            }
+          }
         }
       },
       admin: {
