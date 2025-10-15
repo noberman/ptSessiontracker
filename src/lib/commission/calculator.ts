@@ -251,7 +251,13 @@ export async function calculateMonthlyCommissions(
     where: {
       role: 'TRAINER',
       active: true,
-      ...(locationId && { locationId }),
+      ...(locationId && { 
+        locations: {
+          some: {
+            locationId: locationId
+          }
+        }
+      }),
       ...(organizationId && { organizationId })
     }
   })
