@@ -58,7 +58,8 @@ interface DashboardData {
     id: string
     name: string
     email: string
-    locationId?: string
+    locationId?: string  // Single location for backward compatibility
+    locationIds?: string[]  // All locations the trainer has access to
   }>
   allLocations?: Array<{
     id: string
@@ -171,7 +172,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
       setSelectedLocation(locationId)
       if (data?.allTrainers) {
         const locationTrainers = data.allTrainers
-          .filter(t => t.locationId === locationId)
+          .filter(t => t.locationIds?.includes(locationId) || t.locationId === locationId)
           .map(t => t.id)
         setSelectedTrainers(locationTrainers)
       }
@@ -182,7 +183,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
     // Only allow toggling trainers from the selected location (or all if no location selected)
     if (selectedLocation && data?.allTrainers) {
       const trainer = data.allTrainers.find(t => t.id === trainerId)
-      // Check if trainer has access to the selected location (using locationIds array or fallback to locationId)
+      // Check if trainer has access to the selected location
       const hasLocation = trainer?.locationIds?.includes(selectedLocation) || 
                          trainer?.locationId === selectedLocation
       if (!hasLocation) {
@@ -530,7 +531,9 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
                                 <span className="text-sm text-text-primary">{trainer.name}</span>
                               </label>
                             ))}
-                          {selectedLocation && data.allTrainers.filter(t => t.locationId === selectedLocation).length === 0 && (
+                          {selectedLocation && data.allTrainers.filter(t => 
+                            t.locationIds?.includes(selectedLocation) || t.locationId === selectedLocation
+                          ).length === 0 && (
                             <p className="text-sm text-text-secondary p-2">No trainers in this location</p>
                           )}
                         </div>
