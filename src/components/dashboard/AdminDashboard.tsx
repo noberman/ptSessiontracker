@@ -25,7 +25,7 @@ export function AdminDashboard({ userId, userName }: AdminDashboardProps) {
           userId={userId}
           userName={userName}
           userRole="ADMIN"
-          locationId={null}
+          locationIds={[]}  // Empty array for admin means "all locations"
         />
     </div>
   )
