@@ -48,15 +48,25 @@ export default async function UserDetailPage({
     redirect('/dashboard')
   }
 
-  if (session.user.role === 'CLUB_MANAGER' && 
-      user.locationId !== session.user.locationId &&
-      user.id !== session.user.id) {
-    redirect('/dashboard')
+  // For club managers, check if they share locations with the user
+  if (session.user.role === 'CLUB_MANAGER' && user.id !== session.user.id) {
+    const currentUserLocations = await prisma.userLocation.findMany({
+      where: { userId: session.user.id },
+      select: { locationId: true }
+    })
+    const currentUserLocationIds = currentUserLocations.map(l => l.locationId)
+    const targetUserLocationIds = user.locations.map(l => l.locationId)
+    
+    const hasSharedLocation = targetUserLocationIds.some(id => currentUserLocationIds.includes(id))
+    
+    if (!hasSharedLocation) {
+      redirect('/dashboard')
+    }
   }
 
   const canEdit = session.user.id === user.id || 
                   ['PT_MANAGER', 'ADMIN'].includes(session.user.role) ||
-                  (session.user.role === 'CLUB_MANAGER' && user.locationId === session.user.locationId)
+                  (session.user.role === 'CLUB_MANAGER') // Already checked access above
 
   const roleColors = {
     ADMIN: 'error',
