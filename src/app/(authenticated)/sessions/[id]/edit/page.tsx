@@ -57,11 +57,23 @@ export default async function EditSessionPage({
   }
 
   // Check permissions
-  const canEdit = 
-    (session.user.role === 'ADMIN') ||
-    (session.user.role === 'PT_MANAGER') ||
-    (session.user.role === 'CLUB_MANAGER' && session.user.locationId === trainingSession.locationId) ||
-    (session.user.role === 'TRAINER' && trainingSession.trainerId === session.user.id && !trainingSession.validated)
+  // For club managers, check if they have access to the session's location
+  let canEdit = false
+  
+  if (session.user.role === 'ADMIN' || session.user.role === 'PT_MANAGER') {
+    canEdit = true
+  } else if (session.user.role === 'CLUB_MANAGER') {
+    // Check if club manager has access to this session's location
+    const userLocation = await prisma.userLocation.findFirst({
+      where: {
+        userId: session.user.id,
+        locationId: trainingSession.locationId
+      }
+    })
+    canEdit = !!userLocation
+  } else if (session.user.role === 'TRAINER') {
+    canEdit = trainingSession.trainerId === session.user.id && !trainingSession.validated
+  }
 
   if (!canEdit) {
     redirect(`/sessions/${id}`)
