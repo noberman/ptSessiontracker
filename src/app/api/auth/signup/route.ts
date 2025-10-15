@@ -96,8 +96,15 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role: Role.ADMIN,
           organizationId: organization.id,
-          locationId: location.id,
           active: true,
+        }
+      })
+
+      // 4. Associate user with location through UserLocation junction table
+      await tx.userLocation.create({
+        data: {
+          userId: user.id,
+          locationId: location.id,
         }
       })
 
