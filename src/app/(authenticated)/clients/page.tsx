@@ -118,7 +118,7 @@ export default async function ClientsPage({
   }
 
   // Get user's accessible locations for filtering
-  let accessibleLocationIds: string[] = []
+  const accessibleLocationIds: string[] = []
   
   // Restrict based on user role
   if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
