@@ -32,31 +32,6 @@ export default async function LocationDetailsPage({
   const location = await prisma.location.findUnique({
     where: { id },
     include: {
-      users: {
-        where: {
-          role: 'TRAINER',
-          active: true
-        },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          _count: {
-            select: {
-              sessions: {
-                where: {
-                  sessionDate: {
-                    gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                  }
-                }
-              }
-            }
-          }
-        },
-        orderBy: {
-          name: 'asc'
-        }
-      },
       clients: {
         where: {
           active: true
@@ -108,16 +83,45 @@ export default async function LocationDetailsPage({
     redirect('/locations')
   }
 
-  // Count trainers separately through the UserLocation junction table
-  const trainerCount = await prisma.userLocation.count({
+  // Fetch trainers separately through the UserLocation junction table
+  const trainersAtLocation = await prisma.userLocation.findMany({
     where: {
       locationId: id,
       user: {
         role: 'TRAINER',
         active: true
       }
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          _count: {
+            select: {
+              sessions: {
+                where: {
+                  sessionDate: {
+                    gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    orderBy: {
+      user: {
+        name: 'asc'
+      }
     }
   })
+
+  // Extract the user data and count
+  const trainers = trainersAtLocation.map(tl => tl.user)
+  const trainerCount = trainers.length
 
   // Check permissions
   if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER') {
@@ -245,13 +249,13 @@ export default async function LocationDetailsPage({
             <CardTitle>Trainers at This Location</CardTitle>
           </CardHeader>
           <CardContent>
-            {location.users.length === 0 ? (
+            {trainers.length === 0 ? (
               <p className="text-text-secondary text-center py-4">
                 No trainers assigned to this location
               </p>
             ) : (
               <div className="space-y-3">
-                {location.users.map((trainer) => (
+                {trainers.map((trainer) => (
                   <div key={trainer.id} className="flex items-center justify-between p-3 rounded-lg bg-surface-secondary hover:bg-surface-hover transition-colors">
                     <div>
                       <Link 
