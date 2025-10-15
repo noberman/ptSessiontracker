@@ -18,29 +18,32 @@ export async function GET(
     const location = await prisma.location.findUnique({
       where: { id },
       include: {
-        users: {
+        userLocations: {
           where: {
-            role: 'TRAINER',
-            active: true
+            user: {
+              role: 'TRAINER',
+              active: true
+            }
           },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            _count: {
+          include: {
+            user: {
               select: {
-                sessions: {
-                  where: {
-                    sessionDate: {
-                      gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+                id: true,
+                name: true,
+                email: true,
+                _count: {
+                  select: {
+                    sessions: {
+                      where: {
+                        sessionDate: {
+                          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+                        }
+                      }
                     }
                   }
                 }
               }
             }
-          },
-          orderBy: {
-            name: 'asc'
           }
         },
         clients: {
@@ -85,7 +88,14 @@ export async function GET(
 
     // Check permissions
     if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER') {
-      if (session.user.locationId !== id) {
+      // Check if user has access to this location through UserLocation
+      const userLocation = await prisma.userLocation.findFirst({
+        where: {
+          userId: session.user.id,
+          locationId: id
+        }
+      })
+      if (!userLocation) {
         return NextResponse.json(
           { error: 'You can only view your assigned location' },
           { status: 403 }
@@ -93,10 +103,15 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({
+    // Transform the response to flatten the user data from junction table
+    const transformedLocation = {
       ...location,
+      users: location.userLocations.map(ul => ul.user).sort((a, b) => a.name.localeCompare(b.name)),
+      userLocations: undefined, // Remove the junction table from response
       sessionsThisMonth: location._count.sessions
-    })
+    }
+    
+    return NextResponse.json(transformedLocation)
   } catch (error) {
     console.error('Error fetching location:', error)
     return NextResponse.json(
