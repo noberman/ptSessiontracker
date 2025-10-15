@@ -52,8 +52,8 @@ async function main() {
       
       // Update all references to point to the kept location
       await prisma.$transaction([
-        // Update users
-        prisma.user.updateMany({
+        // Update UserLocation junction table entries
+        prisma.userLocation.updateMany({
           where: { locationId: mergeLocation.id },
           data: { locationId: keepLocation.id }
         }),
