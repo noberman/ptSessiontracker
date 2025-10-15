@@ -68,15 +68,24 @@ export default async function SessionDetailsPage({
     redirect('/sessions')
   }
 
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId !== trainingSession.locationId) {
-    redirect('/sessions')
+  if (session.user.role === 'CLUB_MANAGER') {
+    // Check if club manager has access to this session's location
+    const hasAccess = await prisma.userLocation.findFirst({
+      where: {
+        userId: session.user.id,
+        locationId: trainingSession.locationId
+      }
+    })
+    if (!hasAccess) {
+      redirect('/sessions')
+    }
   }
 
   // Determine if user can edit
   const canEdit = 
     (session.user.role === 'ADMIN') ||
     (session.user.role === 'PT_MANAGER') ||
-    (session.user.role === 'CLUB_MANAGER' && session.user.locationId === trainingSession.locationId) ||
+    (session.user.role === 'CLUB_MANAGER') ||  // Already checked access above
     (session.user.role === 'TRAINER' && trainingSession.trainerId === session.user.id && !trainingSession.validated)
 
   const canDelete = session.user.role === 'ADMIN' || session.user.role === 'PT_MANAGER'
