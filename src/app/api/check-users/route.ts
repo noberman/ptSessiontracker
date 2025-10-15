@@ -22,10 +22,14 @@ export async function GET(request: NextRequest) {
         name: true,
         role: true,
         active: true,
-        locationId: true,
-        location: {
+        locations: {
           select: {
-            name: true
+            location: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
           }
         },
         createdAt: true
