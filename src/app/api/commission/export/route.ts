@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    // Only PT Managers and Admins can export
-    if (session.user.role !== 'PT_MANAGER' && session.user.role !== 'ADMIN') {
+    // Only managers and admins can export
+    if (!['CLUB_MANAGER', 'PT_MANAGER', 'ADMIN'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     
@@ -28,13 +28,25 @@ export async function GET(request: NextRequest) {
     const locationId = searchParams.get('locationId')
     const methodParam = searchParams.get('method') as CommissionMethod | null
     
+    console.log('Commission export - Request params:', {
+      monthParam,
+      locationId,
+      methodParam,
+      userRole: session.user.role,
+      organizationId: session.user.organizationId
+    })
+    
     // Parse month or use current month
     const month = monthParam 
       ? parse(monthParam, 'yyyy-MM', new Date())
       : new Date()
     
+    console.log('Commission export - Parsed month:', month)
+    
     // Get commission method
     const method = methodParam || await getCommissionMethod()
+    
+    console.log('Commission export - Method:', method)
     
     // Calculate commissions
     const commissions = await calculateMonthlyCommissions(
@@ -42,6 +54,11 @@ export async function GET(request: NextRequest) {
       locationId || undefined,
       method
     )
+    
+    console.log('Commission export - Commissions calculated:', {
+      count: commissions.length,
+      trainers: commissions.map(c => ({ name: c.trainerName, sessions: c.totalSessions }))
+    })
     
     // Format for export
     const exportData = formatCommissionForExport(commissions)
@@ -100,7 +117,12 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error: any) {
-    console.error('Commission export error:', error)
+    console.error('Commission export error - Full error:', error)
+    console.error('Commission export error - Details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    })
     return NextResponse.json(
       { error: error.message || 'Failed to export commissions' },
       { status: 500 }

@@ -62,7 +62,12 @@ export default async function UsersPage({
   }
 
   if (locationId) {
-    where.locationId = locationId
+    // Filter users who have access to this location through UserLocation junction table
+    where.locations = {
+      some: {
+        locationId: locationId
+      }
+    }
   }
 
   // Restrict club managers and PT managers to their accessible locations
@@ -158,7 +163,6 @@ export default async function UsersPage({
       pagination={pagination}
       locations={locations}
       currentUserRole={session.user.role}
-      currentUserLocationId={currentUser.locationId}
       canEdit={canEdit}
       canDelete={canDelete}
       organizationId={currentUser.organizationId}

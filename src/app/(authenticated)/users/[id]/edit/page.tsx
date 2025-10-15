@@ -24,7 +24,6 @@ export default async function EditUserPage({
       name: true,
       email: true,
       role: true,
-      locationId: true,
       active: true,
       locations: {
         select: {
@@ -74,10 +73,11 @@ export default async function EditUserPage({
 
   // Get locations for the form
   let locations: Array<{ id: string; name: string }> = []
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
+  if (session.user.role === 'CLUB_MANAGER') {
+    // Get club manager's accessible locations
     locations = await prisma.location.findMany({
       where: { 
-        id: session.user.locationId,
+        id: { in: managerLocationIds },
         active: true
       },
       select: {
@@ -114,12 +114,8 @@ export default async function EditUserPage({
         <UserForm 
           user={{
             ...user,
-            locationId: user.locationId || undefined,
             role: user.role as string,
-            locationIds: [
-              ...(user.locationId ? [user.locationId] : []), // Include primary location
-              ...user.locations.map(l => l.locationId).filter(id => id !== user.locationId) // Add other locations
-            ],
+            locationIds: user.locations.map(l => l.locationId),
           }}
           locations={locations}
           currentUserRole={session.user.role}

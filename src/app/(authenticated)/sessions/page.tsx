@@ -120,51 +120,82 @@ export default async function SessionsPage({
   let filterLocations: any[] = []
 
   if (session.user.role === 'TRAINER') {
-    // Trainers see clients at their location
-    if (session.user.locationId) {
+    // Get trainer's accessible locations
+    const trainerUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        locations: {
+          select: { locationId: true }
+        }
+      }
+    })
+    
+    const trainerLocationIds = trainerUser?.locations.map(l => l.locationId) || []
+    
+    // Trainers see clients at their accessible locations
+    if (trainerLocationIds.length > 0) {
       filterClients = await prisma.client.findMany({
         where: {
-          locationId: session.user.locationId,
+          locationId: { in: trainerLocationIds },
           active: true,
         },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      })
+      
+      // Get locations for filter
+      filterLocations = await prisma.location.findMany({
+        where: { id: { in: trainerLocationIds } },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       })
     }
     // Trainers don't need trainer filter (they only see their own)
     filterTrainers = []
-    // Single location for trainers
-    if (session.user.locationId) {
-      const location = await prisma.location.findUnique({
-        where: { id: session.user.locationId },
+  } else if (session.user.role === 'CLUB_MANAGER') {
+    // Get club manager's accessible locations
+    const managerUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        locations: {
+          select: { locationId: true }
+        }
+      }
+    })
+    
+    const managerLocationIds = managerUser?.locations.map(l => l.locationId) || []
+    
+    if (managerLocationIds.length > 0) {
+      // Club managers see their locations' data
+      filterClients = await prisma.client.findMany({
+        where: {
+          locationId: { in: managerLocationIds },
+          active: true,
+        },
         select: { id: true, name: true },
+        orderBy: { name: 'asc' },
       })
-      filterLocations = location ? [location] : []
+      
+      filterTrainers = await prisma.user.findMany({
+        where: {
+          locations: {
+            some: {
+              locationId: { in: managerLocationIds }
+            }
+          },
+          role: 'TRAINER',
+          active: true,
+        },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      })
+      
+      filterLocations = await prisma.location.findMany({
+        where: { id: { in: managerLocationIds } },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      })
     }
-  } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    // Club managers see their location's data
-    filterClients = await prisma.client.findMany({
-      where: {
-        locationId: session.user.locationId,
-        active: true,
-      },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
-    })
-    filterTrainers = await prisma.user.findMany({
-      where: {
-        locationId: session.user.locationId,
-        role: 'TRAINER',
-        active: true,
-      },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
-    })
-    const location = await prisma.location.findUnique({
-      where: { id: session.user.locationId },
-      select: { id: true, name: true },
-    })
-    filterLocations = location ? [location] : []
   } else {
     // Admins and PT Managers see everything in their organization
     // Now using direct organizationId - no JOINs needed!

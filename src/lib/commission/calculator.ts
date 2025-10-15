@@ -292,7 +292,6 @@ export function formatCommissionForExport(commissions: TrainerCommission[]) {
   return commissions.map(c => ({
     'Trainer Name': c.trainerName,
     'Email': c.trainerEmail,
-    'Location': c.locationName || 'N/A',
     'Total Sessions': c.totalSessions,
     'Validated Sessions': c.validatedSessions,
     'Total Value': `$${c.totalValue.toFixed(2)}`,

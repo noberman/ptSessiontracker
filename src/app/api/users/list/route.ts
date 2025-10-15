@@ -45,29 +45,41 @@ export async function GET(request: NextRequest) {
   }
   
   if (locationId) {
-    where.locationId = locationId
+    where.locations = {
+      some: {
+        locationId: locationId
+      }
+    }
   }
   
   // Restrict club managers and PT managers to their accessible locations
   if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
     const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
     if (accessibleLocations && accessibleLocations.length > 0) {
-      // Show users at accessible locations or users with access to those locations
-      where.OR = [
-        { locationId: { in: accessibleLocations } },
-        { 
-          locations: {
-            some: {
-              locationId: { in: accessibleLocations }
-            }
-          }
+      // Show users with access to those locations through UserLocation junction table
+      where.locations = {
+        some: {
+          locationId: { in: accessibleLocations }
         }
-      ]
+      }
     } else {
       // No accessible locations
       where.id = 'no-access'
     }
   }
+  
+  // Debug logging
+  console.log('Users API - Request params:', {
+    page,
+    limit,
+    search,
+    role,
+    locationId,
+    activeParam,
+    userRole: session.user.role,
+    userId: session.user.id
+  })
+  console.log('Users API - Where clause:', JSON.stringify(where, null, 2))
   
   try {
     const [users, total] = await Promise.all([
@@ -111,7 +123,12 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error fetching users:', error)
+    console.error('Error fetching users - Full error:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      where: JSON.stringify(where, null, 2)
+    })
     return NextResponse.json(
       { error: 'Failed to fetch users' },
       { status: 500 }

@@ -21,7 +21,6 @@ interface UsersPageClientProps {
   }
   locations: any[]
   currentUserRole: string
-  currentUserLocationId?: string | null
   canEdit: boolean
   canDelete: boolean
   organizationId: string
@@ -37,7 +36,6 @@ export default function UsersPageClient({
   pagination,
   locations,
   currentUserRole,
-  currentUserLocationId,
   canEdit,
   canDelete,
   organizationId,
