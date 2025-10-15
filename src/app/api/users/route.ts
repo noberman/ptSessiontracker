@@ -54,24 +54,24 @@ export async function GET(request: NextRequest) {
     }
 
     if (locationId) {
-      where.locationId = locationId
+      // Filter users who have access to this location through UserLocation
+      where.locations = {
+        some: {
+          locationId: locationId
+        }
+      }
     }
 
     // Restrict club managers and PT managers to their accessible locations
     if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
       const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
       if (accessibleLocations && accessibleLocations.length > 0) {
-        // Show users at accessible locations or users with access to those locations
-        where.OR = [
-          { locationId: { in: accessibleLocations } },
-          { 
-            locations: {
-              some: {
-                locationId: { in: accessibleLocations }
-              }
-            }
+        // Show users who have access to any of the manager's accessible locations
+        where.locations = {
+          some: {
+            locationId: { in: accessibleLocations }
           }
-        ]
+        }
       } else {
         // No accessible locations
         where.id = 'no-access'
