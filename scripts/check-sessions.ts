@@ -54,12 +54,24 @@ async function checkSessions() {
 
     // Check for users and their roles
     const users = await prisma.user.findMany({
-      select: { name: true, role: true, locationId: true, active: true }
+      select: { 
+        name: true, 
+        role: true, 
+        active: true,
+        locations: {
+          select: {
+            location: {
+              select: { name: true }
+            }
+          }
+        }
+      }
     })
     
     console.log('\n👥 Users in system:')
     users.forEach(user => {
-      console.log(`  - ${user.name}: ${user.role} | Location: ${user.locationId || 'None'} | Active: ${user.active}`)
+      const locationNames = user.locations.map(l => l.location.name).join(', ')
+      console.log(`  - ${user.name}: ${user.role} | Locations: ${locationNames || 'None'} | Active: ${user.active}`)
     })
 
   } catch (error) {
