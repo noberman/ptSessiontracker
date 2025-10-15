@@ -42,6 +42,9 @@ export default async function EditUserPage({
     redirect('/dashboard')
   }
 
+  // Get manager's locations if club manager
+  let managerLocationIds: string[] = []
+  
   if (session.user.role === 'CLUB_MANAGER') {
     // Club managers can only edit users in their location or themselves
     const userWithLocation = await prisma.user.findUnique({
@@ -63,7 +66,7 @@ export default async function EditUserPage({
     })
     
     const userLocationIds = userWithLocation?.locations.map(l => l.locationId) || []
-    const managerLocationIds = managerWithLocations?.locations.map(l => l.locationId) || []
+    managerLocationIds = managerWithLocations?.locations.map(l => l.locationId) || []
     const hasSharedLocation = userLocationIds.some(loc => managerLocationIds.includes(loc))
     
     if (!hasSharedLocation && user.id !== session.user.id) {
