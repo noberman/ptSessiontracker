@@ -87,12 +87,6 @@ export default async function LocationDetailsPage({
       },
       _count: {
         select: {
-          users: {
-            where: {
-              role: 'TRAINER',
-              active: true
-            }
-          },
           clients: {
             where: {
               active: true
@@ -113,6 +107,17 @@ export default async function LocationDetailsPage({
   if (!location) {
     redirect('/locations')
   }
+
+  // Count trainers separately through the UserLocation junction table
+  const trainerCount = await prisma.userLocation.count({
+    where: {
+      locationId: id,
+      user: {
+        role: 'TRAINER',
+        active: true
+      }
+    }
+  })
 
   // Check permissions
   if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER') {
@@ -182,7 +187,7 @@ export default async function LocationDetailsPage({
               <div>
                 <p className="text-sm text-text-secondary">Active Trainers</p>
                 <p className="text-2xl font-bold text-text-primary">
-                  {location._count.users}
+                  {trainerCount}
                 </p>
               </div>
               <UserCheck className="h-8 w-8 text-primary-500" />
