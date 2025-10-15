@@ -22,7 +22,6 @@ export default async function UserDetailPage({
   const user = await prisma.user.findUnique({
     where: { id },
     include: {
-      location: true,
       locations: {
         include: {
           location: true,
@@ -120,10 +119,9 @@ export default async function UserDetailPage({
                 <div>
                   <p className="text-sm text-text-secondary">Location{(() => {
                     // Count total locations
-                    const locationCount = new Set([
-                      ...(user.location ? [user.location.id] : []),
-                      ...(user.locations?.map((l: any) => l.location.id) || [])
-                    ]).size
+                    const locationCount = new Set(
+                      user.locations?.map((l: any) => l.location.id) || []
+                    ).size
                     return locationCount > 1 ? 's' : ''
                   })()}</p>
                   <div className="mt-1">
@@ -134,9 +132,7 @@ export default async function UserDetailPage({
                       const locationMap = new Map()
                       
                       // Add primary location
-                      if (user.location) {
-                        locationMap.set(user.location.id, user.location.name)
-                      }
+                      // Locations are added from the locations array below
                       
                       // Add locations from junction table
                       user.locations?.forEach((loc: any) => {
