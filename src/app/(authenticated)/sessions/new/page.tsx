@@ -240,16 +240,11 @@ export default async function NewSessionPage({
             role: { in: ['TRAINER', 'PT_MANAGER'] },
             active: true,
             organizationId: session.user.organizationId,
-            OR: [
-              { locationId: { in: accessibleLocationIds } },
-              { 
-                locations: {
-                  some: {
-                    locationId: { in: accessibleLocationIds }
-                  }
-                }
+            locations: {
+              some: {
+                locationId: { in: accessibleLocationIds }
               }
-            ]
+            }
           },
           select: {
             id: true,
