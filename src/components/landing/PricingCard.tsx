@@ -80,7 +80,7 @@ export function PricingCard({ tier, isPopular = false, onSelect }: PricingCardPr
         {/* CTA Button */}
         <Button 
           className="w-full" 
-          variant={isPopular ? "default" : "outline"}
+          variant={isPopular ? "primary" : "outline"}
           onClick={onSelect}
         >
           {tier.price === 0 ? 'Get Started Free' : 'Start 14-Day Trial'}
