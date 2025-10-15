@@ -14,10 +14,10 @@ interface DashboardWrapperProps {
   userId: string
   userName: string
   actualRole: string
-  locationId: string | null
+  locationIds: string[]
 }
 
-export function DashboardWrapper({ userId, userName, actualRole, locationId }: DashboardWrapperProps) {
+export function DashboardWrapper({ userId, userName, actualRole, locationIds }: DashboardWrapperProps) {
   // For development, allow switching between views
   const [viewRole, setViewRole] = useState(actualRole)
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false)
@@ -59,7 +59,7 @@ export function DashboardWrapper({ userId, userName, actualRole, locationId }: D
             userId={userId} 
             userName={userName}
             userRole="CLUB_MANAGER"
-            locationId={locationId}
+            locationIds={locationIds}
           />
         )
       
@@ -69,7 +69,7 @@ export function DashboardWrapper({ userId, userName, actualRole, locationId }: D
             userId={userId} 
             userName={userName}
             userRole="PT_MANAGER"
-            locationId={null}
+            locationIds={locationIds}
           />
         )
       

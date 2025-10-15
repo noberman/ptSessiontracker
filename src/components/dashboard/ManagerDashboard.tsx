@@ -27,7 +27,7 @@ interface ManagerDashboardProps {
   userId: string
   userName: string
   userRole: string
-  locationId: string | null
+  locationIds: string[]
 }
 
 interface DashboardData {
