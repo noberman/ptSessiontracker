@@ -20,7 +20,8 @@ async function main() {
   })
 
   const clients = await prisma.client.findMany({
-    orderBy: { createdAt: 'asc' }
+    orderBy: { createdAt: 'asc' },
+    include: { location: true }
   })
 
   const locations = await prisma.location.findMany({
@@ -84,6 +85,9 @@ async function main() {
   threeMonthsAgo.setMonth(today.getMonth() - 3)
   
   for (const pkg of packages) {
+    // Get the client for this package to find their location
+    const packageClient = clients.find(c => c.id === pkg.clientId)
+    
     // Each package gets 40-90% of its sessions used
     const sessionPercentage = 0.4 + Math.random() * 0.5
     const sessionsToCreate = Math.floor(pkg.totalSessions * sessionPercentage)
@@ -105,7 +109,7 @@ async function main() {
         trainerId: randomTrainer.id,
         clientId: pkg.clientId,
         packageId: pkg.id,
-        locationId: randomTrainer.locationId || locations[0].id,
+        locationId: packageClient?.locationId || locations[0].id,
         sessionDate,
         sessionValue: pkg.sessionValue, // Uses the package's value
         validated: isValidated,
