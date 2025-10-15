@@ -95,12 +95,21 @@ export async function POST(request: NextRequest) {
           name: user.name,
           role: user.role,
           organizationId: clonedOrg.id,
-          locationId: user.locationId ? idMap.locations[user.locationId] : null,
           active: user.active,
           onboardingCompletedAt: user.onboardingCompletedAt ? new Date(user.onboardingCompletedAt) : null
         }
       })
       idMap.users[user.id] = clonedUser.id
+      
+      // Create UserLocation record if user had a location
+      if (user.locationId && idMap.locations[user.locationId]) {
+        await prisma.userLocation.create({
+          data: {
+            userId: clonedUser.id,
+            locationId: idMap.locations[user.locationId]
+          }
+        })
+      }
     }
     console.log('✅ Cloned', data.users.length, 'users')
 
