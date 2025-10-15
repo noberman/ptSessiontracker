@@ -77,7 +77,7 @@ export function PricingTable() {
             <div>
               <h4 className="font-semibold mb-2">Can I cancel anytime?</h4>
               <p className="text-sm text-muted-foreground">
-                Absolutely! Cancel anytime with no penalties or hidden fees. You'll have access until the end of your billing period.
+                Absolutely! Cancel anytime with no penalties or hidden fees. You&apos;ll have access until the end of your billing period.
               </p>
             </div>
           </div>
