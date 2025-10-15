@@ -54,8 +54,15 @@ export async function GET(request: NextRequest) {
         password: hashedPassword,
         name: 'Admin',
         role: 'ADMIN',
-        locationId: location.id,
         active: true
+      }
+    })
+
+    // Associate admin with location through UserLocation junction table
+    await prisma.userLocation.create({
+      data: {
+        userId: admin.id,
+        locationId: location.id
       }
     })
 
