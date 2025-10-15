@@ -467,12 +467,10 @@ export async function POST(request: Request) {
           id: t.id, 
           name: t.name, 
           email: t.email,
-          locationId: t.locationId,
-          // Include all locations this trainer has access to
-          locationIds: [
-            ...(t.locationId ? [t.locationId] : []),  // Old system
-            ...(t.locations ? t.locations.map(l => l.locationId) : [])  // New system
-          ].filter((id, index, self) => self.indexOf(id) === index)  // Remove duplicates
+          // All locations this trainer has access to
+          locationIds: t.locations ? t.locations.map(l => l.locationId) : [],
+          // For backward compatibility, set locationId to first location
+          locationId: t.locations && t.locations.length > 0 ? t.locations[0].locationId : null
         })),
         packageTypes: packageTypes.map(t => ({
           id: t.id,
