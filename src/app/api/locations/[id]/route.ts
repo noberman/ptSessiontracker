@@ -18,7 +18,7 @@ export async function GET(
     const location = await prisma.location.findUnique({
       where: { id },
       include: {
-        userLocations: {
+        userAccess: {
           where: {
             user: {
               role: 'TRAINER',
@@ -106,8 +106,8 @@ export async function GET(
     // Transform the response to flatten the user data from junction table
     const transformedLocation = {
       ...location,
-      users: location.userLocations.map(ul => ul.user).sort((a, b) => a.name.localeCompare(b.name)),
-      userLocations: undefined, // Remove the junction table from response
+      users: location.userAccess.map(ul => ul.user).sort((a, b) => a.name.localeCompare(b.name)),
+      userAccess: undefined, // Remove the junction table from response
       sessionsThisMonth: location._count.sessions
     }
     
