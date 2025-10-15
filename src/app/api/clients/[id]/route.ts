@@ -180,18 +180,12 @@ export async function PUT(
           role: { in: ['TRAINER', 'PT_MANAGER'] },
           active: true,
           organizationId: session.user.organizationId,
-          OR: [
-            // Check old system (locationId field)
-            { locationId: targetLocationId },
-            // Check new system (UserLocation records)
-            {
-              locations: {
-                some: {
-                  locationId: targetLocationId
-                }
-              }
+          // Check UserLocation records
+          locations: {
+            some: {
+              locationId: targetLocationId
             }
-          ]
+          }
         },
       })
 
