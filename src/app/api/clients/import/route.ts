@@ -226,6 +226,7 @@ export async function POST(request: Request) {
         prisma.location.findMany({ 
           where: {
             ...locationFilter,
+            organizationId,  // Filter by organization to prevent showing other orgs' locations
             active: true
           }
         }),
