@@ -10,7 +10,13 @@ async function testProductionLogin() {
     // 1. Check if admin exists
     const admin = await prisma.user.findFirst({
       where: { email: 'admin@ptsession.com' },
-      include: { location: true }
+      include: { 
+        locations: {
+          include: {
+            location: true
+          }
+        }
+      }
     })
     
     if (!admin) {
@@ -37,7 +43,7 @@ async function testProductionLogin() {
     console.log(`  Name: ${admin.name}`)
     console.log(`  Role: ${admin.role}`)
     console.log(`  Active: ${admin.active}`)
-    console.log(`  Location: ${admin.location?.name || 'None'}`)
+    console.log(`  Locations: ${admin.locations?.map(l => l.location.name).join(', ') || 'None'}`)
     console.log(`  Created: ${admin.createdAt}`)
     
     // 2. Test password variations
