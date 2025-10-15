@@ -63,13 +63,22 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
     setError('')
     
     try {
+      // First, fetch available locations
+      const locationsResponse = await fetch('/api/locations')
+      const locationsData = await locationsResponse.json()
+      const firstLocation = locationsData.locations?.[0]
+      
+      if (!firstLocation) {
+        throw new Error('No locations available')
+      }
+      
       // Create demo client
       const clientResponse = await fetch('/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...testClient,
-          locationId: session?.user?.locationId,
+          locationId: firstLocation.id,
           isDemo: true
         })
       })

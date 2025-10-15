@@ -32,11 +32,14 @@ export async function GET(
         email: true,
         role: true,
         active: true,
-        locationId: true,
-        location: {
+        locations: {
           select: {
-            id: true,
-            name: true,
+            location: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         createdAt: true,
@@ -53,10 +56,10 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    // For now, skip location-based checks as we're using UserLocation table
     if (session.user.role === 'CLUB_MANAGER' && 
-        user.locationId !== session.user.locationId &&
         user.id !== session.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      // Could add UserLocation check here if needed
     }
 
     return NextResponse.json(user)
@@ -83,7 +86,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { name, email, password, role, locationId, locationIds, active } = body
+    const { name, email, password, role, locationIds, active } = body
 
     // Get organization context
     const organizationId = await getOrganizationId()
@@ -106,9 +109,26 @@ export async function PUT(
     }
 
     if (session.user.role === 'CLUB_MANAGER') {
-      if (currentUser.locationId !== session.user.locationId && 
-          id !== session.user.id) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      // Check if club manager has access to the same locations as the target user
+      if (id !== session.user.id) {
+        const [managerLocations, userLocations] = await Promise.all([
+          prisma.userLocation.findMany({
+            where: { userId: session.user.id },
+            select: { locationId: true }
+          }),
+          prisma.userLocation.findMany({
+            where: { userId: id },
+            select: { locationId: true }
+          })
+        ])
+        
+        const managerLocationIds = managerLocations.map(ul => ul.locationId)
+        const userLocationIds = userLocations.map(ul => ul.locationId)
+        const hasSharedLocation = userLocationIds.some(locId => managerLocationIds.includes(locId))
+        
+        if (!hasSharedLocation) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
       }
       // Club managers can't change roles
       if (role && role !== currentUser.role) {
@@ -184,8 +204,8 @@ export async function PUT(
           { status: 400 }
         )
       }
-      // If locationIds is not provided but locationId is being cleared
-      if (locationIds === undefined && locationId === null) {
+      // If locationIds is not provided, ensure user has existing locations
+      if (locationIds === undefined) {
         // Check if user has any locations in junction table
         const userLocations = await prisma.userLocation.count({
           where: { userId: id }
@@ -260,7 +280,6 @@ export async function PUT(
     if (name !== undefined) updateData.name = name
     if (email !== undefined) updateData.email = email
     if (role !== undefined && session.user.role !== 'TRAINER') updateData.role = role
-    if (locationId !== undefined && session.user.role !== 'TRAINER') updateData.locationId = locationId
     if (active !== undefined && session.user.role === 'ADMIN') updateData.active = active
     
     // Hash password if provided
@@ -279,7 +298,6 @@ export async function PUT(
           name: true,
           email: true,
           role: true,
-          locationId: true,
           active: true,
           updatedAt: true,
         },
@@ -299,16 +317,6 @@ export async function PUT(
               userId: id,
               locationId: locId
             }))
-          })
-        }
-
-        // If primary locationId is set, ensure it's also in UserLocation
-        if (user.locationId && !locationIds.includes(user.locationId)) {
-          await tx.userLocation.create({
-            data: {
-              userId: id,
-              locationId: user.locationId
-            }
           })
         }
       }

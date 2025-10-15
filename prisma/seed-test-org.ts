@@ -45,7 +45,6 @@ async function createTestOrganization() {
         name: 'Beta Admin',
         role: 'ADMIN',
         organizationId: org.id,
-        locationId: location.id,
         active: true,
         onboardingCompletedAt: new Date()
       }
@@ -62,12 +61,21 @@ async function createTestOrganization() {
         name: 'John Trainer',
         role: 'TRAINER',
         organizationId: org.id,
-        locationId: location.id,
         active: true
       }
     })
     
     console.log('🏋️ Created trainer:', trainer.email)
+    
+    // Create UserLocation records
+    await prisma.userLocation.createMany({
+      data: [
+        { userId: admin.id, locationId: location.id },
+        { userId: trainer.id, locationId: location.id },
+      ]
+    })
+    
+    console.log('✅ Created UserLocation records')
     
     // Create some clients
     const client1 = await prisma.client.create({
@@ -133,8 +141,8 @@ async function createTestOrganization() {
           trainerId: trainer.id,
           clientId: client1.id,
           packageId: package1.id,
-          locationId: location.id,
           organizationId: org.id,
+          locationId: location.id,
           sessionDate: lastWeek,
           sessionValue: 50,
           validated: true,
@@ -144,8 +152,8 @@ async function createTestOrganization() {
           trainerId: trainer.id,
           clientId: client1.id,
           packageId: package1.id,
-          locationId: location.id,
           organizationId: org.id,
+          locationId: location.id,
           sessionDate: new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000),
           sessionValue: 50,
           validated: true,
@@ -155,8 +163,8 @@ async function createTestOrganization() {
           trainerId: trainer.id,
           clientId: client2.id,
           packageId: package2.id,
-          locationId: location.id,
           organizationId: org.id,
+          locationId: location.id,
           sessionDate: today,
           sessionValue: 45,
           validated: false

@@ -50,7 +50,6 @@ export const authOptions: NextAuthOptions = {
               active: true, // Only check active accounts
             },
             include: {
-              location: true,
               organization: true,
             },
           })
@@ -107,7 +106,6 @@ export const authOptions: NextAuthOptions = {
               email: user.email,
               name: user.name,
               role: user.role,
-              locationId: user.locationId,
               organizationId: user.organizationId,
               availableOrgs, // Include all available orgs for switching
             }
@@ -143,7 +141,6 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name,
             role: user.role,
-            locationId: user.locationId,
             organizationId: user.organizationId,
           } as any
         } catch (error) {
@@ -207,7 +204,6 @@ export const authOptions: NextAuthOptions = {
             ...token,
             id: token.id || '',
             role: token.role || 'pending',
-            locationId: token.locationId || null,
             organizationId: token.organizationId || null,
           }
         }
@@ -270,7 +266,6 @@ export const authOptions: NextAuthOptions = {
             ...token,
             id: currentUser.id,
             role: currentUser.role,
-            locationId: currentUser.locationId,
             organizationId: currentUser.organizationId,
             organizationName: currentUser.organization?.name || null,
             onboardingCompletedAt: currentUser.onboardingCompletedAt,
@@ -285,7 +280,6 @@ export const authOptions: NextAuthOptions = {
             ...token,
             id: token.id || '',
             role: token.role || 'pending',
-            locationId: token.locationId || null,
             organizationId: token.organizationId || null,
           }
         }
@@ -328,7 +322,6 @@ export const authOptions: NextAuthOptions = {
               email: user.email,
               name: user.name || selectedUser.name,
               role: selectedUser.role,
-              locationId: selectedUser.locationId,
               organizationId: selectedUser.organizationId,
               organizationName: selectedUser.organization?.name || null,
               onboardingCompletedAt: selectedUser.onboardingCompletedAt,
@@ -344,8 +337,7 @@ export const authOptions: NextAuthOptions = {
               email: user.email,
               name: user.name,
               role: token.role || 'pending',
-              locationId: token.locationId || null,
-              organizationId: token.organizationId || null,
+                organizationId: token.organizationId || null,
               needsOnboarding: true,
             }
           }
@@ -391,7 +383,6 @@ export const authOptions: NextAuthOptions = {
             ...token,
             id: user.id,
             role: (user as any).role,
-            locationId: (user as any).locationId,
             organizationId: (user as any).organizationId,
             organizationName: dbUser?.organization?.name || organizationData?.name || null,
             onboardingCompletedAt: dbUser?.onboardingCompletedAt || null,
@@ -436,7 +427,6 @@ export const authOptions: NextAuthOptions = {
           ...session.user,
           id: token.id as string,
           role: token.role as string,
-          locationId: token.locationId as string | null,
           organizationId: token.organizationId as string | null,
           organizationName: token.organizationName as string | null | undefined,
           onboardingCompletedAt: token.onboardingCompletedAt as Date | null | undefined,

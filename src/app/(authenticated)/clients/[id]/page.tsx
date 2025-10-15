@@ -67,8 +67,14 @@ export default async function ClientDetailPage({
     if (client.primaryTrainerId !== session.user.id) {
       redirect('/clients')
     }
-  } else if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    if (client.locationId !== session.user.locationId) {
+  } else if (session.user.role === 'CLUB_MANAGER') {
+    // Check if club manager has access to the client's location
+    const managerLocations = await prisma.userLocation.findMany({
+      where: { userId: session.user.id },
+      select: { locationId: true }
+    })
+    const hasAccess = managerLocations.some(ul => ul.locationId === client.locationId)
+    if (!hasAccess) {
       redirect('/clients')
     }
   }

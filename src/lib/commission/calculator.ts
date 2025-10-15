@@ -19,8 +19,6 @@ export interface TrainerCommission {
   trainerId: string
   trainerName: string
   trainerEmail: string
-  locationId: string | null
-  locationName: string | null
   totalSessions: number
   totalValue: number
   validatedSessions: number
@@ -167,15 +165,12 @@ export async function calculateTrainerCommission(
   
   // Get trainer info
   const trainer = await prisma.user.findUnique({
-    where: { id: trainerId },
-    include: {
-      location: true
-    }
+    where: { id: trainerId }
   })
   
   if (!trainer) return null
   
-  // Get validated sessions for the month
+  // Get validated sessions for the month with location info
   const sessions = await prisma.session.findMany({
     where: {
       trainerId,
@@ -185,6 +180,13 @@ export async function calculateTrainerCommission(
       },
       validated: true,
       cancelled: false
+    },
+    include: {
+      location: {
+        select: {
+          name: true
+        }
+      }
     },
     orderBy: {
       sessionDate: 'asc'
@@ -202,8 +204,6 @@ export async function calculateTrainerCommission(
     trainerId,
     trainerName: trainer.name,
     trainerEmail: trainer.email,
-    locationId: trainer.locationId,
-    locationName: trainer.location?.name || null,
     totalSessions,
     validatedSessions,
     totalValue,

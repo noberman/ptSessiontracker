@@ -17,7 +17,6 @@ export default async function DashboardPage() {
       userId={session.user.id}
       userName={session.user.name || ''}
       actualRole={session.user.role}
-      locationId={session.user.locationId}
     />
   )
 }

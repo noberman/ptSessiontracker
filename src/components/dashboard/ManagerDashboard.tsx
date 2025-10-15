@@ -182,7 +182,10 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
     // Only allow toggling trainers from the selected location (or all if no location selected)
     if (selectedLocation && data?.allTrainers) {
       const trainer = data.allTrainers.find(t => t.id === trainerId)
-      if (trainer?.locationId !== selectedLocation) {
+      // Check if trainer has access to the selected location (using locationIds array or fallback to locationId)
+      const hasLocation = trainer?.locationIds?.includes(selectedLocation) || 
+                         trainer?.locationId === selectedLocation
+      if (!hasLocation) {
         return // Don't allow selecting trainers from other locations
       }
     }
@@ -510,7 +513,9 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
                       <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
                         <div className="max-h-60 overflow-y-auto p-2">
                           {data.allTrainers
-                            .filter(trainer => !selectedLocation || trainer.locationId === selectedLocation)
+                            .filter(trainer => !selectedLocation || 
+                              trainer.locationIds?.includes(selectedLocation) || 
+                              trainer.locationId === selectedLocation)
                             .map((trainer) => (
                               <label
                                 key={trainer.id}

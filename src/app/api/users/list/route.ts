@@ -81,12 +81,6 @@ export async function GET(request: NextRequest) {
           email: true,
           role: true,
           active: true,
-          locationId: true,
-          location: {
-            select: {
-              name: true,
-            },
-          },
           locations: {
             select: {
               location: {

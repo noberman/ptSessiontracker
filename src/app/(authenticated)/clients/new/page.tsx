@@ -62,7 +62,6 @@ export default async function NewClientPage() {
           id: true,
           name: true,
           email: true,
-          locationId: true,
           locations: {
             select: {
               locationId: true
@@ -93,7 +92,6 @@ export default async function NewClientPage() {
           id: true,
           name: true,
           email: true,
-          locationId: true,
           locations: {
             select: {
               locationId: true

@@ -45,7 +45,6 @@ async function createSuperAdmin() {
           active: true,
           // Super admin doesn't belong to any specific organization
           organizationId: null,
-          locationId: null,
           onboardingCompletedAt: new Date() // Mark as onboarded
         }
       })

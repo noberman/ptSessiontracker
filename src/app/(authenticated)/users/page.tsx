@@ -29,7 +29,6 @@ export default async function UsersPage({
     select: {
       id: true,
       role: true,
-      locationId: true,
       organizationId: true,
     },
   })
@@ -70,17 +69,12 @@ export default async function UsersPage({
   if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
     const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
     if (accessibleLocations && accessibleLocations.length > 0) {
-      // Show users at accessible locations or users with access to those locations
-      where.OR = [
-        { locationId: { in: accessibleLocations } },
-        { 
-          locations: {
-            some: {
-              locationId: { in: accessibleLocations }
-            }
-          }
+      // Show users with access to those locations through UserLocation junction table
+      where.locations = {
+        some: {
+          locationId: { in: accessibleLocations }
         }
-      ]
+      }
     } else {
       // No accessible locations
       where.id = 'no-access'
@@ -111,12 +105,6 @@ export default async function UsersPage({
         email: true,
         role: true,
         active: true,
-        locationId: true,
-        location: {
-          select: {
-            name: true,
-          },
-        },
         locations: {
           select: {
             location: {

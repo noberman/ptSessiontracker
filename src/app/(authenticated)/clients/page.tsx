@@ -117,6 +117,9 @@ export default async function ClientsPage({
     }
   }
 
+  // Get user's accessible locations for filtering
+  let accessibleLocationIds: string[] = []
+  
   // Restrict based on user role
   if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
     // Get user's accessible locations (both old locationId and new UserLocation records)
@@ -130,7 +133,6 @@ export default async function ClientsPage({
     })
     
     // Collect all accessible location IDs from UserLocation table
-    const accessibleLocationIds: string[] = []
     if (user?.locations) {
       accessibleLocationIds.push(...user.locations.map(l => l.locationId))
     }
@@ -188,10 +190,10 @@ export default async function ClientsPage({
     }),
     prisma.client.count({ where }),
     // Get locations for filter
-    session.user.role === 'CLUB_MANAGER' && session.user.locationId
+    session.user.role === 'CLUB_MANAGER' && accessibleLocationIds.length > 0
       ? prisma.location.findMany({
           where: { 
-            id: session.user.locationId,
+            id: { in: accessibleLocationIds },
             active: true
           },
           select: { id: true, name: true },
@@ -210,8 +212,14 @@ export default async function ClientsPage({
         role: { in: ['TRAINER', 'PT_MANAGER'] },
         active: true,
         organizationId: session.user.organizationId,
-        ...(session.user.role === 'CLUB_MANAGER' && session.user.locationId
-          ? { locationId: session.user.locationId }
+        ...(session.user.role === 'CLUB_MANAGER' && accessibleLocationIds.length > 0
+          ? { 
+              locations: {
+                some: {
+                  locationId: { in: accessibleLocationIds }
+                }
+              }
+            }
           : {}),
       },
       select: {

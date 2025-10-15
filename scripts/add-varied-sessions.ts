@@ -100,11 +100,13 @@ async function main() {
         // Get a trainer for this session
         const trainer = trainers[Math.floor(Math.random() * Math.min(4, trainers.length))]
         
+        // Find the client to get their locationId
+        const client = clients.find(c => c.id === pkg.clientId)
         sessionsData.push({
           trainerId: trainer.id,
           clientId: pkg.clientId,
           packageId: pkg.id,
-          locationId: trainer.locationId || locations[0].id,
+          locationId: client?.locationId || locations[0].id,
           sessionDate,
           sessionValue: pkg.sessionValue, // Use the package's session value
           validated: isValidated,

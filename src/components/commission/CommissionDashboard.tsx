@@ -426,9 +426,6 @@ export function CommissionDashboard({
                           <div className="text-sm text-text-secondary">{commission.trainerEmail}</div>
                         </div>
                       </td>
-                      <td className="p-4 text-center text-sm">
-                        {commission.locationName || 'N/A'}
-                      </td>
                       <td className="p-4 text-center">
                         <div>{commission.totalSessions}</div>
                         <div className="text-xs text-text-secondary">

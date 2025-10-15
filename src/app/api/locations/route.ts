@@ -62,7 +62,7 @@ export async function GET(request: Request) {
       include: {
         _count: {
           select: {
-            users: true,
+            userAccess: true,  // Count users through UserLocation junction table
             clients: true,
             sessions: {
               where: {
@@ -82,29 +82,17 @@ export async function GET(request: Request) {
     // Get trainer details for each location
     const locationsWithDetails = await Promise.all(
       locations.map(async (location) => {
-        // Get trainers with access to this location (both old locationId and new UserLocation)
+        // Get trainers with access to this location through UserLocation junction table
         const trainers = await prisma.user.findMany({
           where: {
-            OR: [
-              // Old system: locationId field
-              {
-                locationId: location.id,
-                role: 'TRAINER',
-                active: true,
-                organizationId
-              },
-              // New system: UserLocation junction table
-              {
-                locations: {
-                  some: {
-                    locationId: location.id
-                  }
-                },
-                role: 'TRAINER',
-                active: true,
-                organizationId
+            locations: {
+              some: {
+                locationId: location.id
               }
-            ]
+            },
+            role: 'TRAINER',
+            active: true,
+            organizationId
           },
           select: {
             id: true,

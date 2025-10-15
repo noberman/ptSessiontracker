@@ -90,7 +90,6 @@ async function main() {
       name: 'Sarah Manager',
       role: Role.CLUB_MANAGER,
       organizationId: snapFitness.id,  // Club Manager needs to belong to an organization
-      locationId: woodSquare.id,
       active: true
     }
   })
@@ -102,12 +101,22 @@ async function main() {
       name: 'Mike PT Manager',
       role: Role.PT_MANAGER,
       organizationId: snapFitness.id,  // PT Manager needs to belong to an organization
-      locationId: woodSquare.id,  // PT Manager can have a primary location
       active: true
     }
   })
 
   console.log('✅ Created managers')
+
+  // Create UserLocation records for managers
+  await prisma.userLocation.createMany({
+    data: [
+      { userId: clubManager.id, locationId: woodSquare.id },
+      { userId: ptManager.id, locationId: woodSquare.id },
+      { userId: ptManager.id, locationId: plaza888.id }, // PT Manager has access to both
+    ]
+  })
+
+  console.log('✅ Created UserLocation records for managers')
 
   // Create trainers (2 per location)
   const trainerPassword = await hash('trainer123', 10)

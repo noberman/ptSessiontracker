@@ -331,7 +331,6 @@ export async function POST(request: Request) {
       const trainer = await prisma.user.findUnique({
         where: { id: session.user.id },
         select: { 
-          locationId: true, 
           organizationId: true,
           locations: {
             select: { locationId: true }
@@ -339,9 +338,8 @@ export async function POST(request: Request) {
         }
       })
 
-      // Check both old system (locationId) and new system (UserLocation records)
+      // Check if trainer has access to client's location via UserLocation records
       const hasLocationAccess = 
-        trainer?.locationId === client.locationId || 
         trainer?.locations.some(loc => loc.locationId === client.locationId)
 
       if (!hasLocationAccess) {

@@ -87,7 +87,6 @@ export default async function EditClientPage({
         id: true,
         name: true,
         email: true,
-        locationId: true,
         locations: {
           select: {
             locationId: true
@@ -116,7 +115,6 @@ export default async function EditClientPage({
           id: true,
           name: true,
           email: true,
-          locationId: true,
           locations: {
             select: {
               locationId: true

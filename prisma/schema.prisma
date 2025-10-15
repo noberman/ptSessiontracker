@@ -50,7 +50,6 @@ model Location {
   clients        Client[]
   organization   Organization? @relation(fields: [organizationId], references: [id])
   sessions       Session[]
-  users          User[]
   userAccess     UserLocation[]  // Users with access to this location
 
   @@index([active])
@@ -64,7 +63,6 @@ model User {
   password        String
   name            String
   role            Role          @default(TRAINER)
-  locationId      String?
   active          Boolean       @default(true)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -76,7 +74,6 @@ model User {
   adminAuditLogs  AdminAuditLog[] @relation("AdminAuditLogs")
   createdTokens   TempAuthToken[] @relation("TokenAdmin")
   usedTokens      TempAuthToken[] @relation("TokenUser")
-  location        Location?     @relation(fields: [locationId], references: [id])
   organization    Organization? @relation(fields: [organizationId], references: [id])
   locations       UserLocation[]  // Many-to-many via junction table
 

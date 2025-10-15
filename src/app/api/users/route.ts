@@ -90,7 +90,6 @@ export async function GET(request: NextRequest) {
           email: true,
           role: true,
           active: true,
-          locationId: true,
           location: {
             select: {
               name: true,
@@ -250,7 +249,6 @@ export async function POST(request: NextRequest) {
           email,
           password: hashedPassword,
           role,
-          locationId,
           organizationId, // Set organization for new user
         },
         select: {
@@ -258,7 +256,6 @@ export async function POST(request: NextRequest) {
           name: true,
           email: true,
           role: true,
-          locationId: true,
           active: true,
           createdAt: true,
         },

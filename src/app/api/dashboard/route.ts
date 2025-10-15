@@ -435,7 +435,11 @@ export async function GET(request: Request) {
           id: true,
           name: true,
           email: true,
-          locationId: true
+          locations: {
+            select: {
+              locationId: true
+            }
+          }
         },
         orderBy: { name: 'asc' }
       })
@@ -456,7 +460,7 @@ export async function GET(request: Request) {
       // Get trainer details for those with sessions
       // const trainerIds = [...new Set(trainerStats.map(stat => stat.trainerId))]
 
-      // Combine trainer stats with trainer info (including locationId)
+      // Combine trainer stats with trainer info (including locations)
       const trainerStatsWithInfo = trainerStats.map(stat => {
         const trainer = allTrainers.find(t => t.id === stat.trainerId)
         return {
@@ -464,7 +468,7 @@ export async function GET(request: Request) {
             id: trainer.id,
             name: trainer.name,
             email: trainer.email,
-            locationId: trainer.locationId
+            locationIds: trainer.locations ? trainer.locations.map(l => l.locationId) : []
           } : null,
           sessionCount: stat._count.id,
           totalValue: stat._sum.sessionValue || 0
@@ -498,7 +502,12 @@ export async function GET(request: Request) {
           }
         },
         trainerStats: trainerStatsWithInfo,
-        allTrainers, // Include all trainers for filtering
+        allTrainers: allTrainers.map(t => ({
+          ...t,
+          locationIds: t.locations ? t.locations.map(l => l.locationId) : [],
+          // For backward compatibility, set locationId to first location
+          locationId: t.locations && t.locations.length > 0 ? t.locations[0].locationId : null
+        })), // Include all trainers for filtering
         allLocations, // Include all locations for filtering (PT_MANAGER and ADMIN only)
         dailyStats,
         lowValidationTrainers,
