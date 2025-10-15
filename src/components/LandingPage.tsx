@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
+import { PricingTable } from '@/components/landing/PricingTable'
 import { 
   CheckCircle, 
   Users, 
@@ -279,6 +280,11 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing">
+        <PricingTable />
       </section>
 
       {/* CTA Section */}
