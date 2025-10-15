@@ -7,7 +7,7 @@ async function main() {
   
   const locations = await prisma.location.findMany({
     include: {
-      userLocations: {
+      userAccess: {
         include: {
           user: true
         }
@@ -44,11 +44,11 @@ async function main() {
     const [keepLocation, ...toMerge] = duplicates
     
     console.log(`  Keeping: ${keepLocation.id} (created: ${keepLocation.createdAt})`)
-    console.log(`  Has: ${keepLocation.userLocations.length} users, ${keepLocation.clients.length} clients, ${keepLocation.sessions.length} sessions`)
+    console.log(`  Has: ${keepLocation.userAccess.length} users, ${keepLocation.clients.length} clients, ${keepLocation.sessions.length} sessions`)
     
     for (const mergeLocation of toMerge) {
       console.log(`  Merging: ${mergeLocation.id} (created: ${mergeLocation.createdAt})`)
-      console.log(`    Has: ${mergeLocation.userLocations.length} users, ${mergeLocation.clients.length} clients, ${mergeLocation.sessions.length} sessions`)
+      console.log(`    Has: ${mergeLocation.userAccess.length} users, ${mergeLocation.clients.length} clients, ${mergeLocation.sessions.length} sessions`)
       
       // Update all references to point to the kept location
       await prisma.$transaction([
