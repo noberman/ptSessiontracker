@@ -18,8 +18,11 @@ async function auditLocationData() {
   // Get all users with their location data
   const users = await prisma.user.findMany({
     include: { 
-      locations: true,
-      location: true 
+      locations: {
+        include: {
+          location: true
+        }
+      }
     }
   })
   
