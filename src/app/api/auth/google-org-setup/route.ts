@@ -66,10 +66,17 @@ export async function POST(request: Request) {
           name: session.user.name || 'Admin',
           password: await hash(randomPassword, 10), // Required field but won't be used with OAuth
           organizationId: organization.id,
-          locationId: location.id,
           role: 'ADMIN',
           active: true,
           onboardingCompletedAt: new Date(),
+        },
+      })
+
+      // Add user to location through UserLocation junction table
+      await tx.userLocation.create({
+        data: {
+          userId: user.id,
+          locationId: location.id,
         },
       })
 
