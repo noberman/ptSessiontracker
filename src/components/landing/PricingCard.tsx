@@ -10,7 +10,7 @@ interface PricingCardProps {
     displayName: string
     price: number
     priceId?: string
-    features: string[]
+    features: readonly string[]
     limits: {
       trainers: number
       sessionsPerMonth: number
