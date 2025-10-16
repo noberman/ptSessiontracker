@@ -1,242 +1,148 @@
-# Task 35: Beta Test Rollout
+# Task 35: Beta Promo Code System (Simplified)
 
-**Complexity: 4/10**  
+**Complexity: 3/10**  
 **Priority: HIGH (Product Validation)**  
-**Status: Not Started (Moved back from done - was incorrectly marked complete)**  
-**Dependencies: Core features complete, Stripe integration working**  
-**Estimated Time: 4 hours development + ongoing management**
+**Status: Not Started (Simplified scope for 5 beta users)**  
+**Dependencies: Onboarding flow complete, Stripe integration working**  
+**Estimated Time: 2-3 hours development**
 
 ## Objective
-Implement beta testing system with promo codes, feedback collection, and parallel paid operations.
+Create simple promo code system that gives 5 beta users free SCALE tier access for 3 months during signup, then auto-downgrades to FREE tier.
 
-## Implementation Checklist
+## Simplified Implementation Checklist
 
-### Phase 1: Promo Code System
-- [ ] Add promo code fields to database:
-```prisma
-model PromoCode {
-  id               String   @id @default(cuid())
-  code             String   @unique
-  description      String?
-  discountType     DiscountType // PERCENTAGE, FIXED, FREE_MONTHS
-  discountValue    Float    // 50 for 50%, 15 for $15 off, 3 for 3 months
-  durationMonths   Int?     // How long discount applies
-  maxUses          Int      @default(1)
-  currentUses      Int      @default(0)
-  validFrom        DateTime @default(now())
-  validUntil       DateTime?
-  createdAt        DateTime @default(now())
-  
-  organizationPromoCodes OrganizationPromoCode[]
-}
-
-model OrganizationPromoCode {
-  id               String   @id @default(cuid())
-  organizationId   String
-  promoCodeId      String
-  appliedAt        DateTime @default(now())
-  expiresAt        DateTime?
-  
-  organization     Organization @relation(...)
-  promoCode        PromoCode @relation(...)
-}
-```
-
-### Phase 2: Promo Code Application
-- [ ] Create `/api/promo-code/validate` endpoint:
-```typescript
-// Check if code is valid
-// Check usage limits
-// Check date validity
-// Return discount details
-```
-
-- [ ] Modify checkout flow:
-```typescript
-// Add promo code input field
-// Apply discount to Stripe checkout
-// Store promo code usage
-```
-
-- [ ] Create admin promo code generator:
-```typescript
-// /api/admin/promo-codes
-// Generate codes like: BETA2024, EARLY30, GYM[RANDOM]
-// Set expiration and limits
-```
-
-### Phase 3: Beta User Identification
-- [ ] Add beta status to Organization:
+### Phase 1: Basic Promo Code System
+- [ ] Add simple promo code to Organization model:
 ```prisma
 model Organization {
   // existing fields...
-  isBetaTester     Boolean  @default(false)
-  betaStartDate    DateTime?
-  betaEndDate      DateTime?
-  betaFeedback     Json?    // Store feedback responses
+  promoCode        String?   // Store applied promo code
+  promoAppliedAt   DateTime? // When promo was applied
+  promoExpiresAt   DateTime? // When promo expires (3 months from application)
+  originalTier     SubscriptionTier? // Store original tier for downgrade
 }
 ```
 
-- [ ] Visual beta badge in UI:
+### Phase 2: Signup Integration
+- [ ] Add promo code input to signup form:
 ```typescript
-// Show "BETA TESTER" badge in nav
-// Show feedback widget
-// Show days remaining in beta
+// Optional promo code field in signup
+// Validate against hardcoded list: ["BETA001", "BETA002", "BETA003", "BETA004", "BETA005"]
+// If valid, set subscriptionTier to SCALE and promoExpiresAt to +3 months
 ```
 
-### Phase 4: Feedback Collection System
-- [ ] Create feedback widget component:
+- [ ] Hardcoded promo codes (no database needed):
 ```typescript
-// Floating feedback button
-// Quick rating (1-5 stars)
-// Text feedback
-// Feature request option
-// Bug report option
+const BETA_PROMO_CODES = {
+  "BETA001": { tier: "SCALE", durationMonths: 3 },
+  "BETA002": { tier: "SCALE", durationMonths: 3 },
+  "BETA003": { tier: "SCALE", durationMonths: 3 },
+  "BETA004": { tier: "SCALE", durationMonths: 3 },
+  "BETA005": { tier: "SCALE", durationMonths: 3 }
+}
 ```
 
-- [ ] Feedback API endpoint:
+### Phase 3: Auto-Downgrade System
+- [ ] Create daily cron job/background task:
 ```typescript
-// POST /api/feedback
-// Store in database
-// Optional: Send to Slack/Discord
-// Track sentiment over time
+// Check for expired promo codes daily
+// Downgrade organizations where promoExpiresAt < now()
+// Set subscriptionTier to FREE (or originalTier if stored)
+// Send email notification about downgrade
 ```
 
-- [ ] Weekly feedback email automation:
+- [ ] Promo status display:
 ```typescript
-// Send every Monday to beta users
-// Include usage stats
-// Ask specific questions
-// One-click rating system
+// Show "Beta Access - X days remaining" in dashboard
+// Show countdown in billing settings
+// Clear messaging about auto-downgrade to FREE
 ```
 
-### Phase 5: Beta Analytics Dashboard
-- [ ] Create admin beta dashboard:
-```typescript
-// /admin/beta-analytics
-// Show beta user activity
-// Feedback sentiment analysis
-// Feature request voting
-// Bug report tracking
-// Conversion tracking (beta → paid)
-```
+## Beta Rollout Plan (Simplified)
 
-- [ ] Key metrics to track:
-  - [ ] Daily active beta users
-  - [ ] Feature adoption rates
-  - [ ] Feedback response rate
-  - [ ] Beta → Paid conversion rate
-  - [ ] Churn rate during beta
+### Phase 1: Setup (1 day)
+- [ ] Deploy promo code system to staging
+- [ ] Test 5 hardcoded promo codes
+- [ ] Test auto-downgrade logic
 
-### Phase 6: Beta Communication
-- [ ] Beta welcome email template:
-```
-Subject: Welcome to FitSync Beta Program! 🎉
+### Phase 2: Beta Distribution (1 week)
+- [ ] Personal outreach to 5 target gyms
+- [ ] Provide individual promo codes: BETA001-BETA005
+- [ ] 3 months free SCALE tier access
+- [ ] Clear communication: auto-downgrades to FREE after 3 months
 
-You're one of 20 selected gyms...
-Your feedback shapes the product...
-Here's your exclusive promo code...
-Join our beta Slack/Discord...
-```
+### Phase 3: Monitoring (3 months)
+- [ ] Monitor beta user activity
+- [ ] Personal check-ins (no formal system needed)
+- [ ] Quick bug fixes as needed
 
-- [ ] Beta feature announcement system:
-```typescript
-// In-app notifications for new features
-// Changelog modal
-// "New" badges on beta features
-```
+### Phase 4: Conversion (Month 3)
+- [ ] Email beta users 2 weeks before expiry
+- [ ] Offer discount for continued access
+- [ ] Auto-downgrade to FREE tier if no conversion
 
-### Phase 7: Beta → Paid Conversion
-- [ ] Conversion strategy:
-```typescript
-// 30 days before beta ends: Send reminder
-// 14 days before: Offer special discount (50% off 3 months)
-// 7 days before: Personal outreach
-// Day of expiry: Auto-downgrade to FREE tier
-```
-
-- [ ] Track conversion metrics:
-```typescript
-// Who converted?
-// At what discount?
-// Which features drove conversion?
-// Why did non-converters leave?
-```
-
-## Beta Rollout Timeline
-
-### Week 0: Setup
-- [ ] Deploy promo code system
-- [ ] Create first 20 beta codes
-- [ ] Set up feedback infrastructure
-
-### Week 1: Recruit Beta Users
-- [ ] Personal outreach to target gyms
-- [ ] Offer 6 months free PRO access
-- [ ] Onboard 5 beta users
-
-### Weeks 2-4: Early Beta
-- [ ] Daily monitoring
-- [ ] Quick bug fixes
-- [ ] Weekly feedback calls
-- [ ] Onboard 5 more beta users
-
-### Weeks 5-8: Expanded Beta
-- [ ] Onboard final 10 beta users
-- [ ] Implement top requested features
-- [ ] Begin paid user acquisition in parallel
-
-### Weeks 9-12: Beta Optimization
-- [ ] A/B testing with beta users
-- [ ] Refine based on feedback
-- [ ] Prepare beta → paid conversion campaign
-
-### Week 13+: Beta Graduation
-- [ ] Convert beta users to paid
-- [ ] Use testimonials for marketing
-- [ ] Maintain VIP relationship with beta users
-
-## Promo Code Examples
+## Beta Codes
 
 ```
-BETA2024     - 6 months free PRO (20 uses)
-EARLY50      - 50% off 3 months (50 uses)  
-GYMFRIEND    - 1 month free trial (unlimited)
-FOUNDER30    - 30% lifetime discount (10 uses)
-BLACKFRIDAY  - $10 off 6 months (100 uses)
+BETA001 - 3 months free SCALE tier
+BETA002 - 3 months free SCALE tier  
+BETA003 - 3 months free SCALE tier
+BETA004 - 3 months free SCALE tier
+BETA005 - 3 months free SCALE tier
 ```
 
-## Success Metrics
+## Success Metrics (Simplified)
 
-- [ ] 20 active beta testers recruited
-- [ ] 50%+ weekly feedback response rate
-- [ ] 30%+ beta → paid conversion rate
-- [ ] 10+ testimonials collected
-- [ ] 5+ case studies developed
+- [ ] 5 beta users successfully onboarded
+- [ ] 3+ months of stable usage
+- [ ] 2+ beta users convert to paid plans
+- [ ] No major technical issues during beta period
 
-## Technical Considerations
+## Technical Implementation
 
-- Promo codes should work with Stripe subscriptions
-- Beta features can be feature-flagged
-- Feedback should be exportable
-- Analytics should be real-time
-- System should handle code expiration gracefully
+### Files to Create/Modify:
+```
+src/
+  app/
+    signup/
+      page.tsx                   # Add promo code input field
+    api/
+      cron/
+        check-promo-expiry.ts     # Daily check for expired promos
+  lib/
+    promo-codes.ts              # Hardcoded promo validation
+  components/
+    billing/
+      PromoStatus.tsx           # Show remaining beta time
+```
 
-## Risk Mitigation
+### Database Changes:
+```prisma
+// Add to Organization model:
+promoCode        String?           // Applied promo code
+promoAppliedAt   DateTime?         // When applied
+promoExpiresAt   DateTime?         // When expires
+originalTier     SubscriptionTier? // For downgrade
+```
+
+## Risk Mitigation (Simplified)
 
 - **Risk**: Beta users expect free forever
-  - **Mitigation**: Clear communication about beta period
+  - **Mitigation**: Clear 3-month messaging everywhere
   
-- **Risk**: Beta feedback is overwhelmingly negative
-  - **Mitigation**: Quick iteration cycles, personal touch
+- **Risk**: Promo codes shared publicly
+  - **Mitigation**: Only 5 codes, personal distribution, track usage
   
-- **Risk**: Low beta engagement
-  - **Mitigation**: Weekly check-ins, incentives for feedback
-  
-- **Risk**: Beta users share promo codes publicly
-  - **Mitigation**: Usage limits, code deactivation capability
+- **Risk**: Auto-downgrade fails
+  - **Mitigation**: Manual backup process, email notifications
 
-## Next Steps
-- Task 31: Implement usage limits (required for beta)
-- Task 32: Implement upgrade prompts (helps conversion)
-- Task 36: Three-tier pricing implementation
+## Dependencies
+- Task 41: Pricing/billing system (current task)
+- Onboarding flow must be complete
+- Email system for notifications
+
+## Notes
+- No complex analytics needed - just track 5 beta users manually
+- No feedback system needed - personal communication
+- No complex promo system - just 5 hardcoded codes
+- Focus on validation, not scale
