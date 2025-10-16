@@ -2,7 +2,7 @@
 
 **Complexity: 4/10**  
 **Priority: HIGH (Product Validation)**  
-**Status: Not Started**  
+**Status: Not Started (Moved back from done - was incorrectly marked complete)**  
 **Dependencies: Core features complete, Stripe integration working**  
 **Estimated Time: 4 hours development + ongoing management**
 
