@@ -231,7 +231,6 @@ SWITCH(expression, case1, value1, case2, value2, ..., default)
 // Tier/Breakpoint Functions
 TIER(value, [[min1, max1, rate1], [min2, max2, rate2], ...])
 PROGRESSIVE(base_value, count_value, tier_config)  // All units get highest tier rate
-GRADUATED(base_value, count_value, tier_config)    // Each unit at its tier rate
 
 // Mathematical Functions
 MIN(value1, value2, ...)
@@ -277,50 +276,66 @@ QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
   IF(AND(month_number >= 1, month_number <= 3), 500, 0)  // Q1 bonus
 ```
 
-#### Example 3: Graduated Commission with Validation Bonus
+#### Example 3: Progressive with Validation Bonus
 ```excel
-= GRADUATED(avg_session_value, sessions_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]]) +
+= PROGRESSIVE(validated_value, validated_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]]) +
   IF(validated_count / sessions_count > 0.95, 100, 0)  // Bonus for 95%+ validation rate
 ```
 
 ### Visual Formula Builder Interface
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ Commission Formula Builder                                  │
-├──────────────────────┬──────────────────────────────────────┤
-│ VARIABLES            │ FORMULA EDITOR                       │
-│                      │                                      │
-│ Sessions             │ ┌────────────────────────────────┐  │
-│ ├─ sessions_count    │ │(                               │  │
-│ ├─ sessions_value    │ │  sessions_value *              │  │
-│ └─ avg_session_value │ │  TIER(                         │  │
-│                      │ │    sessions_count,             │  │
-│ Sales                │ │    [[0, 30, 0.15],            │  │
-│ ├─ sales_count       │ │     [31, 50, 0.20],           │  │
-│ └─ sales_value       │ │     [51, null, 0.25]]         │  │
-│                      │ │  )                             │  │
-│ Time                 │ │) +                             │  │
-│ ├─ month_number      │ │(sales_value * 0.10) +          │  │
-│ └─ quarter_number    │ │IF(month_number <= 3,          │  │
-│                      │ │   sales_value * 0.02, 0)      │  │
-│                      │ └────────────────────────────────┘  │
-│ [+ More Variables]   │                                      │
-├──────────────────────┼──────────────────────────────────────┤
-│ FUNCTIONS            │ TEST YOUR FORMULA                    │
-│                      │                                      │
-│ Conditional          │ Test Scenario:                       │
-│ ├─ IF()             │ ┌────────────────────────────────┐  │
-│ ├─ IFS()            │ │ sessions_count: 45             │  │
-│ └─ SWITCH()         │ │ sessions_value: $4,500         │  │
-│                      │ │ sales_value: $12,000           │  │
-│ Tier Functions       │ │                                │  │
-│ ├─ TIER()           │ └────────────────────────────────┘  │
-│ ├─ PROGRESSIVE()    │                                      │
-│ └─ GRADUATED()      │ Result: $2,400.00                    │
-│                      │                                      │
-│ [+ More Functions]   │ [Run Test] [Save Formula] [Cancel]  │
-└──────────────────────┴──────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│ Commission Formula Builder - Profile: Performance Bonus            │
+├────────────────────────┬────────────────────────────────────────────┤
+│ AVAILABLE VARIABLES    │ FORMULA EDITOR                             │
+│                        │                                            │
+│ All Sessions           │ ┌──────────────────────────────────────┐  │
+│ ├─ sessions_count      │ │ // Progressive tier calculation      │  │
+│ └─ sessions_value      │ │ base_rate = PROGRESSIVE(             │  │
+│                        │ │   validated_value,                   │  │
+│ Validated Sessions     │ │   validated_count,                   │  │
+│ ├─ validated_count     │ │   [[0, 30, 0.20],                   │  │
+│ └─ validated_value     │ │    [31, 50, 0.25],                  │  │
+│                        │ │    [51, null, 0.30]]                │  │
+│ Package Sales          │ │ );                                   │  │
+│ ├─ sales_count         │ │                                      │  │
+│ ├─ sales_value         │ │ // Add sales commission             │  │
+│ └─ avg_package_value   │ │ sales_commission = sales_value * 0.15;│  │
+│                        │ │                                      │  │
+│ Averages               │ │ // Validation bonus                  │  │
+│ └─ avg_session_value   │ │ validation_rate =                    │  │
+│                        │ │   validated_count / sessions_count;  │  │
+│ ────────────────────   │ │ bonus = IF(validation_rate > 0.95,   │  │
+│                        │ │   500, 0);                          │  │
+│ HELPER FUNCTIONS       │ │                                      │  │
+│                        │ │ // Total commission                  │  │
+│ ► Mathematical         │ │ base_rate + sales_commission + bonus │  │
+│   MIN() MAX() ROUND()  │ │                                      │  │
+│                        │ └──────────────────────────────────────┘  │
+│ ► Conditional Logic    │                                            │
+│   IF() IFS() SWITCH()  │ [Validate Formula] [Format Code]          │
+│                        │                                            │
+│ ► Tier Calculations    ├────────────────────────────────────────────┤
+│   TIER()               │ TEST YOUR FORMULA                          │
+│   PROGRESSIVE()        │                                            │
+│                        │ Test Values:                               │
+│ [Show All Functions]   │ sessions_count: [50    ]                  │
+│                        │ sessions_value: [$5000 ]                  │
+│                        │ validated_count: [48    ]                 │
+│                        │ validated_value: [$4800 ]                 │
+│                        │ sales_count: [10    ]                     │
+│                        │ sales_value: [$15000]                     │
+│                        │                                            │
+│                        │ [Run Test]                                 │
+│                        │                                            │
+│                        │ Result: $3,470.00                         │
+│                        │ ├─ Base (Progressive): $1,440.00          │
+│                        │ ├─ Sales (15%): $2,250.00                 │
+│                        │ └─ Validation Bonus: $500.00              │
+│                        │                                            │
+│                        │ [Save Formula] [Cancel]                   │
+└────────────────────────┴────────────────────────────────────────────┘
 ```
 
 ### Formula Validation System
@@ -1086,7 +1101,7 @@ class CommissionEngine implements CommissionCalculator {
 ### Phase 2: Enhanced Formula System
 - [ ] Visual formula builder with drag-drop
 - [ ] Extended variable library (performance metrics, trainer attributes)
-- [ ] Advanced functions (GRADUATED, statistical, date functions)
+- [ ] Advanced functions (statistical, lookup functions)
 - [ ] Formula version control
 - [ ] A/B testing capability
 - [ ] Real-time formula preview
