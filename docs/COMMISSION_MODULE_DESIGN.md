@@ -135,30 +135,23 @@ sales_count            // Number of packages sold
 sales_value            // Total monetary value of packages sold
 avg_package_value      // Average package value
 
-// Trainer Attributes
+// Trainer Tier (for different targets/rates)
 trainer_tier           // Numeric tier level (1=PT1, 2=PT2, etc.)
-trainer_months         // Months employed at organization
-trainer_level          // Skill/certification level (1-5)
-years_experience       // Total years as trainer
-
-// Performance Metrics
-completion_rate        // % of scheduled sessions completed (0.0-1.0)
-client_retention       // % of clients retained month-over-month
-client_satisfaction    // Average client rating (1.0-5.0)
-no_show_rate          // % of sessions marked as no-show
-substitute_count       // Number of sessions covered for other trainers
 
 // Time Variables
 month_number          // Current month (1-12)
 quarter_number        // Current quarter (1-4)
 days_in_period        // Number of days in calculation period
-is_peak_season        // Boolean: true during Jan-Mar, Sep-Oct
 
 // Package Specific
 premium_sessions      // Count of premium package sessions
 standard_sessions     // Count of standard package sessions
 intro_sessions        // Count of intro/trial sessions
 group_sessions        // Count of group training sessions
+
+// No-Show Tracking
+no_show_count         // Number of no-show sessions (no commission)
+validated_sessions    // Number of validated sessions only
 ```
 
 ### Formula Functions Library
@@ -200,34 +193,30 @@ IS_MONTH_END()
 IS_QUARTER_END()
 
 // Custom Business Functions
-RETENTION_BONUS(retention_rate, base_amount)
-PERFORMANCE_MULTIPLIER(satisfaction, completion_rate)
-SEASONAL_ADJUSTMENT(month, base_rate)
+SEASONAL_ADJUSTMENT(month, base_rate)  // Apply seasonal multipliers
+QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
+TIER_MULTIPLIER(trainer_tier)          // Multiplier based on trainer tier
 ```
 
 ### Formula Examples
 
-#### Example 1: Simple Progressive with Performance Bonus
+#### Example 1: Simple Progressive
 ```excel
-= (sessions_value * TIER(sessions_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]])) +
-  IF(completion_rate > 0.95, 500, 0)
+= sessions_value * TIER(sessions_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]])
 ```
 
-#### Example 2: Complex Multi-Factor Calculation
+#### Example 2: Multi-Factor Calculation
 ```excel
-= (
-    PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.20], [41,60,0.25], [61,null,0.30]]) +
-    (sales_value * IF(trainer_tier >= 2, 0.12, 0.10)) +
-    RETENTION_BONUS(client_retention, 1000) +
-    IF(AND(is_peak_season, sessions_count > 50), 750, 0)
-  ) * PERFORMANCE_MULTIPLIER(client_satisfaction, completion_rate)
+= PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.20], [41,60,0.25], [61,null,0.30]]) +
+  (sales_value * IF(trainer_tier >= 2, 0.12, 0.10)) +
+  IF(AND(month_number >= 1, month_number <= 3), 500, 0)  // Q1 bonus
 ```
 
-#### Example 3: Graduated Commission with Trainer Experience Factor
+#### Example 3: Graduated Commission with Package Types
 ```excel
-= GRADUATED(avg_session_value, sessions_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]]) *
-  (1 + MIN(years_experience * 0.02, 0.20)) +
-  IF(substitute_count > 5, substitute_count * 25, 0)
+= GRADUATED(avg_session_value, sessions_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]]) +
+  (premium_sessions * 10) +  // Bonus for premium packages
+  (group_sessions * 5)        // Bonus for group sessions
 ```
 
 ### Visual Formula Builder Interface
@@ -247,10 +236,12 @@ SEASONAL_ADJUSTMENT(month, base_rate)
 │ ├─ sales_count       │ │     [31, 50, 0.20],           │  │
 │ └─ sales_value       │ │     [51, null, 0.25]]         │  │
 │                      │ │  )                             │  │
-│ Performance          │ │) +                             │  │
-│ ├─ completion_rate   │ │(sales_value * 0.10) +          │  │
-│ ├─ client_retention  │ │IF(client_retention > 0.85,    │  │
-│ └─ satisfaction      │ │   500, 0)                      │  │
+│ Trainer              │ │) +                             │  │
+│ └─ trainer_tier      │ │(sales_value * 0.10) +          │  │
+│                      │ │IF(trainer_tier >= 2,          │  │
+│ Time                 │ │   sales_value * 0.02, 0)      │  │
+│ ├─ month_number      │ │                                │  │
+│ └─ quarter_number    │ │                                │  │
 │                      │ └────────────────────────────────┘  │
 │ [+ More Variables]   │                                      │
 ├──────────────────────┼──────────────────────────────────────┤
@@ -261,7 +252,7 @@ SEASONAL_ADJUSTMENT(month, base_rate)
 │ ├─ IFS()            │ │ sessions_count: 45             │  │
 │ └─ SWITCH()         │ │ sessions_value: $4,500         │  │
 │                      │ │ sales_value: $12,000           │  │
-│ Tier Functions       │ │ client_retention: 0.87         │  │
+│ Tier Functions       │ │ trainer_tier: 2                │  │
 │ ├─ TIER()           │ └────────────────────────────────┘  │
 │ ├─ PROGRESSIVE()    │                                      │
 │ └─ GRADUATED()      │ Result: $2,400.00                    │
@@ -472,23 +463,22 @@ const FORMULA_TEMPLATES = {
     variables: ["sessions_value", "sessions_count"]
   },
   
-  performance_based: {
-    name: "Performance-Based",
-    description: "Base rate with performance multipliers",
-    formula: "(sessions_value * 0.18) * (1 + ((completion_rate - 0.80) * 0.5))",
-    variables: ["sessions_value", "completion_rate"]
+  tiered_with_bonus: {
+    name: "Tiered with Bonuses",
+    description: "Progressive tiers plus monthly bonuses",
+    formula: "PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]]) + IF(sessions_count > 60, 500, 0)",
+    variables: ["sessions_value", "sessions_count"]
   },
   
   hybrid_advanced: {
     name: "Advanced Hybrid",
-    description: "Complex calculation with multiple factors",
+    description: "Complex calculation with trainer tiers and seasonal adjustments",
     formula: `
       PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]]) +
       (sales_value * IF(trainer_tier >= 2, 0.12, 0.10)) +
-      IF(client_retention > 0.85, 500, 0) +
-      IF(AND(month_number >= 1, month_number <= 3), sessions_value * 0.02, 0)
+      IF(AND(month_number >= 1, month_number <= 3), sessions_value * 0.02, 0)  // Q1 bonus
     `,
-    variables: ["sessions_value", "sessions_count", "sales_value", "trainer_tier", "client_retention", "month_number"]
+    variables: ["sessions_value", "sessions_count", "sales_value", "trainer_tier", "month_number"]
   }
 };
 ```
@@ -611,7 +601,7 @@ const commissionTestSuite: FormulaTestSuite = {
         sessions_value: 1000,
         sales_value: 2000,
         trainer_tier: 1,
-        completion_rate: 0.90
+        month_number: 3
       },
       expectedResult: 350,
       tolerance: 0.01
@@ -624,7 +614,7 @@ const commissionTestSuite: FormulaTestSuite = {
         sessions_value: 7500,
         sales_value: 15000,
         trainer_tier: 3,
-        completion_rate: 0.98
+        month_number: 3
       },
       expectedResult: 3750,
       tolerance: 0.01
@@ -1005,7 +995,7 @@ Formula: Enhanced with Tiers
 Formula: Organization-Specific
 PROGRESSIVE(sessions_value, sessions_count, custom_tiers) +
 (sales_value * IF(trainer_tier >= 2, 0.15, 0.12)) +
-RETENTION_BONUS(client_retention, 1000) +
+QUARTER_BONUS(quarter_number, 1000) +
 SEASONAL_ADJUSTMENT(month_number, base_rate)
 ```
 
