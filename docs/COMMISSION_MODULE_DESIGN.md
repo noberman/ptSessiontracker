@@ -31,91 +31,137 @@ Complete redesign of the commission calculation system to support multiple calcu
 
 ## System Architecture
 
+### Commission Configuration Structure
+
+Organizations configure their commission system with three main settings:
+
+1. **Calculation Method**: How commission rates are determined (Flat, Progressive, Formula)
+2. **Calculation Period**: When commissions are calculated (Monthly, Quarterly)  
+3. **Application Scope**: How rates are applied (Universal, Package-Based)
+
+```javascript
+{
+  // Main Settings
+  calculationMethod: "PROGRESSIVE",    // FLAT | PROGRESSIVE | FORMULA
+  calculationPeriod: "MONTHLY",        // MONTHLY | QUARTERLY
+  applicationScope: "UNIVERSAL",       // UNIVERSAL | PACKAGE_BASED
+  
+  // Method-specific configuration
+  methodConfig: { /* varies by method */ },
+  
+  // Package-specific overrides (if scope is PACKAGE_BASED)
+  packageOverrides: [
+    {
+      packageTypeId: "premium",
+      methodConfig: { /* same structure as main config */ }
+    }
+  ]
+}
+```
+
 ### Commission Calculation Methods
 
 #### Method 1: Flat Rate
+Simple fixed percentage for all commissions.
+
 ```javascript
 {
-  type: "FLAT",
-  config: {
+  calculationMethod: "FLAT",
+  methodConfig: {
     saleCommission: 10,        // 10% on all sales
     executionCommission: 20    // 20% on all sessions
   }
 }
 ```
 
-#### Method 2: Progressive (Retroactive)
+#### Method 2: Progressive Tiers
+Commission rate increases based on volume achieved. All units get the highest achieved rate.
+
 ```javascript
 {
-  type: "PROGRESSIVE",
-  config: {
+  calculationMethod: "PROGRESSIVE",
+  methodConfig: {
     tiers: [
       { minSessions: 0, maxSessions: 40, executionRate: 20, saleRate: 10 },
       { minSessions: 41, maxSessions: 60, executionRate: 25, saleRate: 15 },
       { minSessions: 61, maxSessions: null, executionRate: 30, saleRate: 20 }
-    ],
-    retroactive: true  // All sessions get the achieved tier rate
-  }
-}
-```
-
-#### Method 3: Graduated
-```javascript
-{
-  type: "GRADUATED",
-  config: {
-    tiers: [
-      { minSessions: 0, maxSessions: 40, executionRate: 20, saleRate: 10 },
-      { minSessions: 41, maxSessions: 60, executionRate: 25, saleRate: 15 },
-      { minSessions: 61, maxSessions: null, executionRate: 30, saleRate: 20 }
-    ],
-    retroactive: false  // Only sessions in each tier get that tier's rate
-  }
-}
-```
-
-#### Method 4: Package-Based
-```javascript
-{
-  type: "PACKAGE_BASED",
-  config: {
-    defaultRates: { saleCommission: 10, executionCommission: 20 },
-    packageOverrides: [
-      { 
-        packageTypeId: "pt2-packages",
-        saleCommission: 15,
-        executionCommission: 25
-      }
     ]
   }
 }
 ```
 
-#### Method 5: Target-Based (Quarterly)
-```javascript
-{
-  type: "TARGET_BASED",
-  config: {
-    period: "QUARTERLY",
-    targets: [
-      { minRevenue: 0, maxRevenue: 50000, saleRate: 10 },
-      { minRevenue: 50001, maxRevenue: 100000, saleRate: 15 },
-      { minRevenue: 100001, maxRevenue: null, saleRate: 20 }
-    ],
-    executionCommission: 0  // Sales only
-  }
-}
-```
+#### Method 3: Formula-Based (Most Flexible)
+Organizations create custom formulas for unlimited flexibility.
 
-#### Method 6: Formula-Based (Most Flexible)
 ```javascript
 {
-  type: "FORMULA",
-  config: {
+  calculationMethod: "FORMULA",
+  methodConfig: {
     formula: "(sessions_value * IF(sessions_count > 50, 0.25, 0.20)) + (sales_value * 0.10)",
     variables: ["sessions_value", "sessions_count", "sales_value"],
     description: "25% execution for 50+ sessions, otherwise 20%, plus 10% of sales"
   }
+}
+```
+
+### Application Scope Examples
+
+#### Universal Application (Default)
+The same calculation method applies to all packages and trainers.
+
+```javascript
+{
+  calculationMethod: "PROGRESSIVE",
+  calculationPeriod: "MONTHLY",
+  applicationScope: "UNIVERSAL",
+  methodConfig: {
+    tiers: [
+      { minSessions: 0, maxSessions: 40, executionRate: 20, saleRate: 10 },
+      { minSessions: 41, maxSessions: null, executionRate: 25, saleRate: 15 }
+    ]
+  }
+}
+```
+
+#### Package-Based Application
+Different packages can have different commission structures.
+
+```javascript
+{
+  calculationMethod: "PROGRESSIVE",
+  calculationPeriod: "MONTHLY", 
+  applicationScope: "PACKAGE_BASED",
+  
+  // Default configuration for standard packages
+  methodConfig: {
+    tiers: [
+      { minSessions: 0, maxSessions: 40, executionRate: 20, saleRate: 10 },
+      { minSessions: 41, maxSessions: null, executionRate: 25, saleRate: 12 }
+    ]
+  },
+  
+  // Override configurations for specific package types
+  packageOverrides: [
+    {
+      packageTypeId: "premium",
+      name: "Premium Packages",
+      methodConfig: {
+        tiers: [
+          { minSessions: 0, maxSessions: 30, executionRate: 25, saleRate: 15 },
+          { minSessions: 31, maxSessions: null, executionRate: 30, saleRate: 18 }
+        ]
+      }
+    },
+    {
+      packageTypeId: "intro",
+      name: "Intro Packages", 
+      methodConfig: {
+        tiers: [
+          { minSessions: 0, maxSessions: null, executionRate: 15, saleRate: 5 }
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -633,6 +679,7 @@ model Organization {
   commissionMethod     String @default("PROGRESSIVE")
   commissionConfig     Json   // Stores method-specific configuration
   commissionPeriod     CommissionPeriod @default(MONTHLY)
+  commissionScope      ApplicationScope @default(UNIVERSAL)
 }
 
 model CommissionRule {
@@ -640,6 +687,7 @@ model CommissionRule {
   organizationId   String
   name             String
   type             CommissionType
+  scope            ApplicationScope
   config           Json
   isActive         Boolean @default(true)
   priority         Int     // For rule precedence
@@ -686,6 +734,7 @@ model CommissionCalculation {
   
   // Metadata
   calculationMethod String
+  calculationScope  String  // UNIVERSAL or PACKAGE_BASED
   calculationConfig Json
   
   status           CalculationStatus @default(PENDING)
@@ -713,10 +762,12 @@ enum CommissionPeriod {
 enum CommissionType {
   FLAT
   PROGRESSIVE
-  GRADUATED
+  FORMULA
+}
+
+enum ApplicationScope {
+  UNIVERSAL
   PACKAGE_BASED
-  TARGET_BASED
-  CUSTOM
 }
 
 enum CalculationStatus {
@@ -843,22 +894,26 @@ interface CommissionCalculator {
 }
 
 class CommissionEngine implements CommissionCalculator {
-  calculateCommission(trainer, period, method, config) {
-    const metrics = this.gatherMetrics(trainer, period);
+  calculateCommission(trainer, period, method, scope, config) {
+    const metrics = this.gatherMetrics(trainer, period, scope);
     
     switch(method) {
       case 'FLAT':
         return this.calculateFlat(metrics, config);
       case 'PROGRESSIVE':
         return this.calculateProgressive(metrics, config);
-      case 'GRADUATED':
-        return this.calculateGraduated(metrics, config);
-      case 'PACKAGE_BASED':
-        return this.calculatePackageBased(metrics, config);
-      case 'TARGET_BASED':
-        return this.calculateTargetBased(metrics, config);
-      case 'CUSTOM':
-        return this.calculateCustom(metrics, config);
+      case 'FORMULA':
+        return this.calculateFormula(metrics, config);
+    }
+  }
+  
+  private gatherMetrics(trainer, period, scope) {
+    if (scope === 'PACKAGE_BASED') {
+      // Calculate metrics per package
+      return this.gatherPackageMetrics(trainer, period);
+    } else {
+      // Calculate metrics universally
+      return this.gatherUniversalMetrics(trainer, period);
     }
   }
   
