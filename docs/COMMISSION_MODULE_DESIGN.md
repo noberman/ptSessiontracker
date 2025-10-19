@@ -212,9 +212,6 @@ sales_count            // Number of packages sold
 sales_value            // Total monetary value of packages sold
 avg_package_value      // Average package value
 
-// Trainer Tier (for different targets/rates)
-trainer_tier           // Numeric tier level (1=PT1, 2=PT2, etc.)
-
 // Time Variables
 month_number          // Current month (1-12)
 quarter_number        // Current quarter (1-4)
@@ -272,7 +269,6 @@ IS_QUARTER_END()
 // Custom Business Functions
 SEASONAL_ADJUSTMENT(month, base_rate)  // Apply seasonal multipliers
 QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
-TIER_MULTIPLIER(trainer_tier)          // Multiplier based on trainer tier
 ```
 
 ### Formula Examples
@@ -285,7 +281,7 @@ TIER_MULTIPLIER(trainer_tier)          // Multiplier based on trainer tier
 #### Example 2: Multi-Factor Calculation
 ```excel
 = PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.20], [41,60,0.25], [61,null,0.30]]) +
-  (sales_value * IF(trainer_tier >= 2, 0.12, 0.10)) +
+  (sales_value * 0.12) +
   IF(AND(month_number >= 1, month_number <= 3), 500, 0)  // Q1 bonus
 ```
 
@@ -313,12 +309,10 @@ TIER_MULTIPLIER(trainer_tier)          // Multiplier based on trainer tier
 │ ├─ sales_count       │ │     [31, 50, 0.20],           │  │
 │ └─ sales_value       │ │     [51, null, 0.25]]         │  │
 │                      │ │  )                             │  │
-│ Trainer              │ │) +                             │  │
-│ └─ trainer_tier      │ │(sales_value * 0.10) +          │  │
-│                      │ │IF(trainer_tier >= 2,          │  │
-│ Time                 │ │   sales_value * 0.02, 0)      │  │
-│ ├─ month_number      │ │                                │  │
-│ └─ quarter_number    │ │                                │  │
+│ Time                 │ │) +                             │  │
+│ ├─ month_number      │ │(sales_value * 0.10) +          │  │
+│ └─ quarter_number    │ │IF(month_number <= 3,          │  │
+│                      │ │   sales_value * 0.02, 0)      │  │
 │                      │ └────────────────────────────────┘  │
 │ [+ More Variables]   │                                      │
 ├──────────────────────┼──────────────────────────────────────┤
@@ -329,7 +323,7 @@ TIER_MULTIPLIER(trainer_tier)          // Multiplier based on trainer tier
 │ ├─ IFS()            │ │ sessions_count: 45             │  │
 │ └─ SWITCH()         │ │ sessions_value: $4,500         │  │
 │                      │ │ sales_value: $12,000           │  │
-│ Tier Functions       │ │ trainer_tier: 2                │  │
+│ Tier Functions       │ │                                │  │
 │ ├─ TIER()           │ └────────────────────────────────┘  │
 │ ├─ PROGRESSIVE()    │                                      │
 │ └─ GRADUATED()      │ Result: $2,400.00                    │
@@ -546,13 +540,13 @@ const FORMULA_TEMPLATES = {
   
   hybrid_advanced: {
     name: "Advanced Hybrid",
-    description: "Complex calculation with trainer tiers and seasonal adjustments",
+    description: "Complex calculation with seasonal adjustments",
     formula: `
       PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]]) +
-      (sales_value * IF(trainer_tier >= 2, 0.12, 0.10)) +
+      (sales_value * 0.12) +
       IF(AND(month_number >= 1, month_number <= 3), sessions_value * 0.02, 0)  // Q1 bonus
     `,
-    variables: ["sessions_value", "sessions_count", "sales_value", "trainer_tier", "month_number"]
+    variables: ["sessions_value", "sessions_count", "sales_value", "month_number"]
   }
 };
 ```
@@ -674,7 +668,6 @@ const commissionTestSuite: FormulaTestSuite = {
         sessions_count: 10,
         sessions_value: 1000,
         sales_value: 2000,
-        trainer_tier: 1,
         month_number: 3
       },
       expectedResult: 350,
@@ -687,7 +680,6 @@ const commissionTestSuite: FormulaTestSuite = {
         sessions_count: 75,
         sessions_value: 7500,
         sales_value: 15000,
-        trainer_tier: 3,
         month_number: 3
       },
       expectedResult: 3750,
@@ -901,52 +893,86 @@ enum CalculationStatus {
    ```
 
 
-### Trainer Dashboard View
+### Settings Page - Commission Section
 
 ```
-Commission Dashboard - March 2024
+Settings > Commission
 
-Your Commission Profile: Level 2 Commission
-Method: Progressive Tiers
-Organization Period: Monthly
+Organization Commission Settings
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Current Performance:
-Sessions Completed: 45 (Tier 2: 41-60 sessions)
-Packages Sold: $12,000
-Current Commission Rate: 30% execution, 20% sale
+Calculation Period: [Monthly ▼]  [Change]
 
-Earnings This Month:
-Sale Commission: $2,400 (20% of $12,000)
-Execution Commission: $1,350 (30% of 45 sessions × $100)
-Total: $3,750
+┌─ Commission Profiles ─────────────────────────────────────┐
+│                                                           │
+│ ┌────────────────────┬────────────┬──────────┬──────────┐ │
+│ │ Profile Title      │ Method     │ Trainers │ Actions  │ │
+│ ├────────────────────┼────────────┼──────────┼──────────┤ │
+│ │ Level 1 Commission │ Flat (20%) │ 8        │ [Edit]   │ │
+│ │ Level 2 Commission │ Progressive│ 5        │ [Edit]   │ │
+│ │ Performance Bonus  │ Formula    │ 2        │ [Edit]   │ │
+│ └────────────────────┴────────────┴──────────┴──────────┘ │
+│                                                           │
+│ [+ Create New Profile] [Set Default]                     │
+└───────────────────────────────────────────────────────────┘
 
-Progress to Next Tier:
-████████░░ 16 sessions to Tier 3 (35% execution rate)
-
-Note: Your commission is calculated using the "Level 2 Commission" profile.
+Quick Actions:
+[Export Configuration] [Import Configuration] [View Reports]
 ```
 
-### PT Manager View
+### Onboarding Wizard Updates
 
 ```
-Team Commission Overview - March 2024
+Onboarding Step 4: Commission Setup
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Trainer Performance:
-Name         | Profile            | Sessions | Sales    | Commission | Details
-John Smith   | Level 1 Commission | 45      | $12,000  | $2,100    | Flat 20%
-Sarah Johnson| Level 2 Commission | 45      | $12,000  | $3,750    | Tier 2 (30%)
-Mike Williams| Performance Bonus  | 45      | $12,000  | $4,850    | Formula
-Emily Davis  | Level 1 Commission | 62      | $15,000  | $2,740    | Flat 20%
-Tom Chen     | Level 2 Commission | 62      | $15,000  | $5,270    | Tier 3 (35%)
+Set up commission structure for your trainers
 
-Total Team Commission: $18,710
+1. Calculation Period:
+   (•) Monthly
+   ( ) Quarterly
 
-Commission by Profile:
-- Level 1 Commission: 2 trainers, avg $2,420
-- Level 2 Commission: 2 trainers, avg $4,510  
-- Performance Bonus: 1 trainer, avg $4,850
+2. Create your first commission profile:
+   
+   Profile Title: [Standard Commission]
+   
+   Calculation Method:
+   (•) Flat Rate - Simple percentage
+   ( ) Progressive - Rate increases with volume
+   ( ) Formula - Custom calculation
+   
+   Flat Rate Configuration:
+   Execution Commission: [25]%
+   Sales Commission: [10]%
+   
+   [Save Profile] [Skip for Now]
+   
+   Note: You can create additional profiles and assign
+   trainers to them later in Settings.
+```
 
-[Export to Excel] [Download PDF Report] [Manage Profiles]
+### User Profile - Commission Assignment
+
+```
+Edit User: Sarah Johnson
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Basic Information
+├─ Name: Sarah Johnson
+├─ Email: sarah.j@gym.com
+└─ Role: Trainer
+
+Commission Settings
+├─ Commission Profile: [Level 2 Commission ▼]
+│   Available Profiles:
+│   • Level 1 Commission (Flat 20%)
+│   • Level 2 Commission (Progressive) ✓
+│   • Performance Bonus (Formula)
+│   • Use Organization Default
+│
+└─ Profile assigned: Jan 15, 2024 by Admin
+
+[Save Changes] [Cancel]
 ```
 
 
@@ -1134,7 +1160,7 @@ Formula: Enhanced with Tiers
 ```
 Formula: Organization-Specific
 PROGRESSIVE(sessions_value, sessions_count, custom_tiers) +
-(sales_value * IF(trainer_tier >= 2, 0.15, 0.12)) +
+(sales_value * 0.15) +
 QUARTER_BONUS(quarter_number, 1000) +
 SEASONAL_ADJUSTMENT(month_number, base_rate)
 ```
