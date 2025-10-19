@@ -205,8 +205,10 @@ Instead of predefined calculation methods, organizations can create custom mathe
 
 ```javascript
 // Core Metrics
-sessions_count          // Number of completed sessions this period
-sessions_value          // Total monetary value of completed sessions
+sessions_count          // Number of ALL sessions this period (including unvalidated)
+sessions_value          // Total monetary value of ALL sessions
+validated_count         // Number of VALIDATED sessions only (excludes no-shows)
+validated_value         // Total monetary value of VALIDATED sessions only
 avg_session_value       // Average value per session
 sales_count            // Number of packages sold
 sales_value            // Total monetary value of packages sold
@@ -216,16 +218,6 @@ avg_package_value      // Average package value
 month_number          // Current month (1-12)
 quarter_number        // Current quarter (1-4)
 days_in_period        // Number of days in calculation period
-
-// Package Specific
-premium_sessions      // Count of premium package sessions
-standard_sessions     // Count of standard package sessions
-intro_sessions        // Count of intro/trial sessions
-group_sessions        // Count of group training sessions
-
-// No-Show Tracking
-no_show_count         // Number of no-show sessions (no commission)
-validated_sessions    // Number of validated sessions only
 ```
 
 ### Formula Functions Library
@@ -285,11 +277,10 @@ QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
   IF(AND(month_number >= 1, month_number <= 3), 500, 0)  // Q1 bonus
 ```
 
-#### Example 3: Graduated Commission with Package Types
+#### Example 3: Graduated Commission with Validation Bonus
 ```excel
 = GRADUATED(avg_session_value, sessions_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]]) +
-  (premium_sessions * 10) +  // Bonus for premium packages
-  (group_sessions * 5)        // Bonus for group sessions
+  IF(validated_count / sessions_count > 0.95, 100, 0)  // Bonus for 95%+ validation rate
 ```
 
 ### Visual Formula Builder Interface
