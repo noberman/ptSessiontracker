@@ -413,13 +413,10 @@ model CommissionFormula {
   createdById       String
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  approvedById      String?
-  approvedAt        DateTime?
   
   // Relations
   organization      Organization @relation(...)
   createdBy         User @relation("FormulaCreator", ...)
-  approvedBy        User? @relation("FormulaApprover", ...)
   calculations      CommissionCalculation[] // Track which calculations used this formula
   previousVersion   CommissionFormula? @relation("FormulaVersionHistory", ...)
   
@@ -737,9 +734,7 @@ model CommissionCalculation {
   calculationScope  String  // UNIVERSAL or PACKAGE_BASED
   calculationConfig Json
   
-  status           CalculationStatus @default(PENDING)
-  approvedBy       String?
-  approvedAt       DateTime?
+  status           CalculationStatus @default(CALCULATED)
   paidAt           DateTime?
   
   createdAt        DateTime @default(now())
@@ -771,8 +766,7 @@ enum ApplicationScope {
 }
 
 enum CalculationStatus {
-  PENDING
-  APPROVED
+  CALCULATED
   PAID
   DISPUTED
 }
@@ -1030,24 +1024,10 @@ Sarah (PT1)  | 1    | 38/40   | $8,000   | $2,560    | Near Tier
 Mike (PT2)   | 3    | 62/60   | $15,000  | $5,760    | Exceeded
 
 Total Team Commission: $12,370
-Pending Approval: 3 calculations
+
+[Export to Excel] [Download PDF Report] [View Details]
 ```
 
-### Admin Commission Approval
-
-```
-Commission Approval - March 2024
-
-Review Period: March 1-31, 2024
-Total Payable: $45,230
-
-By Trainer:
-[ ] John Doe - $4,050 [View Details]
-[ ] Sarah Smith - $2,560 [View Details]
-[...more trainers]
-
-[Approve All] [Export to Excel] [Send to Payroll]
-```
 
 ## Calculation Engine
 
@@ -1183,7 +1163,6 @@ class CommissionEngine implements CommissionCalculator {
 - [ ] AI-suggested formula optimization
 - [ ] Commission forecasting with what-if analysis
 - [ ] Multi-location formula variations
-- [ ] Advanced approval workflows with formula review
 - [ ] Integration with payroll systems
 
 ## Formula Adoption Strategy
