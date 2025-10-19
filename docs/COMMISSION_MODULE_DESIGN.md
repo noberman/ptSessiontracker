@@ -791,16 +791,9 @@ enum CalculationStatus {
 
 2. **Create Commission Profiles**
    ```
-   Step 2: How many commission profiles do you need?
-   ( ) 1 - All trainers use same calculation
-   (•) 2 - Two different commission structures
-   ( ) 3+ - Multiple commission structures
+   Step 2: Create Your First Commission Profile
    
-   [Next]
-   
-   Step 3: Configure Profile #1
-   
-   Profile Title: [Level 1 Commission]
+   Profile Title: [Standard Commission]
    
    Calculation Method:
    (•) Flat Rate
@@ -811,29 +804,19 @@ enum CalculationStatus {
    Execution Rate: [20]%
    Sales Rate: [10]%
    
-   [Save Profile]
+   [Save & Continue] [Add Another Profile]
    
-   Step 4: Configure Profile #2
+   ---
    
-   Profile Title: [Level 2 Commission]
+   Commission Profiles Created:
+   ✓ Standard Commission (Flat 20%/10%)
    
-   Calculation Method:
-   ( ) Flat Rate
-   (•) Progressive Tiers
-   ( ) Custom Formula
-   
-   Progressive Tier Configuration:
-   Tier 1: 0-40 sessions → [25]% execution, [15]% sales
-   Tier 2: 41-60 sessions → [30]% execution, [20]% sales
-   Tier 3: 61+ sessions → [35]% execution, [25]% sales
-   [+ Add Tier]
-   
-   [Save Profile] [Add Another Profile]
+   [Add Another Profile] [Continue to Trainer Assignment]
    ```
 
 3. **Assign Profiles to Trainers**
    ```
-   Step 5: Assign Commission Profiles to Your Trainers
+   Step 3: Assign Commission Profiles to Your Trainers
    
    ┌────────────────┬────────────────────────┐
    │ Trainer Name   │ Commission Profile     │
@@ -923,7 +906,7 @@ Set up commission structure for your trainers
    (•) Monthly
    ( ) Quarterly
 
-2. Create your first commission profile:
+2. Create commission profile:
    
    Profile Title: [Standard Commission]
    
@@ -936,10 +919,15 @@ Set up commission structure for your trainers
    Execution Commission: [25]%
    Sales Commission: [10]%
    
-   [Save Profile] [Skip for Now]
+   [Save Profile]
    
-   Note: You can create additional profiles and assign
-   trainers to them later in Settings.
+   Current Profiles:
+   • Standard Commission (Flat 25%/10%) - Applied to all trainers
+   
+   [+ Add Another Profile] [Continue] [Skip for Now]
+   
+   Note: Trainers will use the first profile by default.
+   You can create more profiles and reassign trainers later.
 ```
 
 ### User Profile - Commission Assignment
