@@ -798,17 +798,39 @@ enum CalculationStatus {
    [ ] Package-based (Different rates per package type)
    
    Step 4: Configure rates
-   [Based on selected method and scope]
+   - If Universal: Define ONE configuration for all packages
+   - If Package-Based: Define SEPARATE configuration for EACH package type
+     (e.g., Standard gets one set of tiers, Premium gets different tiers)
    
    Step 5: Set trainer tiers (optional)
    PT1: [____] sessions/month target
    PT2: [____] sessions/month target
    ```
 
-2. **Progressive Tier Configuration**
+   **Example Scenario - Package-Based Progressive Tiers:**
    ```
-   Application Scope: [Universal / Package-based]
+   A trainer completes:
+   - 35 Standard package sessions 
+   - 25 Premium package sessions
+   - 5 Intro package sessions
    
+   With UNIVERSAL scope:
+   - Total: 65 sessions = Tier 3 rate for ALL sessions
+   
+   With PACKAGE-BASED scope:
+   - Standard: 35 sessions = Tier 1 rate (20%)
+   - Premium: 25 sessions = Tier 1 rate (25%) 
+   - Intro: 5 sessions = Flat rate (15%)
+   Each package type evaluated independently!
+   ```
+
+2. **Progressive Tier Configuration**
+
+   **Option A: Universal Scope**
+   ```
+   Application Scope: [✓] Universal
+   
+   Define tiers (applies to all packages):
    Tier 1: 0-40 sessions
    - Sale: [10]% 
    - Execution: [20]%
@@ -820,52 +842,135 @@ enum CalculationStatus {
    [+ Add Tier]
    
    [ ] Apply retroactively (all sessions get achieved tier rate)
+   ```
+
+   **Option B: Package-Based Scope**
+   ```
+   Application Scope: [✓] Package-based
    
-   If Package-based scope selected:
-   ┌─────────────────────────────────┐
-   │ Package-Specific Overrides      │
-   │ Premium: Use different tiers    │
-   │ Intro: Use different tiers      │
-   │ [+ Add Package Override]        │
-   └─────────────────────────────────┘
+   Configure tiers for EACH package type:
+   
+   ┌─────────────────────────────────────────┐
+   │ STANDARD PACKAGES                       │
+   │ Tier 1: 0-40 sessions → 20% execution  │
+   │ Tier 2: 41-60 sessions → 25% execution │
+   │ Tier 3: 61+ sessions → 30% execution   │
+   │ [Edit Tiers]                           │
+   └─────────────────────────────────────────┘
+   
+   ┌─────────────────────────────────────────┐
+   │ PREMIUM PACKAGES                        │
+   │ Tier 1: 0-30 sessions → 25% execution  │
+   │ Tier 2: 31-50 sessions → 30% execution │
+   │ Tier 3: 51+ sessions → 35% execution   │
+   │ [Edit Tiers]                           │
+   └─────────────────────────────────────────┘
+   
+   ┌─────────────────────────────────────────┐
+   │ INTRO PACKAGES                          │
+   │ Flat: All sessions → 15% execution     │
+   │ [Edit Tiers]                           │
+   └─────────────────────────────────────────┘
+   
+   [+ Add Package Type]
+   
+   Note: Each package type's sessions are counted
+   separately for tier qualification. A trainer could be
+   in Tier 3 for Premium packages while still in Tier 1
+   for Standard packages.
    ```
 
 3. **Flat Rate Configuration**
+
+   **Option A: Universal Scope**
    ```
-   Application Scope: [Universal / Package-based]
+   Application Scope: [✓] Universal
    
-   Default rates:
+   Single rate for all packages:
    - Sale: [10]%
    - Execution: [20]%
+   ```
+
+   **Option B: Package-Based Scope**
+   ```
+   Application Scope: [✓] Package-based
    
-   If Package-based scope selected:
+   Define rates for EACH package type:
+   
    ┌─────────────────────────────────┐
-   │ Package-Specific Overrides      │
-   │ Premium: Sale [15]% Exec [25]%  │
-   │ Intro: Sale [5]% Exec [15]%     │
-   │ [+ Add Package Override]        │
+   │ STANDARD PACKAGES               │
+   │ Sale: [10]%  Execution: [20]%  │
    └─────────────────────────────────┘
+   
+   ┌─────────────────────────────────┐
+   │ PREMIUM PACKAGES                │
+   │ Sale: [15]%  Execution: [25]%  │
+   └─────────────────────────────────┘
+   
+   ┌─────────────────────────────────┐
+   │ INTRO PACKAGES                  │
+   │ Sale: [5]%   Execution: [15]%  │
+   └─────────────────────────────────┘
+   
+   [+ Add Package Type]
    ```
 
 4. **Formula-Based Configuration**
+
+   **Option A: Universal Scope**
    ```
-   Application Scope: [Universal / Package-based]
+   Application Scope: [✓] Universal
    
-   Default Formula:
+   Single formula for all packages:
    ┌────────────────────────────────────┐
    │ (sessions_value * 0.20) +          │
    │ (sales_value * 0.10)               │
    └────────────────────────────────────┘
    
    [Edit Formula] [Test Formula] [Use Template]
+   ```
+
+   **Option B: Package-Based Scope**
+   ```
+   Application Scope: [✓] Package-based
    
-   If Package-based scope selected:
-   ┌─────────────────────────────────┐
-   │ Package-Specific Formulas       │
-   │ Premium: [Custom formula]       │
-   │ Intro: [Custom formula]         │
-   │ [+ Add Package Formula]         │
-   └─────────────────────────────────┘
+   Define a complete formula for EACH package type:
+   
+   ┌──────────────────────────────────────────────┐
+   │ STANDARD PACKAGES                            │
+   │ Formula:                                     │
+   │ sessions_value * TIER(sessions_count,       │
+   │   [[0,40,0.20], [41,60,0.25], [61,null,0.30]]) │
+   │ + (sales_value * 0.10)                      │
+   │                                              │
+   │ [Edit] [Test] [Use Template]                │
+   └──────────────────────────────────────────────┘
+   
+   ┌──────────────────────────────────────────────┐
+   │ PREMIUM PACKAGES                             │
+   │ Formula:                                     │
+   │ sessions_value * TIER(sessions_count,       │
+   │   [[0,30,0.25], [31,50,0.30], [51,null,0.35]]) │
+   │ + (sales_value * 0.15)                      │
+   │                                              │
+   │ [Edit] [Test] [Use Template]                │
+   └──────────────────────────────────────────────┘
+   
+   ┌──────────────────────────────────────────────┐
+   │ INTRO PACKAGES                               │
+   │ Formula:                                     │
+   │ (sessions_value * 0.15) +                   │
+   │ (sales_value * 0.05)                        │
+   │                                              │
+   │ [Edit] [Test] [Use Template]                │
+   └──────────────────────────────────────────────┘
+   
+   [+ Add Package Type]
+   
+   Note: Each formula is completely independent.
+   Session counts are tracked per package type.
+   Variables like sessions_count will reflect ONLY
+   the sessions for that specific package type.
    ```
 
 ### Trainer Dashboard View
