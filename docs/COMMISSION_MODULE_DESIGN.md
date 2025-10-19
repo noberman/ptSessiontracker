@@ -788,22 +788,27 @@ enum CalculationStatus {
    [ ] Monthly
    [ ] Quarterly
    
-   Step 2: Choose commission type
-   [ ] Flat rate (Simple)
-   [ ] Progressive tiers (Volume-based)
-   [ ] Package-based (Different packages, different rates)
-   [ ] Custom (Advanced)
+   Step 2: Choose calculation method
+   [ ] Flat rate (Simple fixed percentage)
+   [ ] Progressive tiers (Volume-based, rate increases with performance)
+   [ ] Formula-based (Custom calculation with full flexibility)
    
-   Step 3: Configure rates
-   [Based on selected type]
+   Step 3: Choose application scope
+   [ ] Universal (Same calculation for all packages)
+   [ ] Package-based (Different rates per package type)
    
-   Step 4: Set trainer tiers (optional)
+   Step 4: Configure rates
+   [Based on selected method and scope]
+   
+   Step 5: Set trainer tiers (optional)
    PT1: [____] sessions/month target
    PT2: [____] sessions/month target
    ```
 
 2. **Progressive Tier Configuration**
    ```
+   Application Scope: [Universal / Package-based]
+   
    Tier 1: 0-40 sessions
    - Sale: [10]% 
    - Execution: [20]%
@@ -815,24 +820,63 @@ enum CalculationStatus {
    [+ Add Tier]
    
    [ ] Apply retroactively (all sessions get achieved tier rate)
+   
+   If Package-based scope selected:
+   ┌─────────────────────────────────┐
+   │ Package-Specific Overrides      │
+   │ Premium: Use different tiers    │
+   │ Intro: Use different tiers      │
+   │ [+ Add Package Override]        │
+   └─────────────────────────────────┘
    ```
 
-3. **Package-Based Configuration**
+3. **Flat Rate Configuration**
    ```
+   Application Scope: [Universal / Package-based]
+   
    Default rates:
    - Sale: [10]%
    - Execution: [20]%
    
-   Package-specific overrides:
-   Premium Packages: Sale [15]% Execution [25]%
-   Intro Packages: Sale [5]% Execution [15]%
-   [+ Add Package Rule]
+   If Package-based scope selected:
+   ┌─────────────────────────────────┐
+   │ Package-Specific Overrides      │
+   │ Premium: Sale [15]% Exec [25]%  │
+   │ Intro: Sale [5]% Exec [15]%     │
+   │ [+ Add Package Override]        │
+   └─────────────────────────────────┘
+   ```
+
+4. **Formula-Based Configuration**
+   ```
+   Application Scope: [Universal / Package-based]
+   
+   Default Formula:
+   ┌────────────────────────────────────┐
+   │ (sessions_value * 0.20) +          │
+   │ (sales_value * 0.10)               │
+   └────────────────────────────────────┘
+   
+   [Edit Formula] [Test Formula] [Use Template]
+   
+   If Package-based scope selected:
+   ┌─────────────────────────────────┐
+   │ Package-Specific Formulas       │
+   │ Premium: [Custom formula]       │
+   │ Intro: [Custom formula]         │
+   │ [+ Add Package Formula]         │
+   └─────────────────────────────────┘
    ```
 
 ### Trainer Dashboard View
 
 ```
 Commission Dashboard - March 2024
+
+Commission Settings:
+Method: Progressive Tiers
+Period: Monthly
+Scope: Universal (all packages use same rates)
 
 Current Performance:
 Sessions Completed: 45/50 (Tier 2)
@@ -846,6 +890,27 @@ Total: $4,050
 
 Progress to Next Tier:
 ████████░░ 5 sessions to Tier 3 (30% rate)
+```
+
+**Alternative View - Package-Based Scope:**
+```
+Commission Dashboard - March 2024
+
+Commission Settings:
+Method: Progressive Tiers
+Period: Monthly
+Scope: Package-Based (each package type calculated separately)
+
+Performance by Package Type:
+┌─────────────┬──────────┬────────┬──────────────┐
+│ Package     │ Sessions │ Tier   │ Commission   │
+├─────────────┼──────────┼────────┼──────────────┤
+│ Premium     │ 15/20    │ Tier 1 │ $450 (20%)   │
+│ Standard    │ 25/30    │ Tier 1 │ $625 (20%)   │
+│ Intro       │ 5/10     │ Tier 1 │ $75 (15%)    │
+└─────────────┴──────────┴────────┴──────────────┘
+
+Total Earnings: $1,150
 ```
 
 ### PT Manager View
@@ -1004,7 +1069,7 @@ class CommissionEngine implements CommissionCalculator {
 ### Phase 3: Legacy Method Support (Optional)
 - [ ] Flat rate calculation
 - [ ] Progressive tier calculation (UI wrapper around formula)
-- [ ] Package-based rules (formula generator)
+- [ ] Package-based scope implementation
 - [ ] Migration tool from old methods to formulas
 - [ ] Quarterly calculations
 
