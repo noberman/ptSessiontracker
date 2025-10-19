@@ -107,27 +107,530 @@ Complete redesign of the commission calculation system to support multiple calcu
 }
 ```
 
-#### Method 6: Custom Hybrid
+#### Method 6: Formula-Based (Most Flexible)
 ```javascript
 {
-  type: "CUSTOM",
+  type: "FORMULA",
   config: {
-    rules: [
-      {
-        condition: "trainerTier",
-        value: "PT2",
-        saleCommission: 12,
-        executionCommission: 22
-      },
-      {
-        condition: "packageType",
-        value: "PREMIUM",
-        saleCommissionBonus: 5,  // Adds to base
-        executionCommissionBonus: 3
-      }
-    ]
+    formula: "(sessions_value * IF(sessions_count > 50, 0.25, 0.20)) + (sales_value * 0.10)",
+    variables: ["sessions_value", "sessions_count", "sales_value"],
+    description: "25% execution for 50+ sessions, otherwise 20%, plus 10% of sales"
   }
 }
+```
+
+## Formula-Based Commission System (Advanced)
+
+### Concept Overview
+Instead of predefined calculation methods, organizations can create custom mathematical formulas using a rich set of variables and functions. This provides unlimited flexibility while maintaining a user-friendly interface through a visual formula builder.
+
+### Available Variables
+
+```javascript
+// Core Metrics
+sessions_count          // Number of completed sessions this period
+sessions_value          // Total monetary value of completed sessions
+avg_session_value       // Average value per session
+sales_count            // Number of packages sold
+sales_value            // Total monetary value of packages sold
+avg_package_value      // Average package value
+
+// Trainer Attributes
+trainer_tier           // Numeric tier level (1=PT1, 2=PT2, etc.)
+trainer_months         // Months employed at organization
+trainer_level          // Skill/certification level (1-5)
+years_experience       // Total years as trainer
+
+// Performance Metrics
+completion_rate        // % of scheduled sessions completed (0.0-1.0)
+client_retention       // % of clients retained month-over-month
+client_satisfaction    // Average client rating (1.0-5.0)
+no_show_rate          // % of sessions marked as no-show
+substitute_count       // Number of sessions covered for other trainers
+
+// Time Variables
+month_number          // Current month (1-12)
+quarter_number        // Current quarter (1-4)
+days_in_period        // Number of days in calculation period
+is_peak_season        // Boolean: true during Jan-Mar, Sep-Oct
+
+// Package Specific
+premium_sessions      // Count of premium package sessions
+standard_sessions     // Count of standard package sessions
+intro_sessions        // Count of intro/trial sessions
+group_sessions        // Count of group training sessions
+```
+
+### Formula Functions Library
+
+```javascript
+// Conditional Functions
+IF(condition, true_value, false_value)
+IFS(condition1, value1, condition2, value2, ..., default_value)
+SWITCH(expression, case1, value1, case2, value2, ..., default)
+
+// Tier/Breakpoint Functions
+TIER(value, [[min1, max1, rate1], [min2, max2, rate2], ...])
+PROGRESSIVE(base_value, count_value, tier_config)  // All units get highest tier rate
+GRADUATED(base_value, count_value, tier_config)    // Each unit at its tier rate
+
+// Mathematical Functions
+MIN(value1, value2, ...)
+MAX(value1, value2, ...)
+ROUND(value, decimals)
+FLOOR(value)
+CEILING(value)
+ABS(value)
+POWER(base, exponent)
+
+// Statistical Functions
+AVERAGE(value1, value2, ...)
+MEDIAN(value1, value2, ...)
+STDEV(value1, value2, ...)
+
+// Lookup Functions
+RATE_FOR_TIER(tier_number)     // Returns configured rate for trainer tier
+TARGET_FOR_TIER(tier_number)   // Returns target sessions for trainer tier
+BONUS_THRESHOLD(metric_name)   // Returns threshold for bonus qualification
+
+// Date Functions
+DAYS_SINCE(date)
+MONTHS_BETWEEN(date1, date2)
+IS_MONTH_END()
+IS_QUARTER_END()
+
+// Custom Business Functions
+RETENTION_BONUS(retention_rate, base_amount)
+PERFORMANCE_MULTIPLIER(satisfaction, completion_rate)
+SEASONAL_ADJUSTMENT(month, base_rate)
+```
+
+### Formula Examples
+
+#### Example 1: Simple Progressive with Performance Bonus
+```excel
+= (sessions_value * TIER(sessions_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]])) +
+  IF(completion_rate > 0.95, 500, 0)
+```
+
+#### Example 2: Complex Multi-Factor Calculation
+```excel
+= (
+    PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.20], [41,60,0.25], [61,null,0.30]]) +
+    (sales_value * IF(trainer_tier >= 2, 0.12, 0.10)) +
+    RETENTION_BONUS(client_retention, 1000) +
+    IF(AND(is_peak_season, sessions_count > 50), 750, 0)
+  ) * PERFORMANCE_MULTIPLIER(client_satisfaction, completion_rate)
+```
+
+#### Example 3: Graduated Commission with Trainer Experience Factor
+```excel
+= GRADUATED(avg_session_value, sessions_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]]) *
+  (1 + MIN(years_experience * 0.02, 0.20)) +
+  IF(substitute_count > 5, substitute_count * 25, 0)
+```
+
+### Visual Formula Builder Interface
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Commission Formula Builder                                  │
+├──────────────────────┬──────────────────────────────────────┤
+│ VARIABLES            │ FORMULA EDITOR                       │
+│                      │                                      │
+│ Sessions             │ ┌────────────────────────────────┐  │
+│ ├─ sessions_count    │ │(                               │  │
+│ ├─ sessions_value    │ │  sessions_value *              │  │
+│ └─ avg_session_value │ │  TIER(                         │  │
+│                      │ │    sessions_count,             │  │
+│ Sales                │ │    [[0, 30, 0.15],            │  │
+│ ├─ sales_count       │ │     [31, 50, 0.20],           │  │
+│ └─ sales_value       │ │     [51, null, 0.25]]         │  │
+│                      │ │  )                             │  │
+│ Performance          │ │) +                             │  │
+│ ├─ completion_rate   │ │(sales_value * 0.10) +          │  │
+│ ├─ client_retention  │ │IF(client_retention > 0.85,    │  │
+│ └─ satisfaction      │ │   500, 0)                      │  │
+│                      │ └────────────────────────────────┘  │
+│ [+ More Variables]   │                                      │
+├──────────────────────┼──────────────────────────────────────┤
+│ FUNCTIONS            │ TEST YOUR FORMULA                    │
+│                      │                                      │
+│ Conditional          │ Test Scenario:                       │
+│ ├─ IF()             │ ┌────────────────────────────────┐  │
+│ ├─ IFS()            │ │ sessions_count: 45             │  │
+│ └─ SWITCH()         │ │ sessions_value: $4,500         │  │
+│                      │ │ sales_value: $12,000           │  │
+│ Tier Functions       │ │ client_retention: 0.87         │  │
+│ ├─ TIER()           │ └────────────────────────────────┘  │
+│ ├─ PROGRESSIVE()    │                                      │
+│ └─ GRADUATED()      │ Result: $2,400.00                    │
+│                      │                                      │
+│ [+ More Functions]   │ [Run Test] [Save Formula] [Cancel]  │
+└──────────────────────┴──────────────────────────────────────┘
+```
+
+### Formula Validation System
+
+```typescript
+class FormulaValidator {
+  validateFormula(formula: string, organization: Organization): ValidationResult {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    
+    // 1. Syntax Validation
+    try {
+      const ast = this.parseFormula(formula);
+    } catch (e) {
+      errors.push(`Syntax error: ${e.message}`);
+      return { valid: false, errors, warnings };
+    }
+    
+    // 2. Variable Validation
+    const usedVars = this.extractVariables(formula);
+    for (const varName of usedVars) {
+      if (!this.isValidVariable(varName)) {
+        errors.push(`Unknown variable: ${varName}`);
+      }
+    }
+    
+    // 3. Business Logic Validation
+    const testScenarios = [
+      { name: "No activity", data: { sessions_count: 0, sessions_value: 0 }},
+      { name: "Minimum activity", data: { sessions_count: 1, sessions_value: 100 }},
+      { name: "Average month", data: { sessions_count: 40, sessions_value: 4000 }},
+      { name: "High performer", data: { sessions_count: 80, sessions_value: 8000 }},
+      { name: "Maximum values", data: { sessions_count: 200, sessions_value: 20000 }}
+    ];
+    
+    for (const scenario of testScenarios) {
+      const result = this.evaluateFormula(formula, scenario.data);
+      
+      // Check for reasonable bounds
+      if (result < 0) {
+        errors.push(`Negative commission in scenario: ${scenario.name}`);
+      }
+      
+      if (result > scenario.data.sessions_value * 0.5) {
+        warnings.push(`Commission >50% of session value in: ${scenario.name}`);
+      }
+      
+      if (result > 50000) {
+        warnings.push(`Unusually high commission (${result}) in: ${scenario.name}`);
+      }
+    }
+    
+    // 4. Performance Validation
+    const executionTime = this.measureExecutionTime(formula, testScenarios[2].data);
+    if (executionTime > 100) {
+      warnings.push(`Formula may be slow to calculate (${executionTime}ms)`);
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      testResults: testScenarios.map(s => ({
+        scenario: s.name,
+        result: this.evaluateFormula(formula, s.data)
+      }))
+    };
+  }
+}
+```
+
+### Formula Storage and Versioning
+
+```prisma
+model CommissionFormula {
+  id                String @id @default(cuid())
+  organizationId    String
+  name              String
+  description       String?
+  
+  // Formula Definition
+  formula           String   @db.Text      // The formula expression
+  compiledFormula   Json?                  // Pre-compiled AST for performance
+  usedVariables     String[]               // Variables referenced in formula
+  usedFunctions     String[]               // Functions used in formula
+  
+  // Configuration
+  isActive          Boolean @default(true)
+  isPrimary         Boolean @default(false) // Primary formula for organization
+  effectiveFrom     DateTime @default(now())
+  effectiveTo       DateTime?
+  
+  // Validation & Testing
+  isValid           Boolean @default(false)
+  validationErrors  Json?
+  validationWarnings Json?
+  lastValidatedAt   DateTime?
+  testScenarios     Json?    // Saved test scenarios with expected results
+  
+  // Versioning
+  version           Int @default(1)
+  previousVersionId String?  // Link to previous version
+  changeNotes       String?
+  
+  // Audit
+  createdById       String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  approvedById      String?
+  approvedAt        DateTime?
+  
+  // Relations
+  organization      Organization @relation(...)
+  createdBy         User @relation("FormulaCreator", ...)
+  approvedBy        User? @relation("FormulaApprover", ...)
+  calculations      CommissionCalculation[] // Track which calculations used this formula
+  previousVersion   CommissionFormula? @relation("FormulaVersionHistory", ...)
+  
+  @@index([organizationId, isActive])
+  @@index([organizationId, isPrimary])
+}
+```
+
+### Formula Execution Engine
+
+```typescript
+class FormulaExecutionEngine {
+  private readonly functionLibrary: Map<string, Function>;
+  private readonly cache: Map<string, CompiledFormula>;
+  
+  constructor() {
+    this.functionLibrary = this.initializeFunctions();
+    this.cache = new Map();
+  }
+  
+  async calculateCommission(
+    formula: CommissionFormula,
+    context: CommissionContext
+  ): Promise<CommissionResult> {
+    // 1. Get compiled formula (from cache if available)
+    const compiled = this.getCompiledFormula(formula);
+    
+    // 2. Prepare variable context
+    const variables = await this.prepareVariables(context);
+    
+    // 3. Execute formula with timeout protection
+    const result = await this.executeWithTimeout(compiled, variables, 1000);
+    
+    // 4. Apply business rules
+    const finalResult = this.applyBusinessRules(result, context);
+    
+    // 5. Create audit record
+    await this.createAuditRecord({
+      formulaId: formula.id,
+      context,
+      variables,
+      rawResult: result,
+      finalResult,
+      executionTimeMs: performance.now() - startTime
+    });
+    
+    return {
+      amount: finalResult,
+      formulaUsed: formula.id,
+      calculationDate: new Date(),
+      breakdown: this.generateBreakdown(compiled, variables)
+    };
+  }
+  
+  private generateBreakdown(formula: CompiledFormula, variables: Variables): Breakdown {
+    // Step through formula showing intermediate results
+    // Useful for transparency and debugging
+    return {
+      steps: [
+        { expression: "sessions_count", value: 45 },
+        { expression: "TIER(45, [[0,30,0.15],[31,50,0.20]])", value: 0.20 },
+        { expression: "sessions_value * 0.20", value: 900 },
+        { expression: "sales_value * 0.10", value: 1200 },
+        { expression: "Final", value: 2100 }
+      ]
+    };
+  }
+}
+
+### Formula Templates Library
+
+Organizations can start with pre-built templates and customize them:
+
+```javascript
+const FORMULA_TEMPLATES = {
+  simple_percentage: {
+    name: "Simple Percentage",
+    description: "Fixed percentage of session and sales value",
+    formula: "(sessions_value * 0.20) + (sales_value * 0.10)",
+    variables: ["sessions_value", "sales_value"]
+  },
+  
+  progressive_tiers: {
+    name: "Progressive Tiers",
+    description: "Commission rate increases with volume",
+    formula: "sessions_value * TIER(sessions_count, [[0,30,0.15],[31,50,0.20],[51,null,0.25]])",
+    variables: ["sessions_value", "sessions_count"]
+  },
+  
+  performance_based: {
+    name: "Performance-Based",
+    description: "Base rate with performance multipliers",
+    formula: "(sessions_value * 0.18) * (1 + ((completion_rate - 0.80) * 0.5))",
+    variables: ["sessions_value", "completion_rate"]
+  },
+  
+  hybrid_advanced: {
+    name: "Advanced Hybrid",
+    description: "Complex calculation with multiple factors",
+    formula: `
+      PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]]) +
+      (sales_value * IF(trainer_tier >= 2, 0.12, 0.10)) +
+      IF(client_retention > 0.85, 500, 0) +
+      IF(AND(month_number >= 1, month_number <= 3), sessions_value * 0.02, 0)
+    `,
+    variables: ["sessions_value", "sessions_count", "sales_value", "trainer_tier", "client_retention", "month_number"]
+  }
+};
+```
+
+### Implementation Considerations
+
+#### 1. Formula Parser Selection
+- **Option A**: Use existing library like math.js or expr-eval
+- **Option B**: Build custom parser with better control  
+- **Option C**: Use sandboxed JavaScript evaluation with safety checks
+
+```javascript
+// Example using math.js with custom functions
+import { create, all } from 'mathjs';
+
+const math = create(all);
+
+// Add custom functions
+math.import({
+  TIER: function(value, tiers) {
+    for (const tier of tiers) {
+      if (value >= tier[0] && (tier[1] === null || value <= tier[1])) {
+        return tier[2];
+      }
+    }
+    return 0;
+  },
+  
+  PROGRESSIVE: function(baseValue, count, tiers) {
+    const rate = math.TIER(count, tiers);
+    return baseValue * rate;
+  },
+  
+  IF: function(condition, trueValue, falseValue) {
+    return condition ? trueValue : falseValue;
+  }
+});
+
+// Safe evaluation
+function evaluateFormula(formula, variables) {
+  const scope = { ...variables };
+  return math.evaluate(formula, scope);
+}
+```
+
+#### 2. Security Considerations
+
+```typescript
+class SecureFormulaEvaluator {
+  private readonly blacklistedKeywords = [
+    'eval', 'Function', 'require', 'import', 'process', 
+    'global', 'window', '__proto__', 'constructor'
+  ];
+  
+  private readonly maxExecutionTime = 1000; // ms
+  private readonly maxIterations = 10000;
+  
+  validateSecurity(formula: string): boolean {
+    // Check for blacklisted keywords
+    for (const keyword of this.blacklistedKeywords) {
+      if (formula.includes(keyword)) {
+        throw new Error(`Security violation: formula contains blacklisted keyword "${keyword}"`);
+      }
+    }
+    
+    // Check formula length
+    if (formula.length > 5000) {
+      throw new Error('Formula too long (max 5000 characters)');
+    }
+    
+    // Check nesting depth
+    const nestingDepth = this.calculateNestingDepth(formula);
+    if (nestingDepth > 10) {
+      throw new Error('Formula nesting too deep (max 10 levels)');
+    }
+    
+    return true;
+  }
+  
+  executeWithSandbox(formula: string, variables: object): number {
+    // Use VM2 or similar for sandboxed execution
+    const vm = new VM({
+      timeout: this.maxExecutionTime,
+      sandbox: {
+        ...variables,
+        ...this.safeFunctions
+      }
+    });
+    
+    return vm.run(`(function() { return ${formula}; })()`);
+  }
+}
+```
+
+#### 3. Formula Testing Interface
+
+```typescript
+interface FormulaTestSuite {
+  name: string;
+  scenarios: TestScenario[];
+}
+
+interface TestScenario {
+  name: string;
+  description: string;
+  inputs: Record<string, number>;
+  expectedResult: number;
+  tolerance: number; // For floating point comparison
+}
+
+// Example test suite
+const commissionTestSuite: FormulaTestSuite = {
+  name: "Standard Commission Tests",
+  scenarios: [
+    {
+      name: "New Trainer - Low Volume",
+      description: "First month, minimal sessions",
+      inputs: {
+        sessions_count: 10,
+        sessions_value: 1000,
+        sales_value: 2000,
+        trainer_tier: 1,
+        completion_rate: 0.90
+      },
+      expectedResult: 350,
+      tolerance: 0.01
+    },
+    {
+      name: "Senior Trainer - High Volume",
+      description: "Experienced trainer at peak performance",
+      inputs: {
+        sessions_count: 75,
+        sessions_value: 7500,
+        sales_value: 15000,
+        trainer_tier: 3,
+        completion_rate: 0.98
+      },
+      expectedResult: 3750,
+      tolerance: 0.01
+    }
+  ]
+};
 ```
 
 ## Data Model
@@ -434,41 +937,85 @@ class CommissionEngine implements CommissionCalculator {
 
 ## Implementation Phases
 
-### Phase 1: Core Engine (MVP)
-- [ ] Database schema for commission configuration
-- [ ] Flat rate calculation
-- [ ] Progressive tier calculation (retroactive)
+### Phase 1: Formula Foundation (MVP - Recommended Start)
+- [ ] Basic formula parser using math.js
+- [ ] Core variables (sessions_count, sessions_value, sales_value)
+- [ ] Essential functions (IF, TIER, PROGRESSIVE)
+- [ ] Formula validation and security
+- [ ] Simple formula builder UI
+- [ ] 3-4 pre-built templates
+- [ ] Test scenario runner
 - [ ] Monthly commission dashboard
-- [ ] Basic approval workflow
 
-### Phase 2: Advanced Methods
-- [ ] Graduated tiers
-- [ ] Package-based rules
-- [ ] Trainer tier system
+### Phase 2: Enhanced Formula System
+- [ ] Visual formula builder with drag-drop
+- [ ] Extended variable library (performance metrics, trainer attributes)
+- [ ] Advanced functions (GRADUATED, statistical, date functions)
+- [ ] Formula version control
+- [ ] A/B testing capability
+- [ ] Real-time formula preview
+- [ ] Excel export with formula details
+
+### Phase 3: Legacy Method Support (Optional)
+- [ ] Flat rate calculation
+- [ ] Progressive tier calculation (UI wrapper around formula)
+- [ ] Package-based rules (formula generator)
+- [ ] Migration tool from old methods to formulas
 - [ ] Quarterly calculations
-- [ ] Excel export
 
-### Phase 3: Optimization
-- [ ] Target-based calculations
-- [ ] Custom rule builder
-- [ ] Commission forecasting
-- [ ] Historical comparisons
-- [ ] Automated payroll integration
+### Phase 4: Enterprise Features
+- [ ] Formula marketplace (share between organizations)
+- [ ] AI-suggested formula optimization
+- [ ] Commission forecasting with what-if analysis
+- [ ] Multi-location formula variations
+- [ ] Advanced approval workflows with formula review
+- [ ] Integration with payroll systems
 
-### Phase 4: Enterprise
-- [ ] Multi-location rules
-- [ ] Commission splits
-- [ ] Advanced dispute resolution
-- [ ] Commission advance requests
-- [ ] Performance incentives
+## Formula Adoption Strategy
+
+### Migration Path from Simple to Advanced
+
+1. **Start Simple**: Organizations begin with templates
+2. **Gradual Customization**: Modify templates as needed
+3. **Advanced Usage**: Create custom formulas from scratch
+
+### Example Progressive Adoption
+
+**Month 1: Use Template**
+```
+Formula: Simple Percentage Template
+(sessions_value * 0.20) + (sales_value * 0.10)
+```
+
+**Month 3: Customize Rates**
+```
+Formula: Modified Template
+(sessions_value * 0.22) + (sales_value * 0.12)
+```
+
+**Month 6: Add Conditions**
+```
+Formula: Enhanced with Tiers
+(sessions_value * TIER(sessions_count, [[0,30,0.20],[31,50,0.22],[51,null,0.25]])) + 
+(sales_value * 0.12)
+```
+
+**Month 12: Full Custom**
+```
+Formula: Organization-Specific
+PROGRESSIVE(sessions_value, sessions_count, custom_tiers) +
+(sales_value * IF(trainer_tier >= 2, 0.15, 0.12)) +
+RETENTION_BONUS(client_retention, 1000) +
+SEASONAL_ADJUSTMENT(month_number, base_rate)
+```
 
 ## Success Metrics
 
-1. **Accuracy**: 100% calculation accuracy
-2. **Flexibility**: Support 90% of gym commission models
+1. **Accuracy**: 100% calculation accuracy with formula validation
+2. **Flexibility**: Support ANY commission model via formulas
 3. **Efficiency**: Calculate 100 trainers in <5 seconds
-4. **Transparency**: Trainers can see calculation details
-5. **Adoption**: 80% of organizations configure custom rules
+4. **Transparency**: Step-by-step formula breakdown for trainers
+5. **Adoption**: 80% of organizations using formulas within 6 months
 
 ## Technical Considerations
 
