@@ -33,24 +33,21 @@ Complete redesign of the commission calculation system to support multiple calcu
 
 ### Commission Configuration Structure
 
-Organizations configure commissions by directly assigning calculation methods to each trainer:
+Organizations configure commissions in two steps:
+1. **Set organization-wide calculation period** (Monthly or Quarterly)
+2. **Create commission profiles** and assign them to trainers
 
 ```javascript
-// Example: Each trainer has their own commission configuration
+// Example: Organization with commission profiles
 {
-  organizationSettings: {
-    calculationPeriod: "MONTHLY",  // When to calculate
-    defaultMethod: "FLAT",         // Default for new trainers
-    defaultConfig: {
-      executionRate: 20,
-      saleRate: 10
-    }
-  },
+  // Organization-wide setting
+  calculationPeriod: "MONTHLY",  // Applies to all trainers
   
-  trainerCommissions: [
+  // Commission profiles (reusable configurations)
+  commissionProfiles: [
     {
-      trainerId: "user1",
-      trainerName: "John Smith",
+      id: "level1",
+      title: "Level 1 Commission",
       calculationMethod: "FLAT",
       methodConfig: {
         executionRate: 20,
@@ -58,8 +55,8 @@ Organizations configure commissions by directly assigning calculation methods to
       }
     },
     {
-      trainerId: "user2",
-      trainerName: "Sarah Johnson",
+      id: "level2", 
+      title: "Level 2 Commission",
       calculationMethod: "PROGRESSIVE",
       methodConfig: {
         tiers: [
@@ -70,13 +67,21 @@ Organizations configure commissions by directly assigning calculation methods to
       }
     },
     {
-      trainerId: "user3",
-      trainerName: "Mike Williams",
+      id: "performance",
+      title: "Performance Commission",
       calculationMethod: "FORMULA",
       methodConfig: {
         formula: "(sessions_value * 0.35) + (sales_value * 0.20) + IF(sessions_count > 50, 500, 0)"
       }
     }
+  ],
+  
+  // Trainer assignments (which profile each trainer uses)
+  trainerAssignments: [
+    { trainerId: "user1", trainerName: "John Smith", profileId: "level1" },
+    { trainerId: "user2", trainerName: "Sarah Johnson", profileId: "level2" },
+    { trainerId: "user3", trainerName: "Mike Williams", profileId: "performance" },
+    { trainerId: "user4", trainerName: "Emily Davis", profileId: "level1" }  // Multiple trainers can use same profile
   ]
 }
 ```
@@ -126,59 +131,68 @@ Organizations create custom formulas for unlimited flexibility.
 }
 ```
 
-### Direct Assignment Examples
+### Commission Profile Examples
 
-#### Example 1: Mixed Methods Across Team
+#### Example 1: Simple Two-Level System
 ```javascript
 {
-  // John uses flat rate (new trainer)
-  trainer1: {
-    calculationMethod: "FLAT",
-    config: { executionRate: 20, saleRate: 10 }
-  },
+  calculationPeriod: "MONTHLY",
   
-  // Sarah uses progressive tiers (experienced)
-  trainer2: {
-    calculationMethod: "PROGRESSIVE",
-    config: {
-      tiers: [
-        { min: 0, max: 40, executionRate: 25, saleRate: 15 },
-        { min: 41, max: null, executionRate: 30, saleRate: 20 }
-      ]
+  commissionProfiles: [
+    {
+      id: "standard",
+      title: "Standard Commission",
+      calculationMethod: "FLAT",
+      methodConfig: {
+        executionRate: 25,
+        saleRate: 12
+      }
+    },
+    {
+      id: "advanced",
+      title: "Advanced Commission",
+      calculationMethod: "PROGRESSIVE",
+      methodConfig: {
+        tiers: [
+          { minSessions: 0, maxSessions: 40, executionRate: 28, saleRate: 15 },
+          { minSessions: 41, maxSessions: null, executionRate: 32, saleRate: 18 }
+        ]
+      }
     }
-  },
-  
-  // Mike uses custom formula (top performer)
-  trainer3: {
-    calculationMethod: "FORMULA",
-    config: {
-      formula: "sessions_value * 0.35 + IF(sessions_count > 60, 1000, 0)"
-    }
-  }
+  ]
 }
 ```
 
-#### Example 2: Bulk Assignment with Overrides
+#### Example 2: Multi-Tier System
 ```javascript
 {
-  // Default for all trainers
-  defaultCommission: {
-    calculationMethod: "FLAT",
-    config: { executionRate: 25, saleRate: 12 }
-  },
+  calculationPeriod: "QUARTERLY",
   
-  // Specific overrides for certain trainers
-  trainerOverrides: {
-    "sarah_id": {
-      calculationMethod: "PROGRESSIVE",
-      config: { /* custom tiers */ }
+  commissionProfiles: [
+    {
+      id: "tier1",
+      title: "Tier 1 Commission",
+      calculationMethod: "FLAT",
+      methodConfig: { executionRate: 20, saleRate: 10 }
     },
-    "mike_id": {
-      calculationMethod: "FORMULA",
-      config: { formula: "custom formula here" }
+    {
+      id: "tier2",
+      title: "Tier 2 Commission",
+      calculationMethod: "FLAT",
+      methodConfig: { executionRate: 25, saleRate: 15 }
+    },
+    {
+      id: "tier3",
+      title: "Tier 3 Commission",
+      calculationMethod: "PROGRESSIVE",
+      methodConfig: {
+        tiers: [
+          { minSessions: 0, maxSessions: 50, executionRate: 30, saleRate: 18 },
+          { minSessions: 51, maxSessions: null, executionRate: 35, saleRate: 22 }
+        ]
+      }
     }
-    // John and others use the default
-  }
+  ]
 }
 ```
 
@@ -691,10 +705,25 @@ const commissionTestSuite: FormulaTestSuite = {
 model Organization {
   // existing fields...
   commissionPeriod     CommissionPeriod @default(MONTHLY)
+  defaultProfileId     String?  // Default profile for new trainers
   
-  // Default commission for new trainers
-  defaultCommissionMethod CommissionType @default(FLAT)
-  defaultCommissionConfig Json?
+  commissionProfiles   CommissionProfile[]
+}
+
+model CommissionProfile {
+  id               String @id @default(cuid())
+  organizationId   String
+  title            String  // "Level 1 Commission", "Standard Commission", etc.
+  calculationMethod CommissionType  // FLAT, PROGRESSIVE, FORMULA
+  methodConfig     Json   // Method-specific configuration
+  isActive         Boolean @default(true)
+  isDefault        Boolean @default(false)  // Mark as org default
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  organization     Organization @relation(...)
+  users            User[]  // Trainers using this profile
 }
 
 model CommissionCalculation {
@@ -720,8 +749,10 @@ model CommissionCalculation {
   appliedTier      String?
   
   // Metadata
+  profileId         String  // Which profile was used
+  profileTitle      String  // Title at time of calculation
   calculationMethod String
-  calculationConfig Json  // The actual config used for this calculation
+  calculationConfig Json   // The actual config used
   
   status           CalculationStatus @default(CALCULATED)
   paidAt           DateTime?
@@ -735,13 +766,13 @@ model CommissionCalculation {
 model User {
   // existing fields...
   
-  // Direct commission configuration
-  commissionMethod    CommissionType?  // FLAT, PROGRESSIVE, FORMULA
-  commissionConfig    Json?            // Method-specific configuration
+  // Commission profile assignment
+  commissionProfileId String?
+  commissionProfile   CommissionProfile? @relation(...)
   
-  // Track commission changes
-  commissionUpdatedAt DateTime?
-  commissionUpdatedBy String?
+  // Track profile changes
+  profileAssignedAt   DateTime?
+  profileAssignedBy   String?
 }
 
 enum CommissionPeriod {
@@ -766,80 +797,107 @@ enum CalculationStatus {
 
 ### Organization Admin Configuration Flow
 
-1. **Commission Profile Setup**
+1. **Initial Setup Wizard**
    ```
-   Step 1: Choose calculation period
-   [ ] Monthly
-   [ ] Quarterly
+   Step 1: Set Calculation Period (Organization-wide)
+   ( ) Monthly  
+   (•) Quarterly
    
-   Step 2: Create Commission Profiles
-   How many trainer levels does your organization have?
-   [ ] Single level (all trainers same rate)
-   [ ] 2 levels (e.g., Junior, Senior)
-   [ ] 3+ levels (e.g., Junior, Standard, Senior, Elite)
-   
-   Step 3: Configure Each Profile
-   For each profile, define:
-   - Profile Name: [_______________]
-   - Calculation Method:
-     [ ] Flat rate
-     [ ] Progressive tiers
-     [ ] Formula-based
-   - Configure rates/tiers/formula
-   
-   Step 4: Assign Trainers to Profiles
-   Trainer Name     | Current Profile    | Change to
-   John Smith       | Junior Trainer     | [Dropdown]
-   Sarah Johnson    | Senior Trainer     | [Dropdown]
-   Mike Williams    | Junior Trainer     | [Dropdown]
-   
-   [Bulk Assign] [Save Assignments]
+   [Next]
    ```
 
-   **Example Scenario - Trainer-Based Commission:**
+2. **Create Commission Profiles**
    ```
-   Three trainers complete 50 sessions each in March:
+   Step 2: How many commission profiles do you need?
+   ( ) 1 - All trainers use same calculation
+   (•) 2 - Two different commission structures
+   ( ) 3+ - Multiple commission structures
    
-   John (Junior Profile - Flat 20%):
-   - 50 sessions × $100 × 20% = $1,000 commission
+   [Next]
    
-   Sarah (Senior Profile - Progressive):
-   - 50 sessions hit Tier 2 (25% rate)
-   - 50 sessions × $100 × 25% = $1,250 commission
+   Step 3: Configure Profile #1
    
-   Mike (Elite Profile - Formula):
-   - Formula: base 30% + bonus for 50+ sessions
-   - 50 sessions × $100 × 30% + $500 bonus = $2,000 commission
+   Profile Title: [Level 1 Commission]
    
-   Same work, different rates based on trainer level!
+   Calculation Method:
+   (•) Flat Rate
+   ( ) Progressive Tiers
+   ( ) Custom Formula
+   
+   Flat Rate Configuration:
+   Execution Rate: [20]%
+   Sales Rate: [10]%
+   
+   [Save Profile]
+   
+   Step 4: Configure Profile #2
+   
+   Profile Title: [Level 2 Commission]
+   
+   Calculation Method:
+   ( ) Flat Rate
+   (•) Progressive Tiers
+   ( ) Custom Formula
+   
+   Progressive Tier Configuration:
+   Tier 1: 0-40 sessions → [25]% execution, [15]% sales
+   Tier 2: 41-60 sessions → [30]% execution, [20]% sales
+   Tier 3: 61+ sessions → [35]% execution, [25]% sales
+   [+ Add Tier]
+   
+   [Save Profile] [Add Another Profile]
    ```
 
-4. **Bulk Edit Interface**
+3. **Assign Profiles to Trainers**
    ```
-   Bulk Commission Update
+   Step 5: Assign Commission Profiles to Your Trainers
    
-   Select trainers to update:
-   [✓] John Smith (currently: Flat 20%)
-   [✓] Emily Davis (currently: Default)
-   [ ] Sarah Johnson (currently: Progressive)
-   [ ] Mike Williams (currently: Formula)
+   ┌────────────────┬────────────────────────┐
+   │ Trainer Name   │ Commission Profile     │
+   ├────────────────┼────────────────────────┤
+   │ John Smith     │ [Level 1 Commission ▼] │
+   │ Sarah Johnson  │ [Level 2 Commission ▼] │
+   │ Mike Williams  │ [Level 1 Commission ▼] │
+   │ Emily Davis    │ [Level 1 Commission ▼] │
+   └────────────────┴────────────────────────┘
    
-   Apply Commission Settings:
-   Method: [Flat Rate ▼]
-   Execution Rate: [25]%
-   Sales Rate: [12]%
-   
-   [Apply to Selected] [Cancel]
+   [Bulk Assign] [Complete Setup]
    ```
 
-5. **Quick Actions Menu**
+### Ongoing Management Interface
+
+1. **Commission Profile Management**
    ```
-   Common Actions:
+   Commission Profiles
    
-   [Copy Settings] Copy commission from one trainer to another
-   [Apply Template] Use pre-defined commission templates
-   [Reset to Default] Reset selected trainers to org default
-   [Export/Import] Export settings to CSV or import from file
+   Organization Period: Monthly
+   
+   ┌───────────────────┬────────────┬────────────┬─────────┐
+   │ Profile Title     │ Method     │ # Trainers │ Actions │
+   ├───────────────────┼────────────┼────────────┼─────────┤
+   │ Level 1 Commission│ Flat (20%) │ 8          │ [Edit]  │
+   │ Level 2 Commission│ Progressive│ 5          │ [Edit]  │
+   │ Performance Bonus │ Formula    │ 2          │ [Edit]  │
+   └───────────────────┴────────────┴────────────┴─────────┘
+   
+   [+ Create New Profile] [Set Default]
+   ```
+
+2. **Trainer Assignment View**
+   ```
+   Trainer Commission Assignments
+   
+   Filter: [All Trainers ▼] Search: [________]
+   
+   ┌───────────────┬───────────────────┬───────────────┐
+   │ Trainer       │ Current Profile   │ Actions       │
+   ├───────────────┼───────────────────┼───────────────┤
+   │ John Smith    │ Level 1 Commission│ [Change ▼]   │
+   │ Sarah Johnson │ Level 2 Commission│ [Change ▼]   │
+   │ Mike Williams │ Level 1 Commission│ [Change ▼]   │
+   └───────────────┴───────────────────┴───────────────┘
+   
+   [Bulk Reassign] [Export]
    ```
 
 
@@ -848,9 +906,9 @@ enum CalculationStatus {
 ```
 Commission Dashboard - March 2024
 
-Your Commission Settings:
+Your Commission Profile: Level 2 Commission
 Method: Progressive Tiers
-Period: Monthly
+Organization Period: Monthly
 
 Current Performance:
 Sessions Completed: 45 (Tier 2: 41-60 sessions)
@@ -864,6 +922,8 @@ Total: $3,750
 
 Progress to Next Tier:
 ████████░░ 16 sessions to Tier 3 (35% execution rate)
+
+Note: Your commission is calculated using the "Level 2 Commission" profile.
 ```
 
 ### PT Manager View
@@ -872,21 +932,21 @@ Progress to Next Tier:
 Team Commission Overview - March 2024
 
 Trainer Performance:
-Name         | Method      | Sessions | Sales    | Commission | Details
-John Smith   | Flat        | 45      | $12,000  | $2,100    | 20% exec
-Sarah Johnson| Progressive | 45      | $12,000  | $3,750    | Tier 2 (30%)
-Mike Williams| Formula     | 45      | $12,000  | $4,850    | Custom + bonus
-Emily Davis  | Flat        | 62      | $15,000  | $2,740    | 20% exec
-Tom Chen     | Progressive | 62      | $15,000  | $5,270    | Tier 3 (35%)
+Name         | Profile            | Sessions | Sales    | Commission | Details
+John Smith   | Level 1 Commission | 45      | $12,000  | $2,100    | Flat 20%
+Sarah Johnson| Level 2 Commission | 45      | $12,000  | $3,750    | Tier 2 (30%)
+Mike Williams| Performance Bonus  | 45      | $12,000  | $4,850    | Formula
+Emily Davis  | Level 1 Commission | 62      | $15,000  | $2,740    | Flat 20%
+Tom Chen     | Level 2 Commission | 62      | $15,000  | $5,270    | Tier 3 (35%)
 
 Total Team Commission: $18,710
 
-Commission Summary:
-- Flat Rate Users: 2 trainers, avg $2,420
-- Progressive Users: 2 trainers, avg $4,510  
-- Formula Users: 1 trainer, avg $4,850
+Commission by Profile:
+- Level 1 Commission: 2 trainers, avg $2,420
+- Level 2 Commission: 2 trainers, avg $4,510  
+- Performance Bonus: 1 trainer, avg $4,850
 
-[Export to Excel] [Download PDF Report] [Edit Commissions]
+[Export to Excel] [Download PDF Report] [Manage Profiles]
 ```
 
 
@@ -906,31 +966,35 @@ interface CommissionCalculator {
 
 class CommissionEngine implements CommissionCalculator {
   async calculateCommission(trainer, period, organization) {
-    // Get trainer's commission configuration
-    const method = trainer.commissionMethod || organization.defaultCommissionMethod;
-    const config = trainer.commissionConfig || organization.defaultCommissionConfig;
+    // Get trainer's commission profile
+    const profile = await this.getTrainerProfile(trainer.commissionProfileId);
     
-    if (!method || !config) {
-      throw new Error(`No commission configuration for trainer ${trainer.name}`);
+    if (!profile) {
+      // Use organization default profile if trainer has none assigned
+      const defaultProfile = await this.getDefaultProfile(organization.id);
+      if (!defaultProfile) {
+        throw new Error(`No commission profile assigned to trainer ${trainer.name}`);
+      }
+      profile = defaultProfile;
     }
     
     // Gather metrics for the period
     const metrics = await this.gatherMetrics(trainer, period);
     
-    // Calculate based on trainer's method
-    switch(method) {
+    // Calculate based on profile's method
+    switch(profile.calculationMethod) {
       case 'FLAT':
-        return this.calculateFlat(metrics, config);
+        return this.calculateFlat(metrics, profile.methodConfig);
       case 'PROGRESSIVE':
-        return this.calculateProgressive(metrics, config);
+        return this.calculateProgressive(metrics, profile.methodConfig);
       case 'FORMULA':
-        return this.calculateFormula(metrics, config);
+        return this.calculateFormula(metrics, profile.methodConfig);
     }
   }
   
   private async gatherMetrics(trainer, period) {
     // Gather ALL sessions and sales for the trainer
-    // Trainer's individual config determines the rate
+    // The profile determines the calculation method and rates
     return {
       totalSessions: await this.countSessions(trainer, period),
       sessionValue: await this.sumSessionValue(trainer, period),
