@@ -33,28 +33,53 @@ Complete redesign of the commission calculation system to support multiple calcu
 
 ### Commission Configuration Structure
 
-Organizations configure their commission system with three main settings:
+Organizations configure their commission system in two parts:
 
-1. **Calculation Method**: How commission rates are determined (Flat, Progressive, Formula)
-2. **Calculation Period**: When commissions are calculated (Monthly, Quarterly)  
-3. **Application Scope**: How rates are applied (Universal, Package-Based)
+1. **Define Commission Profiles**: Create different commission structures (e.g., Junior, Senior, Elite)
+2. **Assign to Trainers**: Assign each trainer to a commission profile
 
 ```javascript
+// Example: Organization with multiple trainer levels
 {
-  // Main Settings
-  calculationMethod: "PROGRESSIVE",    // FLAT | PROGRESSIVE | FORMULA
-  calculationPeriod: "MONTHLY",        // MONTHLY | QUARTERLY
-  applicationScope: "UNIVERSAL",       // UNIVERSAL | PACKAGE_BASED
-  
-  // Method-specific configuration
-  methodConfig: { /* varies by method */ },
-  
-  // Package-specific overrides (if scope is PACKAGE_BASED)
-  packageOverrides: [
+  commissionProfiles: [
     {
-      packageTypeId: "premium",
-      methodConfig: { /* same structure as main config */ }
+      id: "junior",
+      name: "Junior Trainer",
+      calculationMethod: "FLAT",
+      methodConfig: {
+        executionRate: 20,
+        saleRate: 10
+      }
+    },
+    {
+      id: "senior",
+      name: "Senior Trainer",
+      calculationMethod: "PROGRESSIVE",
+      methodConfig: {
+        tiers: [
+          { minSessions: 0, maxSessions: 40, executionRate: 25, saleRate: 15 },
+          { minSessions: 41, maxSessions: 60, executionRate: 30, saleRate: 20 },
+          { minSessions: 61, maxSessions: null, executionRate: 35, saleRate: 25 }
+        ]
+      }
+    },
+    {
+      id: "elite",
+      name: "Elite Trainer",
+      calculationMethod: "FORMULA",
+      methodConfig: {
+        formula: "(sessions_value * 0.35) + (sales_value * 0.20) + IF(sessions_count > 50, 500, 0)"
+      }
     }
+  ],
+  
+  calculationPeriod: "MONTHLY",  // When to calculate
+  
+  // Trainer assignments
+  trainerAssignments: [
+    { trainerId: "user1", profileId: "junior" },
+    { trainerId: "user2", profileId: "senior" },
+    { trainerId: "user3", profileId: "elite" }
   ]
 }
 ```
@@ -104,60 +129,69 @@ Organizations create custom formulas for unlimited flexibility.
 }
 ```
 
-### Application Scope Examples
+### Commission Profile Examples
 
-#### Universal Application (Default)
-The same calculation method applies to all packages and trainers.
-
+#### Example 1: Simple Two-Tier System
 ```javascript
 {
-  calculationMethod: "PROGRESSIVE",
-  calculationPeriod: "MONTHLY",
-  applicationScope: "UNIVERSAL",
-  methodConfig: {
-    tiers: [
-      { minSessions: 0, maxSessions: 40, executionRate: 20, saleRate: 10 },
-      { minSessions: 41, maxSessions: null, executionRate: 25, saleRate: 15 }
-    ]
-  }
+  commissionProfiles: [
+    {
+      id: "standard",
+      name: "Standard Trainer",
+      calculationMethod: "FLAT",
+      methodConfig: {
+        executionRate: 25,
+        saleRate: 10
+      }
+    },
+    {
+      id: "senior",
+      name: "Senior Trainer",
+      calculationMethod: "FLAT",
+      methodConfig: {
+        executionRate: 30,
+        saleRate: 15
+      }
+    }
+  ]
 }
 ```
 
-#### Package-Based Application
-Different packages can have different commission structures.
-
+#### Example 2: Performance-Based System
 ```javascript
 {
-  calculationMethod: "PROGRESSIVE",
-  calculationPeriod: "MONTHLY", 
-  applicationScope: "PACKAGE_BASED",
-  
-  // Default configuration for standard packages
-  methodConfig: {
-    tiers: [
-      { minSessions: 0, maxSessions: 40, executionRate: 20, saleRate: 10 },
-      { minSessions: 41, maxSessions: null, executionRate: 25, saleRate: 12 }
-    ]
-  },
-  
-  // Override configurations for specific package types
-  packageOverrides: [
+  commissionProfiles: [
     {
-      packageTypeId: "premium",
-      name: "Premium Packages",
+      id: "tier1",
+      name: "Tier 1 - Entry Level",
+      calculationMethod: "PROGRESSIVE",
       methodConfig: {
         tiers: [
-          { minSessions: 0, maxSessions: 30, executionRate: 25, saleRate: 15 },
-          { minSessions: 31, maxSessions: null, executionRate: 30, saleRate: 18 }
+          { minSessions: 0, maxSessions: 30, executionRate: 20, saleRate: 8 },
+          { minSessions: 31, maxSessions: null, executionRate: 22, saleRate: 10 }
         ]
       }
     },
     {
-      packageTypeId: "intro",
-      name: "Intro Packages", 
+      id: "tier2",
+      name: "Tier 2 - Experienced",
+      calculationMethod: "PROGRESSIVE",
       methodConfig: {
         tiers: [
-          { minSessions: 0, maxSessions: null, executionRate: 15, saleRate: 5 }
+          { minSessions: 0, maxSessions: 40, executionRate: 25, saleRate: 12 },
+          { minSessions: 41, maxSessions: 60, executionRate: 28, saleRate: 15 },
+          { minSessions: 61, maxSessions: null, executionRate: 30, saleRate: 18 }
+        ]
+      }
+    },
+    {
+      id: "tier3",
+      name: "Tier 3 - Elite",
+      calculationMethod: "PROGRESSIVE",
+      methodConfig: {
+        tiers: [
+          { minSessions: 0, maxSessions: 50, executionRate: 30, saleRate: 15 },
+          { minSessions: 51, maxSessions: null, executionRate: 35, saleRate: 20 }
         ]
       }
     }
@@ -673,38 +707,30 @@ const commissionTestSuite: FormulaTestSuite = {
 ```prisma
 model Organization {
   // existing fields...
-  commissionMethod     String @default("PROGRESSIVE")
-  commissionConfig     Json   // Stores method-specific configuration
   commissionPeriod     CommissionPeriod @default(MONTHLY)
-  commissionScope      ApplicationScope @default(UNIVERSAL)
+  commissionProfiles   CommissionProfile[]
 }
 
-model CommissionRule {
+model CommissionProfile {
   id               String @id @default(cuid())
   organizationId   String
-  name             String
-  type             CommissionType
-  scope            ApplicationScope
-  config           Json
+  name             String  // "Junior Trainer", "Senior Trainer", "Elite"
+  description      String?
+  calculationMethod CommissionType  // FLAT, PROGRESSIVE, FORMULA
+  methodConfig     Json   // Stores method-specific configuration
   isActive         Boolean @default(true)
-  priority         Int     // For rule precedence
+  isDefault        Boolean @default(false) // For new trainers
+  sortOrder        Int @default(0)
+  
+  // Audit
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  createdBy        String
   
+  // Relations
   organization     Organization @relation(...)
-}
-
-model TrainerTier {
-  id               String @id @default(cuid())
-  organizationId   String
-  name             String  // "PT1", "PT2", "Junior", "Senior"
-  level            Int     // 1, 2, 3 for ordering
-  monthlyTarget    Int?    // Target sessions
-  quarterlyTarget  Float?  // Target revenue
-  createdAt        DateTime @default(now())
-  
-  organization     Organization @relation(...)
-  users            User[]
+  users            User[]  // Trainers assigned to this profile
+  calculations     CommissionCalculation[]
 }
 
 model CommissionCalculation {
@@ -731,7 +757,7 @@ model CommissionCalculation {
   
   // Metadata
   calculationMethod String
-  calculationScope  String  // UNIVERSAL or PACKAGE_BASED
+  profileId        String  // Which commission profile was used
   calculationConfig Json
   
   status           CalculationStatus @default(CALCULATED)
@@ -745,8 +771,12 @@ model CommissionCalculation {
 
 model User {
   // existing fields...
-  trainerTierId    String?
-  trainerTier      TrainerTier? @relation(...)
+  commissionProfileId String?
+  commissionProfile   CommissionProfile? @relation(...)
+  
+  // Track profile changes
+  profileAssignedAt   DateTime?
+  profileAssignedBy   String?
 }
 
 enum CommissionPeriod {
@@ -760,11 +790,6 @@ enum CommissionType {
   FORMULA
 }
 
-enum ApplicationScope {
-  UNIVERSAL
-  PACKAGE_BASED
-}
-
 enum CalculationStatus {
   CALCULATED
   PAID
@@ -776,240 +801,164 @@ enum CalculationStatus {
 
 ### Organization Admin Configuration Flow
 
-1. **Initial Setup Wizard**
+1. **Commission Profile Setup**
    ```
    Step 1: Choose calculation period
    [ ] Monthly
    [ ] Quarterly
    
-   Step 2: Choose calculation method
-   [ ] Flat rate (Simple fixed percentage)
-   [ ] Progressive tiers (Volume-based, rate increases with performance)
-   [ ] Formula-based (Custom calculation with full flexibility)
+   Step 2: Create Commission Profiles
+   How many trainer levels does your organization have?
+   [ ] Single level (all trainers same rate)
+   [ ] 2 levels (e.g., Junior, Senior)
+   [ ] 3+ levels (e.g., Junior, Standard, Senior, Elite)
    
-   Step 3: Choose application scope
-   [ ] Universal (Same calculation for all packages)
-   [ ] Package-based (Different rates per package type)
+   Step 3: Configure Each Profile
+   For each profile, define:
+   - Profile Name: [_______________]
+   - Calculation Method:
+     [ ] Flat rate
+     [ ] Progressive tiers
+     [ ] Formula-based
+   - Configure rates/tiers/formula
    
-   Step 4: Configure rates
-   - If Universal: Define ONE configuration for all packages
-   - If Package-Based: Define SEPARATE configuration for EACH package type
-     (e.g., Standard gets one set of tiers, Premium gets different tiers)
+   Step 4: Assign Trainers to Profiles
+   Trainer Name     | Current Profile    | Change to
+   John Smith       | Junior Trainer     | [Dropdown]
+   Sarah Johnson    | Senior Trainer     | [Dropdown]
+   Mike Williams    | Junior Trainer     | [Dropdown]
    
-   Step 5: Set trainer tiers (optional)
-   PT1: [____] sessions/month target
-   PT2: [____] sessions/month target
+   [Bulk Assign] [Save Assignments]
    ```
 
-   **Example Scenario - Package-Based Progressive Tiers:**
+   **Example Scenario - Trainer-Based Commission:**
    ```
-   A trainer completes:
-   - 35 Standard package sessions 
-   - 25 Premium package sessions
-   - 5 Intro package sessions
+   Three trainers complete 50 sessions each in March:
    
-   With UNIVERSAL scope:
-   - Total: 65 sessions = Tier 3 rate for ALL sessions
+   John (Junior Profile - Flat 20%):
+   - 50 sessions × $100 × 20% = $1,000 commission
    
-   With PACKAGE-BASED scope:
-   - Standard: 35 sessions = Tier 1 rate (20%)
-   - Premium: 25 sessions = Tier 1 rate (25%) 
-   - Intro: 5 sessions = Flat rate (15%)
-   Each package type evaluated independently!
+   Sarah (Senior Profile - Progressive):
+   - 50 sessions hit Tier 2 (25% rate)
+   - 50 sessions × $100 × 25% = $1,250 commission
+   
+   Mike (Elite Profile - Formula):
+   - Formula: base 30% + bonus for 50+ sessions
+   - 50 sessions × $100 × 30% + $500 bonus = $2,000 commission
+   
+   Same work, different rates based on trainer level!
    ```
 
-2. **Progressive Tier Configuration**
+2. **Commission Profile Configuration Examples**
 
-   **Option A: Universal Scope**
+   **Junior Trainer Profile**
    ```
-   Application Scope: [✓] Universal
+   Profile Name: Junior Trainer
+   Calculation Method: Flat Rate
    
-   Define tiers (applies to all packages):
-   Tier 1: 0-40 sessions
-   - Sale: [10]% 
+   Commission Rates:
    - Execution: [20]%
+   - Sales: [10]%
+   
+   [Save Profile]
+   ```
+
+   **Senior Trainer Profile**
+   ```
+   Profile Name: Senior Trainer
+   Calculation Method: Progressive Tiers
+   
+   Tier 1: 0-40 sessions
+   - Sale: [15]% 
+   - Execution: [25]%
    
    Tier 2: 41-60 sessions
-   - Sale: [15]%
-   - Execution: [25]%
+   - Sale: [20]%
+   - Execution: [30]%
+   
+   Tier 3: 61+ sessions
+   - Sale: [25]%
+   - Execution: [35]%
    
    [+ Add Tier]
    
-   [ ] Apply retroactively (all sessions get achieved tier rate)
+   [✓] Apply retroactively (all sessions get achieved tier rate)
+   
+   [Save Profile]
    ```
 
-   **Option B: Package-Based Scope**
+   **Elite Trainer Profile**
    ```
-   Application Scope: [✓] Package-based
+   Profile Name: Elite Trainer
+   Calculation Method: Formula-Based
    
-   Configure tiers for EACH package type:
+   Commission Formula:
+   ┌────────────────────────────────────────────────┐
+   │ // Base commission                               │
+   │ base = sessions_value * 0.35 + sales_value * 0.20;│
+   │                                                   │
+   │ // Performance bonus                              │
+   │ bonus = IF(sessions_count > 50, 500, 0);         │
+   │                                                   │
+   │ // Total commission                               │
+   │ base + bonus                                      │
+   └────────────────────────────────────────────────┘
    
-   ┌─────────────────────────────────────────┐
-   │ STANDARD PACKAGES                       │
-   │ Tier 1: 0-40 sessions → 20% execution  │
-   │ Tier 2: 41-60 sessions → 25% execution │
-   │ Tier 3: 61+ sessions → 30% execution   │
-   │ [Edit Tiers]                           │
-   └─────────────────────────────────────────┘
-   
-   ┌─────────────────────────────────────────┐
-   │ PREMIUM PACKAGES                        │
-   │ Tier 1: 0-30 sessions → 25% execution  │
-   │ Tier 2: 31-50 sessions → 30% execution │
-   │ Tier 3: 51+ sessions → 35% execution   │
-   │ [Edit Tiers]                           │
-   └─────────────────────────────────────────┘
-   
-   ┌─────────────────────────────────────────┐
-   │ INTRO PACKAGES                          │
-   │ Flat: All sessions → 15% execution     │
-   │ [Edit Tiers]                           │
-   └─────────────────────────────────────────┘
-   
-   [+ Add Package Type]
-   
-   Note: Each package type's sessions are counted
-   separately for tier qualification. A trainer could be
-   in Tier 3 for Premium packages while still in Tier 1
-   for Standard packages.
+   [Test Formula] [Save Profile]
    ```
 
-3. **Flat Rate Configuration**
-
-   **Option A: Universal Scope**
+3. **Trainer Assignment Interface**
    ```
-   Application Scope: [✓] Universal
+   Commission Profile Management
    
-   Single rate for all packages:
-   - Sale: [10]%
-   - Execution: [20]%
-   ```
-
-   **Option B: Package-Based Scope**
-   ```
-   Application Scope: [✓] Package-based
+   Current Profiles:
+   ┌─────────────────┬─────────────┬─────────────┬─────────┐
+   │ Profile Name    │ Method      │ # Trainers  │ Actions │
+   ├─────────────────┼─────────────┼─────────────┼─────────┤
+   │ Junior Trainer  │ Flat (20%)  │ 8           │ [Edit]  │
+   │ Senior Trainer  │ Progressive │ 5           │ [Edit]  │
+   │ Elite Trainer   │ Formula     │ 2           │ [Edit]  │
+   └─────────────────┴─────────────┴─────────────┴─────────┘
    
-   Define rates for EACH package type:
+   [+ Create New Profile]
    
-   ┌─────────────────────────────────┐
-   │ STANDARD PACKAGES               │
-   │ Sale: [10]%  Execution: [20]%  │
-   └─────────────────────────────────┘
+   Trainer Assignments:
+   ┌────────────────┬─────────────────┬───────────────┐
+   │ Trainer Name   │ Current Profile │ Change to     │
+   ├────────────────┼─────────────────┼───────────────┤
+   │ John Smith     │ Junior Trainer  │ [▼ Dropdown] │
+   │ Sarah Johnson  │ Senior Trainer  │ [▼ Dropdown] │
+   │ Mike Williams  │ Junior Trainer  │ [▼ Dropdown] │
+   └────────────────┴─────────────────┴───────────────┘
    
-   ┌─────────────────────────────────┐
-   │ PREMIUM PACKAGES                │
-   │ Sale: [15]%  Execution: [25]%  │
-   └─────────────────────────────────┘
-   
-   ┌─────────────────────────────────┐
-   │ INTRO PACKAGES                  │
-   │ Sale: [5]%   Execution: [15]%  │
-   └─────────────────────────────────┘
-   
-   [+ Add Package Type]
+   [Save Changes]
    ```
 
-4. **Formula-Based Configuration**
-
-   **Option A: Universal Scope**
-   ```
-   Application Scope: [✓] Universal
-   
-   Single formula for all packages:
-   ┌────────────────────────────────────┐
-   │ (sessions_value * 0.20) +          │
-   │ (sales_value * 0.10)               │
-   └────────────────────────────────────┘
-   
-   [Edit Formula] [Test Formula] [Use Template]
-   ```
-
-   **Option B: Package-Based Scope**
-   ```
-   Application Scope: [✓] Package-based
-   
-   Define a complete formula for EACH package type:
-   
-   ┌──────────────────────────────────────────────┐
-   │ STANDARD PACKAGES                            │
-   │ Formula:                                     │
-   │ sessions_value * TIER(sessions_count,       │
-   │   [[0,40,0.20], [41,60,0.25], [61,null,0.30]]) │
-   │ + (sales_value * 0.10)                      │
-   │                                              │
-   │ [Edit] [Test] [Use Template]                │
-   └──────────────────────────────────────────────┘
-   
-   ┌──────────────────────────────────────────────┐
-   │ PREMIUM PACKAGES                             │
-   │ Formula:                                     │
-   │ sessions_value * TIER(sessions_count,       │
-   │   [[0,30,0.25], [31,50,0.30], [51,null,0.35]]) │
-   │ + (sales_value * 0.15)                      │
-   │                                              │
-   │ [Edit] [Test] [Use Template]                │
-   └──────────────────────────────────────────────┘
-   
-   ┌──────────────────────────────────────────────┐
-   │ INTRO PACKAGES                               │
-   │ Formula:                                     │
-   │ (sessions_value * 0.15) +                   │
-   │ (sales_value * 0.05)                        │
-   │                                              │
-   │ [Edit] [Test] [Use Template]                │
-   └──────────────────────────────────────────────┘
-   
-   [+ Add Package Type]
-   
-   Note: Each formula is completely independent.
-   Session counts are tracked per package type.
-   Variables like sessions_count will reflect ONLY
-   the sessions for that specific package type.
-   ```
 
 ### Trainer Dashboard View
 
 ```
 Commission Dashboard - March 2024
 
-Commission Settings:
+Your Commission Profile: Senior Trainer
 Method: Progressive Tiers
 Period: Monthly
-Scope: Universal (all packages use same rates)
 
 Current Performance:
-Sessions Completed: 45/50 (Tier 2)
+Sessions Completed: 45/50 (Tier 2 in your profile)
 Packages Sold: $12,000
-Current Commission Rate: 25% execution, 15% sale
+Current Commission Rate: 30% execution, 20% sale
 
 Earnings This Month:
-Sale Commission: $1,800 (15% of $12,000)
-Execution Commission: $2,250 (25% of 45 sessions × $100)
-Total: $4,050
+Sale Commission: $2,400 (20% of $12,000)
+Execution Commission: $1,350 (30% of 45 sessions × $100)
+Total: $3,750
 
 Progress to Next Tier:
-████████░░ 5 sessions to Tier 3 (30% rate)
-```
+████████░░ 16 sessions to Tier 3 (35% execution rate)
 
-**Alternative View - Package-Based Scope:**
-```
-Commission Dashboard - March 2024
-
-Commission Settings:
-Method: Progressive Tiers
-Period: Monthly
-Scope: Package-Based (each package type calculated separately)
-
-Performance by Package Type:
-┌─────────────┬──────────┬────────┬──────────────┐
-│ Package     │ Sessions │ Tier   │ Commission   │
-├─────────────┼──────────┼────────┼──────────────┤
-│ Premium     │ 15/20    │ Tier 1 │ $450 (20%)   │
-│ Standard    │ 25/30    │ Tier 1 │ $625 (20%)   │
-│ Intro       │ 5/10     │ Tier 1 │ $75 (15%)    │
-└─────────────┴──────────┴────────┴──────────────┘
-
-Total Earnings: $1,150
+Note: Your commission is based on your Senior Trainer profile.
+All packages use the same rates defined in your profile.
 ```
 
 ### PT Manager View
@@ -1018,14 +967,21 @@ Total Earnings: $1,150
 Team Commission Overview - March 2024
 
 Trainer Performance:
-Name         | Tier | Sessions | Sales    | Commission | Status
-John (PT2)   | 2    | 45/50   | $12,000  | $4,050    | On Track
-Sarah (PT1)  | 1    | 38/40   | $8,000   | $2,560    | Near Tier
-Mike (PT2)   | 3    | 62/60   | $15,000  | $5,760    | Exceeded
+Name         | Profile      | Sessions | Sales    | Commission | Notes
+John Smith   | Junior       | 45      | $12,000  | $2,100    | Flat 20%
+Sarah Johnson| Senior       | 45      | $12,000  | $3,750    | Tier 2 (30%)
+Mike Williams| Elite        | 45      | $12,000  | $4,850    | Formula + bonus
+Emily Davis  | Junior       | 62      | $15,000  | $2,740    | Flat 20%
+Tom Chen     | Senior       | 62      | $15,000  | $5,270    | Tier 3 (35%)
 
-Total Team Commission: $12,370
+Total Team Commission: $18,710
 
-[Export to Excel] [Download PDF Report] [View Details]
+Commission by Profile:
+- Junior Trainers (2): $4,840 avg: $2,420
+- Senior Trainers (2): $9,020 avg: $4,510
+- Elite Trainers (1):  $4,850 avg: $4,850
+
+[Export to Excel] [Download PDF Report] [Manage Profiles]
 ```
 
 
@@ -1044,27 +1000,37 @@ interface CommissionCalculator {
 }
 
 class CommissionEngine implements CommissionCalculator {
-  calculateCommission(trainer, period, method, scope, config) {
-    const metrics = this.gatherMetrics(trainer, period, scope);
+  async calculateCommission(trainer, period, organization) {
+    // Get trainer's commission profile
+    const profile = await this.getTrainerProfile(trainer.commissionProfileId);
     
-    switch(method) {
+    if (!profile) {
+      throw new Error(`No commission profile assigned to trainer ${trainer.name}`);
+    }
+    
+    // Gather metrics for the period
+    const metrics = await this.gatherMetrics(trainer, period);
+    
+    // Calculate based on profile's method
+    switch(profile.calculationMethod) {
       case 'FLAT':
-        return this.calculateFlat(metrics, config);
+        return this.calculateFlat(metrics, profile.methodConfig);
       case 'PROGRESSIVE':
-        return this.calculateProgressive(metrics, config);
+        return this.calculateProgressive(metrics, profile.methodConfig);
       case 'FORMULA':
-        return this.calculateFormula(metrics, config);
+        return this.calculateFormula(metrics, profile.methodConfig);
     }
   }
   
-  private gatherMetrics(trainer, period, scope) {
-    if (scope === 'PACKAGE_BASED') {
-      // Calculate metrics per package
-      return this.gatherPackageMetrics(trainer, period);
-    } else {
-      // Calculate metrics universally
-      return this.gatherUniversalMetrics(trainer, period);
-    }
+  private async gatherMetrics(trainer, period) {
+    // Always gather ALL sessions and sales for the trainer
+    // Commission profile determines the rate, not what's counted
+    return {
+      totalSessions: await this.countSessions(trainer, period),
+      sessionValue: await this.sumSessionValue(trainer, period),
+      totalSales: await this.sumSales(trainer, period),
+      avgSessionValue: await this.avgSessionValue(trainer, period)
+    };
   }
   
   private calculateProgressive(metrics, config) {
