@@ -67,11 +67,11 @@ Organizations configure commissions in two steps:
       }
     },
     {
-      id: "performance",
-      title: "Performance Commission",
+      id: "advanced",
+      title: "Advanced Commission",
       calculationMethod: "FORMULA",
       methodConfig: {
-        formula: "(sessions_value * 0.35) + (sales_value * 0.20) + IF(sessions_count > 50, 500, 0)"
+        formula: "(sessions_value * 0.35) + (sales_value * 0.20)"
       }
     }
   ],
@@ -80,7 +80,7 @@ Organizations configure commissions in two steps:
   trainerAssignments: [
     { trainerId: "user1", trainerName: "John Smith", profileId: "level1" },
     { trainerId: "user2", trainerName: "Sarah Johnson", profileId: "level2" },
-    { trainerId: "user3", trainerName: "Mike Williams", profileId: "performance" },
+    { trainerId: "user3", trainerName: "Mike Williams", profileId: "advanced" },
     { trainerId: "user4", trainerName: "Emily Davis", profileId: "level1" }  // Multiple trainers can use same profile
   ]
 }
@@ -249,7 +249,6 @@ STDEV(value1, value2, ...)
 // Lookup Functions
 RATE_FOR_TIER(tier_number)     // Returns configured rate for trainer tier
 TARGET_FOR_TIER(tier_number)   // Returns target sessions for trainer tier
-BONUS_THRESHOLD(metric_name)   // Returns threshold for bonus qualification
 
 // Date Functions
 DAYS_SINCE(date)
@@ -259,7 +258,6 @@ IS_QUARTER_END()
 
 // Custom Business Functions
 SEASONAL_ADJUSTMENT(month, base_rate)  // Apply seasonal multipliers
-QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
 ```
 
 ### Formula Examples
@@ -272,21 +270,20 @@ QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
 #### Example 2: Multi-Factor Calculation
 ```excel
 = PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.20], [41,60,0.25], [61,null,0.30]]) +
-  (sales_value * 0.12) +
-  IF(AND(month_number >= 1, month_number <= 3), 500, 0)  // Q1 bonus
+  (sales_value * 0.12)
 ```
 
-#### Example 3: Progressive with Performance Bonus
+#### Example 3: Using Validated Sessions Only
 ```excel
 = PROGRESSIVE(validated_value, validated_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]]) +
-  IF(validated_count > 60, 500, 0)  // Performance bonus for 60+ validated sessions
+  (sales_value * 0.10)
 ```
 
 ### Visual Formula Builder Interface
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Commission Formula Builder - Profile: Performance Bonus            │
+│ Commission Formula Builder - Profile: Advanced Commission          │
 ├────────────────────────┬────────────────────────────────────────────┤
 │ AVAILABLE VARIABLES    │ FORMULA EDITOR                             │
 │                        │                                            │
@@ -303,12 +300,12 @@ QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
 │ ├─ sales_value         │ │ // Add sales commission             │  │
 │ └─ avg_package_value   │ │ sales_commission = sales_value * 0.15;│  │
 │                        │ │                                      │  │
-│ Averages               │ │ // Performance bonus                 │  │
-│ └─ avg_session_value   │ │ bonus = IF(validated_count > 50,    │  │
-│ ────────────────────   │ │   500, 0);                          │  │
+│ Averages               │ │                                      │  │
+│ └─ avg_session_value   │ │ // Total commission                  │  │
+│ ────────────────────   │ │ base_rate + sales_commission        │  │
 │ HELPER FUNCTIONS       │ │                                      │  │
-│                        │ │ // Total commission                  │  │
-│ ► Mathematical         │ │ base_rate + sales_commission + bonus │  │
+│                        │ │                                      │  │
+│ ► Mathematical         │ │                                      │  │
 │   MIN() MAX() ROUND()  │ │                                      │  │
 │                        │ └──────────────────────────────────────┘  │
 │ ► Conditional Logic    │                                            │
@@ -327,10 +324,9 @@ QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
 │                        │                                            │
 │                        │ [Run Test]                                 │
 │                        │                                            │
-│                        │ Result: $3,470.00                         │
-│                        │ ├─ Base (Progressive): $1,440.00          │
-│                        │ ├─ Sales (15%): $2,250.00                 │
-│                        │ └─ Performance Bonus: $500.00              │
+│                        │ Result: $2,970.00                         │
+│                        │ ├─ Base (Progressive): $1,200.00          │
+│                        │ └─ Sales (15%): $1,770.00                 │
 │                        │                                            │
 │                        │ [Save Formula] [Cancel]                   │
 └────────────────────────┴────────────────────────────────────────────┘
@@ -535,22 +531,21 @@ const FORMULA_TEMPLATES = {
     variables: ["sessions_value", "sessions_count"]
   },
   
-  tiered_with_bonus: {
-    name: "Tiered with Bonuses",
-    description: "Progressive tiers plus monthly bonuses",
-    formula: "PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]]) + IF(sessions_count > 60, 500, 0)",
+  tiered_execution: {
+    name: "Tiered Execution",
+    description: "Progressive tiers for execution commission",
+    formula: "PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]])",
     variables: ["sessions_value", "sessions_count"]
   },
   
   hybrid_advanced: {
     name: "Advanced Hybrid",
-    description: "Complex calculation with seasonal adjustments",
+    description: "Complex calculation combining execution and sales",
     formula: `
       PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]]) +
-      (sales_value * 0.12) +
-      IF(AND(month_number >= 1, month_number <= 3), sessions_value * 0.02, 0)  // Q1 bonus
+      (sales_value * 0.12)
     `,
-    variables: ["sessions_value", "sessions_count", "sales_value", "month_number"]
+    variables: ["sessions_value", "sessions_count", "sales_value"]
   }
 };
 ```
@@ -856,7 +851,7 @@ enum CalculationStatus {
    ├───────────────────┼────────────┼────────────┼─────────┤
    │ Level 1 Commission│ Flat (20%) │ 8          │ [Edit]  │
    │ Level 2 Commission│ Progressive│ 5          │ [Edit]  │
-   │ Performance Bonus │ Formula    │ 2          │ [Edit]  │
+   │ Advanced Formula  │ Formula    │ 2          │ [Edit]  │
    └───────────────────┴────────────┴────────────┴─────────┘
    
    [+ Create New Profile] [Set Default]
@@ -897,7 +892,7 @@ Calculation Period: [Monthly ▼]  [Change]
 │ ├────────────────────┼────────────┼──────────┼──────────┤ │
 │ │ Level 1 Commission │ Flat (20%) │ 8        │ [Edit]   │ │
 │ │ Level 2 Commission │ Progressive│ 5        │ [Edit]   │ │
-│ │ Performance Bonus  │ Formula    │ 2        │ [Edit]   │ │
+│ │ Advanced Formula   │ Formula    │ 2        │ [Edit]   │ │
 │ └────────────────────┴────────────┴──────────┴──────────┘ │
 │                                                           │
 │ [+ Create New Profile] [Set Default]                     │
@@ -959,7 +954,7 @@ Commission Settings
 │   Available Profiles:
 │   • Level 1 Commission (Flat 20%)
 │   • Level 2 Commission (Progressive) ✓
-│   • Performance Bonus (Formula)
+│   • Advanced Formula (Formula)
 │   • Use Organization Default
 │
 └─ Profile assigned: Jan 15, 2024 by Admin
@@ -1153,7 +1148,6 @@ Formula: Enhanced with Tiers
 Formula: Organization-Specific
 PROGRESSIVE(sessions_value, sessions_count, custom_tiers) +
 (sales_value * 0.15) +
-QUARTER_BONUS(quarter_number, 1000) +
 SEASONAL_ADJUSTMENT(month_number, base_rate)
 ```
 
