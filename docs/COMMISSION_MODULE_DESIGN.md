@@ -276,10 +276,10 @@ QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
   IF(AND(month_number >= 1, month_number <= 3), 500, 0)  // Q1 bonus
 ```
 
-#### Example 3: Progressive with Validation Bonus
+#### Example 3: Progressive with Performance Bonus
 ```excel
 = PROGRESSIVE(validated_value, validated_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]]) +
-  IF(validated_count / sessions_count > 0.95, 100, 0)  // Bonus for 95%+ validation rate
+  IF(validated_count > 60, 500, 0)  // Performance bonus for 60+ validated sessions
 ```
 
 ### Visual Formula Builder Interface
@@ -303,11 +303,9 @@ QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
 │ ├─ sales_value         │ │ // Add sales commission             │  │
 │ └─ avg_package_value   │ │ sales_commission = sales_value * 0.15;│  │
 │                        │ │                                      │  │
-│ Averages               │ │ // Validation bonus                  │  │
-│ └─ avg_session_value   │ │ validation_rate =                    │  │
-│                        │ │   validated_count / sessions_count;  │  │
-│ ────────────────────   │ │ bonus = IF(validation_rate > 0.95,   │  │
-│                        │ │   500, 0);                          │  │
+│ Averages               │ │ // Performance bonus                 │  │
+│ └─ avg_session_value   │ │ bonus = IF(validated_count > 50,    │  │
+│ ────────────────────   │ │   500, 0);                          │  │
 │ HELPER FUNCTIONS       │ │                                      │  │
 │                        │ │ // Total commission                  │  │
 │ ► Mathematical         │ │ base_rate + sales_commission + bonus │  │
@@ -332,7 +330,7 @@ QUARTER_BONUS(quarter, base_amount)    // Quarterly performance bonuses
 │                        │ Result: $3,470.00                         │
 │                        │ ├─ Base (Progressive): $1,440.00          │
 │                        │ ├─ Sales (15%): $2,250.00                 │
-│                        │ └─ Validation Bonus: $500.00              │
+│                        │ └─ Performance Bonus: $500.00              │
 │                        │                                            │
 │                        │ [Save Formula] [Cancel]                   │
 └────────────────────────┴────────────────────────────────────────────┘
