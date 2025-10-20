@@ -213,11 +213,6 @@ avg_session_value       // Average value per session
 sales_count            // Number of packages sold
 sales_value            // Total monetary value of packages sold
 avg_package_value      // Average package value
-
-// Time Variables
-month_number          // Current month (1-12)
-quarter_number        // Current quarter (1-4)
-days_in_period        // Number of days in calculation period
 ```
 
 ### Formula Functions Library
@@ -250,14 +245,6 @@ STDEV(value1, value2, ...)
 RATE_FOR_TIER(tier_number)     // Returns configured rate for trainer tier
 TARGET_FOR_TIER(tier_number)   // Returns target sessions for trainer tier
 
-// Date Functions
-DAYS_SINCE(date)
-MONTHS_BETWEEN(date1, date2)
-IS_MONTH_END()
-IS_QUARTER_END()
-
-// Custom Business Functions
-SEASONAL_ADJUSTMENT(month, base_rate)  // Apply seasonal multipliers
 ```
 
 ### Formula Examples
@@ -666,8 +653,7 @@ const commissionTestSuite: FormulaTestSuite = {
       inputs: {
         sessions_count: 10,
         sessions_value: 1000,
-        sales_value: 2000,
-        month_number: 3
+        sales_value: 2000
       },
       expectedResult: 350,
       tolerance: 0.01
@@ -678,8 +664,7 @@ const commissionTestSuite: FormulaTestSuite = {
       inputs: {
         sessions_count: 75,
         sessions_value: 7500,
-        sales_value: 15000,
-        month_number: 3
+        sales_value: 15000
       },
       expectedResult: 3750,
       tolerance: 0.01
@@ -1148,7 +1133,7 @@ Formula: Enhanced with Tiers
 Formula: Organization-Specific
 PROGRESSIVE(sessions_value, sessions_count, custom_tiers) +
 (sales_value * 0.15) +
-SEASONAL_ADJUSTMENT(month_number, base_rate)
+// Final calculated commission value
 ```
 
 ## Success Metrics
