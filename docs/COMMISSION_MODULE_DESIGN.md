@@ -86,6 +86,36 @@ Organizations configure commissions in two steps:
 }
 ```
 
+### Target Bonuses (Optional)
+
+Organizations can add fixed-amount target bonuses on top of percentage-based commissions. These provide additional incentives for reaching specific performance thresholds.
+
+#### How Target Bonuses Work:
+- **Condition-based**: Triggered when specific metrics hit defined thresholds
+- **Fixed amounts**: Unlike commission rates, these are flat dollar amounts
+- **Stackable**: Can be combined with any commission calculation method
+- **Common uses**:
+  - Sales milestones ($500 bonus at $10K sales, $1000 at $20K)
+  - Session volume targets (bonus for 50+ sessions)
+  - Validation rate incentives (bonus for 95%+ validation rate)
+
+#### Example Target Bonus Structure:
+```javascript
+// Sales target bonuses
+TARGET_BONUS(sales_value, [
+  [10000, 500],   // $500 bonus at $10K sales
+  [20000, 1000],  // $1000 bonus at $20K sales
+  [30000, 1500]   // $1500 bonus at $30K sales
+])
+
+// Session volume bonuses
+TARGET_BONUS(validated_count, [
+  [50, 300],      // $300 bonus at 50 validated sessions
+  [75, 600],      // $600 bonus at 75 sessions
+  [100, 1000]     // $1000 bonus at 100 sessions
+])
+```
+
 ### Commission Calculation Methods
 
 #### Method 1: Flat Rate
@@ -301,9 +331,12 @@ TARGET_FOR_TIER(tier_number)   // Returns target sessions for trainer tier
 │ ► Tier Calculations    ├────────────────────────────────────────────┤
 │   TIER()               │ TEST YOUR FORMULA                          │
 │   PROGRESSIVE()        │                                            │
-│                        │ Test Values:                               │
-│ [Show All Functions]   │ sessions_count: [50    ]                  │
-│                        │ sessions_value: [$5000 ]                  │
+│                        │                                            │
+│ ► Target Bonuses       │ Test Values:                               │
+│   TARGET_BONUS()       │ sessions_count: [50    ]                  │
+│   TIERED_BONUS()       │                                            │
+│                        │                                            │
+│ [Show All Functions]   │
 │                        │ validated_count: [48    ]                 │
 │                        │ validated_value: [$4800 ]                 │
 │                        │ sales_count: [10    ]                     │
@@ -311,9 +344,10 @@ TARGET_FOR_TIER(tier_number)   // Returns target sessions for trainer tier
 │                        │                                            │
 │                        │ [Run Test]                                 │
 │                        │                                            │
-│                        │ Result: $2,970.00                         │
+│                        │ Result: $3,470.00                         │
 │                        │ ├─ Base (Progressive): $1,200.00          │
-│                        │ └─ Sales (15%): $1,770.00                 │
+│                        │ ├─ Sales (15%): $1,770.00                 │
+│                        │ └─ Target Bonus: $500.00                   │
 │                        │                                            │
 │                        │ [Save Formula] [Cancel]                   │
 └────────────────────────┴────────────────────────────────────────────┘
@@ -518,10 +552,13 @@ const FORMULA_TEMPLATES = {
     variables: ["sessions_value", "sessions_count"]
   },
   
-  tiered_execution: {
-    name: "Tiered Execution",
-    description: "Progressive tiers for execution commission",
-    formula: "PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]])",
+  tiered_with_bonuses: {
+    name: "Tiered with Target Bonuses",
+    description: "Progressive tiers plus target-based bonuses",
+    formula: `
+      PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]]) +
+      TARGET_BONUS(sessions_count, [[50, 300], [75, 600], [100, 1000]])
+    `,
     variables: ["sessions_value", "sessions_count"]
   },
   
@@ -564,6 +601,28 @@ math.import({
   PROGRESSIVE: function(baseValue, count, tiers) {
     const rate = math.TIER(count, tiers);
     return baseValue * rate;
+  },
+  
+  TARGET_BONUS: function(metric, targets) {
+    // Returns the highest bonus for which the metric qualifies
+    let bonus = 0;
+    for (const [threshold, amount] of targets) {
+      if (metric >= threshold) {
+        bonus = amount; // Keep updating to get highest qualified bonus
+      }
+    }
+    return bonus;
+  },
+  
+  TIERED_BONUS: function(metric, targets) {
+    // Alternative: adds all qualifying bonuses together
+    let totalBonus = 0;
+    for (const [threshold, amount] of targets) {
+      if (metric >= threshold) {
+        totalBonus += amount;
+      }
+    }
+    return totalBonus;
   },
   
   IF: function(condition, trueValue, falseValue) {
