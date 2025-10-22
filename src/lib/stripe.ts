@@ -63,7 +63,7 @@ export const SUBSCRIPTION_TIERS = {
       'Excel exports',
     ],
   },
-  PRO: {
+  SCALE: {
     name: 'Scale',
     price: 37,
     priceId: process.env.STRIPE_SCALE_PRICE_ID,

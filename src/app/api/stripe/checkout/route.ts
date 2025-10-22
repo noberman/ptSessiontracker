@@ -18,10 +18,10 @@ export async function POST(request: NextRequest) {
     
     // Get request body
     const body = await request.json()
-    const { tier = 'PRO' } = body
+    const { tier = 'SCALE' } = body
     
     // Validate tier
-    if (!['GROWTH', 'PRO'].includes(tier)) {
+    if (!['GROWTH', 'SCALE'].includes(tier)) {
       return NextResponse.json(
         { error: 'Invalid subscription tier' },
         { status: 400 }
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     
     // Check if already on requested tier or higher
     const currentTier = user.organization.subscriptionTier
-    if (currentTier === 'PRO' || (currentTier === 'GROWTH' && tier === 'GROWTH')) {
+    if (currentTier === 'SCALE' || (currentTier === 'GROWTH' && tier === 'GROWTH')) {
       return NextResponse.json(
         { error: `Already subscribed to ${currentTier} plan` },
         { status: 400 }

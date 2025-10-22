@@ -175,7 +175,7 @@ export function getUpgradeRecommendation(
   usage: UsageStats
 ): SubscriptionTier | null {
   // Already on highest tier
-  if (currentTier === 'PRO') {
+  if (currentTier === 'SCALE') {
     return null
   }
 
@@ -193,14 +193,14 @@ export function getUpgradeRecommendation(
   if (currentTier === 'FREE') {
     // Check if GROWTH would be sufficient
     const growthTier = SUBSCRIPTION_TIERS.GROWTH
-    const needsPro = 
+    const needsScale = 
       usage.trainers.current > growthTier.limits.trainers ||
       usage.sessions.current > growthTier.limits.sessionsPerMonth ||
       usage.locations.current > growthTier.limits.locations
 
-    return needsPro ? 'PRO' : 'GROWTH'
+    return needsScale ? 'SCALE' : 'GROWTH'
   }
 
-  // If on GROWTH, recommend PRO
-  return 'PRO'
+  // If on GROWTH, recommend SCALE
+  return 'SCALE'
 }

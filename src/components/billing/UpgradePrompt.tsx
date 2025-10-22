@@ -57,7 +57,7 @@ export function UpgradePrompt({
   }
 
   const { title, description } = getMessage()
-  const proFeatures = SUBSCRIPTION_TIERS.PRO.features
+  const scaleFeatures = SUBSCRIPTION_TIERS.SCALE.features
 
   return (
     <Card className={blocking ? 'border-warning' : ''}>
@@ -72,9 +72,9 @@ export function UpgradePrompt({
         <p className="text-text-secondary">{description}</p>
         
         <div className="bg-background-secondary rounded-lg p-4">
-          <h4 className="font-semibold mb-2">Professional Plan Includes:</h4>
+          <h4 className="font-semibold mb-2">Scale Plan Includes:</h4>
           <ul className="space-y-1 text-sm text-text-secondary">
-            {proFeatures.slice(0, 5).map((feature, index) => (
+            {scaleFeatures.slice(0, 5).map((feature, index) => (
               <li key={index} className="flex items-center gap-2">
                 <span className="text-success-500">✓</span>
                 {feature}
@@ -82,7 +82,7 @@ export function UpgradePrompt({
             ))}
           </ul>
           <p className="mt-2 text-lg font-semibold text-text-primary">
-            Only ${SUBSCRIPTION_TIERS.PRO.price}/month
+            Only ${SUBSCRIPTION_TIERS.SCALE.price}/month
           </p>
         </div>
         

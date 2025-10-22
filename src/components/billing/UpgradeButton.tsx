@@ -10,7 +10,7 @@ interface UpgradeButtonProps {
   variant?: 'primary' | 'outline' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   children?: React.ReactNode
-  tier?: 'GROWTH' | 'PRO'
+  tier?: 'GROWTH' | 'SCALE'
 }
 
 export function UpgradeButton({ 
@@ -18,7 +18,7 @@ export function UpgradeButton({
   variant = 'primary',
   size = 'md',
   children,
-  tier = 'PRO'
+  tier = 'SCALE'
 }: UpgradeButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

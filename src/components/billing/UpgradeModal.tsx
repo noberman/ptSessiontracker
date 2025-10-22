@@ -41,9 +41,9 @@ export function UpgradeModal({
 
   const getRecommendedTiers = () => {
     if (currentTier === 'FREE') {
-      return ['GROWTH', 'PRO'] as const
+      return ['GROWTH', 'SCALE'] as const
     }
-    return ['PRO'] as const
+    return ['SCALE'] as const
   }
 
   const tiers = getRecommendedTiers()

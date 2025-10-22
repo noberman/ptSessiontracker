@@ -3,7 +3,7 @@ export interface Organization {
   name: string
   email: string
   phone?: string | null
-  subscriptionTier: 'FREE' | 'PRO'
+  subscriptionTier: 'FREE' | 'GROWTH' | 'SCALE'
   subscriptionStatus: 'ACTIVE' | 'CANCELED' | 'PAST_DUE'
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
@@ -11,7 +11,7 @@ export interface Organization {
   updatedAt: Date
 }
 
-export type SubscriptionTier = 'FREE' | 'PRO'
+export type SubscriptionTier = 'FREE' | 'GROWTH' | 'SCALE'
 export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'PAST_DUE'
 
 export interface CreateOrganizationInput {

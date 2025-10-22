@@ -2,7 +2,7 @@ import { SUBSCRIPTION_TIERS } from './stripe'
 
 /**
  * Maps database subscription tier values to their display names
- * Database values: FREE, GROWTH, PRO
+ * Database values: FREE, GROWTH, SCALE
  * Display names: Starter, Growth, Scale
  */
 export function getSubscriptionDisplayName(tier: keyof typeof SUBSCRIPTION_TIERS | string): string {

@@ -14,7 +14,7 @@ async function main() {
       name: 'Snap Fitness Singapore',
       email: 'admin@snapfitness.sg',
       phone: '+65 6789 0123',
-      subscriptionTier: SubscriptionTier.PRO,
+      subscriptionTier: SubscriptionTier.SCALE,
       subscriptionStatus: SubscriptionStatus.ACTIVE
     }
   })
