@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { AlertCircle } from 'lucide-react'
@@ -192,14 +193,11 @@ export function SessionEditForm({
                 <label htmlFor="sessionDate" className="block text-sm font-medium text-text-primary mb-1">
                   Session Date {!canEditDate && '(Read Only)'}
                 </label>
-                <Input
-                  id="sessionDate"
-                  type="date"
-                  required
+                <DatePicker
                   value={formData.sessionDate}
-                  onChange={(e) => setFormData({ ...formData, sessionDate: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, sessionDate: value })}
                   disabled={!canEditDate}
-                  className={!canEditDate ? 'bg-background-secondary' : ''}
+                  placeholder="Select date"
                 />
               </div>
               <div>

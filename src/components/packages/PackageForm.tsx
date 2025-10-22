@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
@@ -379,11 +380,10 @@ export function PackageForm({
               <label htmlFor="startDate" className="block text-sm font-medium text-text-primary mb-1">
                 Start Date
               </label>
-              <Input
-                id="startDate"
-                type="date"
+              <DatePicker
                 value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, startDate: value })}
+                placeholder="Select start date"
               />
             </div>
 
@@ -391,11 +391,10 @@ export function PackageForm({
               <label htmlFor="expiresAt" className="block text-sm font-medium text-text-primary mb-1">
                 Expiration Date
               </label>
-              <Input
-                id="expiresAt"
-                type="date"
+              <DatePicker
                 value={formData.expiresAt}
-                onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, expiresAt: value })}
+                placeholder="Select expiry date"
               />
             </div>
           </div>

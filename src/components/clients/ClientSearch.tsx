@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
 
 interface ClientSearchProps {
   locations?: Array<{
@@ -25,7 +26,6 @@ export function ClientSearch({
 }: ClientSearchProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const dropdownRef = useRef<HTMLDivElement>(null)
   
   // Parse comma-separated values for multi-select fields
   const getArrayFromParam = (param: string | null) => {
@@ -41,7 +41,6 @@ export function ClientSearch({
   })
 
   const [isOpen, setIsOpen] = useState(false)
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [searchInput, setSearchInput] = useState(filters.search)
 
   // Sync filters with URL parameters when they change
@@ -54,20 +53,6 @@ export function ClientSearch({
     })
     setSearchInput(searchParams.get('search') || '')
   }, [searchParams])
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpenDropdown(null)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
 
   const applyFilters = () => {
     
@@ -143,25 +128,6 @@ export function ClientSearch({
     filters.trainerIds.length +
     (!filters.active ? 1 : 0)
 
-  // Toggle functions for multi-select - update state immediately
-  const toggleLocationId = (id: string) => {
-    setFilters(prev => ({
-      ...prev,
-      locationIds: prev.locationIds.includes(id)
-        ? prev.locationIds.filter(l => l !== id)
-        : [...prev.locationIds, id]
-    }))
-  }
-  
-  const toggleTrainerId = (id: string) => {
-    setFilters(prev => ({
-      ...prev,
-      trainerIds: prev.trainerIds.includes(id)
-        ? prev.trainerIds.filter(t => t !== id)
-        : [...prev.trainerIds, id]
-    }))
-  }
-
   return (
     <div className="mb-4">
       <div className="flex items-center space-x-2 mb-4">
@@ -190,7 +156,7 @@ export function ClientSearch({
       </div>
 
       {isOpen && (
-        <div className="bg-surface border border-border rounded-lg p-4" ref={dropdownRef}>
+        <div className="bg-surface border border-border rounded-lg p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {/* Search Input */}
             <div className="md:col-span-2">
@@ -211,104 +177,45 @@ export function ClientSearch({
               </form>
             </div>
 
-            {/* Location Filter - Multi-select Dropdown */}
+            {/* Location Filter - Searchable Multi-select */}
             {locations.length > 0 && (
-              <div className="relative">
+              <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">
                   Locations
                 </label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setOpenDropdown(openDropdown === 'locations' ? null : 'locations')}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
-                  >
-                    <span>
-                      {filters.locationIds.length === 0 
-                        ? 'All Locations' 
-                        : `${filters.locationIds.length} selected`}
-                    </span>
-                    <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {openDropdown === 'locations' && (
-                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
-                      <div className="max-h-60 overflow-y-auto p-2">
-                        {locations.map((location) => (
-                          <label
-                            key={location.id}
-                            className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={filters.locationIds.includes(location.id)}
-                              onChange={() => toggleLocationId(location.id)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-text-primary">{location.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <SearchableMultiSelect
+                  options={locations.map(location => ({
+                    value: location.id,
+                    label: location.name
+                  }))}
+                  value={filters.locationIds}
+                  onChange={(ids) => setFilters(prev => ({ ...prev, locationIds: ids }))}
+                  placeholder="All Locations"
+                  searchPlaceholder="Search locations..."
+                />
               </div>
             )}
 
-            {/* Trainer Filter - Multi-select Dropdown */}
+            {/* Trainer Filter - Searchable Multi-select */}
             {trainers.length > 0 && (
-              <div className="relative">
+              <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">
                   Trainers
                 </label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setOpenDropdown(openDropdown === 'trainers' ? null : 'trainers')}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
-                  >
-                    <span>
-                      {filters.trainerIds.length === 0 
-                        ? 'All Trainers' 
-                        : filters.trainerIds.includes('unassigned')
-                        ? `Unassigned${filters.trainerIds.length > 1 ? ` + ${filters.trainerIds.length - 1} more` : ''}`
-                        : `${filters.trainerIds.length} selected`}
-                    </span>
-                    <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {openDropdown === 'trainers' && (
-                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
-                      <div className="max-h-60 overflow-y-auto p-2">
-                        <label className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer border-b border-border mb-2">
-                          <input
-                            type="checkbox"
-                            checked={filters.trainerIds.includes('unassigned')}
-                            onChange={() => toggleTrainerId('unassigned')}
-                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                          />
-                          <span className="text-sm text-text-primary font-medium">Unassigned</span>
-                        </label>
-                        {trainers.map((trainer) => (
-                          <label
-                            key={trainer.id}
-                            className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={filters.trainerIds.includes(trainer.id)}
-                              onChange={() => toggleTrainerId(trainer.id)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-text-primary">{trainer.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <SearchableMultiSelect
+                  options={[
+                    { value: 'unassigned', label: 'Unassigned' },
+                    ...trainers.map(trainer => ({
+                      value: trainer.id,
+                      label: trainer.name,
+                      subLabel: trainer.email
+                    }))
+                  ]}
+                  value={filters.trainerIds}
+                  onChange={(ids) => setFilters(prev => ({ ...prev, trainerIds: ids }))}
+                  placeholder="All Trainers"
+                  searchPlaceholder="Search trainers..."
+                />
               </div>
             )}
 

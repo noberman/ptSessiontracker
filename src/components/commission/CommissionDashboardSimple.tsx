@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
 import { TrainerCommission } from '@/lib/commission/calculator'
 
 interface CommissionDashboardProps {
@@ -32,6 +33,7 @@ export function CommissionDashboard({
   const router = useRouter()
   const [isExporting, setIsExporting] = useState(false)
   const [expandedTrainer, setExpandedTrainer] = useState<string | null>(null)
+  const [selectedLocations, setSelectedLocations] = useState<string[]>(selectedLocationId ? [selectedLocationId] : [])
   
   const handleMonthChange = (newMonth: string) => {
     const params = new URLSearchParams()
@@ -40,10 +42,12 @@ export function CommissionDashboard({
     router.push(`/commission?${params.toString()}`)
   }
   
-  const handleLocationChange = (locationId: string) => {
+  const handleLocationChange = (locationIds: string[]) => {
+    setSelectedLocations(locationIds)
     const params = new URLSearchParams()
     params.set('month', month)
-    if (locationId !== 'all') params.set('locationId', locationId)
+    // For now, use first location since backend expects single locationId
+    if (locationIds.length > 0) params.set('locationId', locationIds[0])
     router.push(`/commission?${params.toString()}`)
   }
   
@@ -95,18 +99,18 @@ export function CommissionDashboard({
             
             {/* Location filter */}
             {locations.length > 0 && (currentUserRole === 'ADMIN' || currentUserRole === 'PT_MANAGER') && (
-              <div>
-                <label className="text-sm text-text-secondary mr-2">Location:</label>
-                <select
-                  value={selectedLocationId || 'all'}
-                  onChange={(e) => handleLocationChange(e.target.value)}
-                  className="rounded-lg border border-border px-3 py-2"
-                >
-                  <option value="all">All Locations</option>
-                  {locations.map(loc => (
-                    <option key={loc.id} value={loc.id}>{loc.name}</option>
-                  ))}
-                </select>
+              <div className="min-w-[200px]">
+                <label className="text-sm text-text-secondary block mb-1">Location:</label>
+                <SearchableMultiSelect
+                  options={locations.map(loc => ({
+                    value: loc.id,
+                    label: loc.name
+                  }))}
+                  value={selectedLocations}
+                  onChange={handleLocationChange}
+                  placeholder="All Locations"
+                  searchPlaceholder="Search locations..."
+                />
               </div>
             )}
             

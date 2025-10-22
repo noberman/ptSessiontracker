@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { SearchableSelect, type Option } from '@/components/ui/SearchableSelect'
@@ -339,13 +340,11 @@ export function SessionForm({
               <label htmlFor="sessionDate" className="block text-sm font-medium text-text-primary mb-1">
                 Session Date *
               </label>
-              <Input
-                id="sessionDate"
-                type="date"
-                required
+              <DatePicker
                 value={formData.sessionDate}
-                onChange={(e) => setFormData({ ...formData, sessionDate: e.target.value })}
-                max={new Date().toISOString().split('T')[0]}
+                onChange={(value) => setFormData({ ...formData, sessionDate: value })}
+                maxDate={new Date()}
+                placeholder="Select date"
               />
             </div>
             <div>

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
 
 interface UserSearchProps {
   locations?: Array<{
@@ -19,7 +20,9 @@ export function UserSearch({ locations = [], currentRole }: UserSearchProps) {
   
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [role, setRole] = useState(searchParams.get('role') || '')
-  const [locationId, setLocationId] = useState(searchParams.get('locationId') || '')
+  const [locationIds, setLocationIds] = useState<string[]>(
+    searchParams.get('locationId') ? [searchParams.get('locationId')!] : []
+  )
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,7 +30,8 @@ export function UserSearch({ locations = [], currentRole }: UserSearchProps) {
     const params = new URLSearchParams()
     if (search) params.set('search', search)
     if (role) params.set('role', role)
-    if (locationId) params.set('locationId', locationId)
+    // For now, use first location since backend expects single locationId
+    if (locationIds.length > 0) params.set('locationId', locationIds[0])
     
     router.push(`/users?${params.toString()}`)
   }
@@ -35,7 +39,7 @@ export function UserSearch({ locations = [], currentRole }: UserSearchProps) {
   const handleReset = () => {
     setSearch('')
     setRole('')
-    setLocationId('')
+    setLocationIds([])
     router.push('/users')
   }
 
@@ -78,18 +82,18 @@ export function UserSearch({ locations = [], currentRole }: UserSearchProps) {
         </select>
 
         {locations.length > 0 && (
-          <select
-            value={locationId}
-            onChange={(e) => setLocationId(e.target.value)}
-            className="rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white"
-          >
-            <option value="">All Locations</option>
-            {locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
-            ))}
-          </select>
+          <div className="min-w-[200px]">
+            <SearchableMultiSelect
+              options={locations.map(location => ({
+                value: location.id,
+                label: location.name
+              }))}
+              value={locationIds}
+              onChange={setLocationIds}
+              placeholder="All Locations"
+              searchPlaceholder="Search locations..."
+            />
+          </div>
         )}
 
         <Button type="submit">

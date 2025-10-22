@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
 
 interface PackageFiltersProps {
   clients: Array<{
@@ -31,7 +32,6 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
   const [isOpen, setIsOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [localChanges, setLocalChanges] = useState<Record<string, any>>({})
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Get current filter values - either from local changes or URL
   const getFilterValue = (key: string, isArray = false) => {
@@ -53,19 +53,6 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     endDate: getFilterValue('endDate') as string,
   }
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpenDropdown(null)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
 
   const applyFilters = () => {
     
@@ -111,28 +98,7 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     (currentFilters.startDate ? 1 : 0) + 
     (currentFilters.endDate ? 1 : 0)
 
-  // Toggle functions for multi-select
-  const toggleClientId = (id: string) => {
-    const current = currentFilters.clientIds
-    setLocalChanges(prev => ({
-      ...prev,
-      clientIds: current.includes(id)
-        ? current.filter(c => c !== id)
-        : [...current, id]
-    }))
-  }
-  
-  const toggleLocationId = (id: string) => {
-    const current = currentFilters.locationIds
-    setLocalChanges(prev => ({
-      ...prev,
-      locationIds: current.includes(id)
-        ? current.filter(l => l !== id)
-        : [...current, id]
-    }))
-  }
-  
-  
+  // Toggle function for status (still using dropdown)
   const toggleActiveStatus = (status: string) => {
     const current = currentFilters.activeStatuses
     setLocalChanges(prev => ({
@@ -172,122 +138,64 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
       </div>
 
       {isOpen && (
-        <div className="bg-surface border border-border rounded-lg p-4" ref={dropdownRef}>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {/* Date Range */}
-            <div>
+        <div className="bg-surface border border-border rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Date Range - Flowbite Style */}
+            <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Start Date
+                Date Range
               </label>
-              <Input
-                type="date"
-                value={currentFilters.startDate}
-                onChange={(e) => setLocalChanges(prev => ({ ...prev, startDate: e.target.value }))}
-                className="text-sm"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                End Date
-              </label>
-              <Input
-                type="date"
-                value={currentFilters.endDate}
-                onChange={(e) => setLocalChanges(prev => ({ ...prev, endDate: e.target.value }))}
-                className="text-sm"
-              />
-            </div>
-
-            {/* Client Filter - Multi-select Dropdown */}
-            <div className="relative">
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Clients
-              </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpenDropdown(openDropdown === 'clients' ? null : 'clients')}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
-                >
-                  <span>
-                    {currentFilters.clientIds.length === 0 
-                      ? 'All Clients' 
-                      : `${currentFilters.clientIds.length} selected`}
-                  </span>
-                  <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {openDropdown === 'clients' && (
-                  <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
-                    <div className="max-h-60 overflow-y-auto p-2">
-                      {clients.length === 0 ? (
-                        <p className="text-sm text-text-secondary p-2">No clients available</p>
-                      ) : (
-                        clients.map((client) => (
-                          <label
-                            key={client.id}
-                            className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={currentFilters.clientIds.includes(client.id)}
-                              onChange={() => toggleClientId(client.id)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-text-primary">{client.name}</span>
-                          </label>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
+              <div className="flex items-center">
+                <DatePicker
+                  value={currentFilters.startDate}
+                  onChange={(value) => setLocalChanges(prev => ({ ...prev, startDate: value }))}
+                  placeholder="Start date"
+                  className="flex-1"
+                />
+                <span className="mx-2 text-text-secondary">to</span>
+                <DatePicker
+                  value={currentFilters.endDate}
+                  onChange={(value) => setLocalChanges(prev => ({ ...prev, endDate: value }))}
+                  placeholder="End date"
+                  className="flex-1"
+                />
               </div>
             </div>
 
-            {/* Location Filter - Multi-select Dropdown */}
+            {/* Client Filter - Searchable Multi-select */}
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Clients
+              </label>
+              <SearchableMultiSelect
+                options={clients.map(client => ({
+                  value: client.id,
+                  label: client.name,
+                  subLabel: client.email
+                }))}
+                value={currentFilters.clientIds}
+                onChange={(ids) => setLocalChanges(prev => ({ ...prev, clientIds: ids }))}
+                placeholder="All Clients"
+                searchPlaceholder="Search by name or email..."
+              />
+            </div>
+
+            {/* Location Filter - Searchable Multi-select */}
             {locations && locations.length > 0 && currentUserRole !== 'TRAINER' && currentUserRole !== 'CLUB_MANAGER' && (
-              <div className="relative">
+              <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">
                   Locations
                 </label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setOpenDropdown(openDropdown === 'locations' ? null : 'locations')}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
-                  >
-                    <span>
-                      {currentFilters.locationIds.length === 0 
-                        ? 'All Locations' 
-                        : `${currentFilters.locationIds.length} selected`}
-                    </span>
-                    <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {openDropdown === 'locations' && (
-                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
-                      <div className="max-h-60 overflow-y-auto p-2">
-                        {locations.map((location) => (
-                          <label
-                            key={location.id}
-                            className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={currentFilters.locationIds.includes(location.id)}
-                              onChange={() => toggleLocationId(location.id)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-text-primary">{location.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <SearchableMultiSelect
+                  options={locations.map(location => ({
+                    value: location.id,
+                    label: location.name
+                  }))}
+                  value={currentFilters.locationIds}
+                  onChange={(ids) => setLocalChanges(prev => ({ ...prev, locationIds: ids }))}
+                  placeholder="All Locations"
+                  searchPlaceholder="Search locations..."
+                />
               </div>
             )}
 

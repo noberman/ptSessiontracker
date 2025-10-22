@@ -21,7 +21,9 @@
     "pre-deploy": "./scripts/pre-deploy.sh",
     "deploy:staging": "npm run pre-deploy && git push origin staging",
     "deploy:production": "npm run pre-deploy && git push origin main",
-    "test:session-limit": "npx tsx scripts/test-session-limit.ts"
+    "test:session-limit": "npx tsx scripts/test-session-limit.ts",
+    "audit:packages": "npx tsx scripts/audit-package-overflow.ts",
+    "audit:discrepancy": "npx tsx scripts/audit-package-discrepancy.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -35,6 +37,7 @@
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@react-email/components": "^0.5.1",
     "@stripe/stripe-js": "^7.9.0",
+    "@types/react-datepicker": "^6.2.0",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -46,6 +49,7 @@
     "next-auth": "^4.24.11",
     "prisma": "^6.14.0",
     "react": "^19.1.0",
+    "react-datepicker": "^8.8.0",
     "react-dom": "19.1.0",
     "react-hot-toast": "^2.6.0",
     "recharts": "^3.1.2",

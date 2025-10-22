@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
 
 interface SessionFiltersProps {
   clients: Array<{
@@ -43,26 +44,11 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
   const [tempFilters, setTempFilters] = useState(currentFilters)
   const [isOpen, setIsOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
   
   // Reset temp filters when URL changes
   useEffect(() => {
     setTempFilters(currentFilters)
   }, [searchParams])
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpenDropdown(null)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
 
   const applyFilters = () => {
     
@@ -114,34 +100,6 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
     (currentFilters.startDate ? 1 : 0) +
     (currentFilters.endDate ? 1 : 0)
   
-  // Toggle functions for multi-select
-  const toggleClientId = (id: string) => {
-    setTempFilters(prev => ({
-      ...prev,
-      clientIds: prev.clientIds.includes(id)
-        ? prev.clientIds.filter(c => c !== id)
-        : [...prev.clientIds, id]
-    }))
-  }
-  
-  const toggleTrainerId = (id: string) => {
-    setTempFilters(prev => ({
-      ...prev,
-      trainerIds: prev.trainerIds.includes(id)
-        ? prev.trainerIds.filter(t => t !== id)
-        : [...prev.trainerIds, id]
-    }))
-  }
-  
-  const toggleLocationId = (id: string) => {
-    setTempFilters(prev => ({
-      ...prev,
-      locationIds: prev.locationIds.includes(id)
-        ? prev.locationIds.filter(l => l !== id)
-        : [...prev.locationIds, id]
-    }))
-  }
-  
   const toggleValidatedStatus = (status: string) => {
     setTempFilters(prev => ({
       ...prev,
@@ -179,172 +137,79 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
       </div>
 
       {isOpen && (
-        <div className="bg-surface border border-border rounded-lg p-4" ref={dropdownRef}>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {/* Date Range */}
-            <div>
+        <div className="bg-surface border border-border rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Date Range - Flowbite Style */}
+            <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Start Date
+                Date Range
               </label>
-              <Input
-                type="date"
-                value={tempFilters.startDate}
-                onChange={(e) => setTempFilters({ ...tempFilters, startDate: e.target.value })}
-                className="text-sm"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                End Date
-              </label>
-              <Input
-                type="date"
-                value={tempFilters.endDate}
-                onChange={(e) => setTempFilters({ ...tempFilters, endDate: e.target.value })}
-                className="text-sm"
-              />
+              <div className="flex items-center">
+                <DatePicker
+                  value={tempFilters.startDate}
+                  onChange={(value) => setTempFilters({ ...tempFilters, startDate: value })}
+                  placeholder="Start date"
+                  className="flex-1"
+                />
+                <span className="mx-2 text-text-secondary">to</span>
+                <DatePicker
+                  value={tempFilters.endDate}
+                  onChange={(value) => setTempFilters({ ...tempFilters, endDate: value })}
+                  placeholder="End date"
+                  className="flex-1"
+                />
+              </div>
             </div>
 
-            {/* Client Filter - Multi-select Dropdown */}
-            <div className="relative">
+            {/* Client Filter - Searchable Multi-select */}
+            <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 Clients
               </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpenDropdown(openDropdown === 'clients' ? null : 'clients')}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
-                >
-                  <span>
-                    {tempFilters.clientIds.length === 0 
-                      ? 'All Clients' 
-                      : `${tempFilters.clientIds.length} selected`}
-                  </span>
-                  <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {openDropdown === 'clients' && (
-                  <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
-                    <div className="max-h-60 overflow-y-auto p-2">
-                      {clients.length === 0 ? (
-                        <p className="text-sm text-text-secondary p-2">No clients available</p>
-                      ) : (
-                        clients.map((client) => (
-                          <label
-                            key={client.id}
-                            className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={tempFilters.clientIds.includes(client.id)}
-                              onChange={() => toggleClientId(client.id)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-text-primary">{client.name}</span>
-                          </label>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <SearchableMultiSelect
+                options={clients.map(client => ({
+                  value: client.id,
+                  label: client.name
+                }))}
+                value={tempFilters.clientIds}
+                onChange={(ids) => setTempFilters({ ...tempFilters, clientIds: ids })}
+                placeholder="All Clients"
+                searchPlaceholder="Search clients..."
+              />
             </div>
 
-            {/* Trainer Filter - Multi-select Dropdown */}
-            <div className="relative">
+            {/* Trainer Filter - Searchable Multi-select */}
+            <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 Trainers
               </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpenDropdown(openDropdown === 'trainers' ? null : 'trainers')}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
-                >
-                  <span>
-                    {tempFilters.trainerIds.length === 0 
-                      ? 'All Trainers' 
-                      : `${tempFilters.trainerIds.length} selected`}
-                  </span>
-                  <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {openDropdown === 'trainers' && (
-                  <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
-                    <div className="max-h-60 overflow-y-auto p-2">
-                      {trainers.length === 0 ? (
-                        <p className="text-sm text-text-secondary p-2">No trainers available</p>
-                      ) : (
-                        trainers.map((trainer) => (
-                          <label
-                            key={trainer.id}
-                            className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={tempFilters.trainerIds.includes(trainer.id)}
-                              onChange={() => toggleTrainerId(trainer.id)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-text-primary">{trainer.name}</span>
-                          </label>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <SearchableMultiSelect
+                options={trainers.map(trainer => ({
+                  value: trainer.id,
+                  label: trainer.name
+                }))}
+                value={tempFilters.trainerIds}
+                onChange={(ids) => setTempFilters({ ...tempFilters, trainerIds: ids })}
+                placeholder="All Trainers"
+                searchPlaceholder="Search trainers..."
+              />
             </div>
 
-            {/* Location Filter - Multi-select Dropdown */}
-            <div className="relative">
+            {/* Location Filter - Searchable Multi-select */}
+            <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 Locations
               </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpenDropdown(openDropdown === 'locations' ? null : 'locations')}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
-                >
-                  <span>
-                    {tempFilters.locationIds.length === 0 
-                      ? 'All Locations' 
-                      : `${tempFilters.locationIds.length} selected`}
-                  </span>
-                  <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {openDropdown === 'locations' && (
-                  <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
-                    <div className="max-h-60 overflow-y-auto p-2">
-                      {locations.length === 0 ? (
-                        <p className="text-sm text-text-secondary p-2">No locations available</p>
-                      ) : (
-                        locations.map((location) => (
-                          <label
-                            key={location.id}
-                            className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={tempFilters.locationIds.includes(location.id)}
-                              onChange={() => toggleLocationId(location.id)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-text-primary">{location.name}</span>
-                          </label>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <SearchableMultiSelect
+                options={locations.map(location => ({
+                  value: location.id,
+                  label: location.name
+                }))}
+                value={tempFilters.locationIds}
+                onChange={(ids) => setTempFilters({ ...tempFilters, locationIds: ids })}
+                placeholder="All Locations"
+                searchPlaceholder="Search locations..."
+              />
             </div>
 
 

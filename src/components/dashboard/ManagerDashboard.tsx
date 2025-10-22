@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { 
   Download,
   WifiOff
@@ -446,11 +447,11 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
                     <label className="block text-sm font-medium text-text-primary mb-1">
                       Start Date
                     </label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={customStartDate}
-                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      onChange={(value) => setCustomStartDate(value)}
                       className="text-sm"
+                      placeholder="Select start date"
                     />
                   </div>
                   
@@ -458,11 +459,11 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
                     <label className="block text-sm font-medium text-text-primary mb-1">
                       End Date
                     </label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={customEndDate}
-                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      onChange={(value) => setCustomEndDate(value)}
                       className="text-sm"
+                      placeholder="Select end date"
                     />
                   </div>
                 </>
