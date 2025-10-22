@@ -88,12 +88,32 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
+  // Determine tier based on price ID from metadata or line items
+  let tier: 'FREE' | 'GROWTH' | 'SCALE' = 'FREE'
+  
+  // Check metadata first (if passed from checkout)
+  if (session.metadata?.tier) {
+    tier = session.metadata.tier as 'FREE' | 'GROWTH' | 'SCALE'
+  } else {
+    // Otherwise, check the price ID
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id)
+    const priceId = lineItems.data[0]?.price?.id
+    
+    if (priceId === process.env.STRIPE_GROWTH_PRICE_ID) {
+      tier = 'GROWTH'
+    } else if (priceId === process.env.STRIPE_SCALE_PRICE_ID) {
+      tier = 'SCALE'
+    }
+  }
+
+  console.log(`Setting tier to ${tier} for organization ${organizationId}`)
+
   // Update organization with subscription info
   await prisma.organization.update({
     where: { id: organizationId },
     data: {
       stripeSubscriptionId: session.subscription as string,
-      subscriptionTier: 'PRO',
+      subscriptionTier: tier,
       subscriptionStatus: 'ACTIVE',
     },
   })
@@ -131,11 +151,23 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     return
   }
 
+  // Determine tier based on price ID
+  let tier: 'FREE' | 'GROWTH' | 'SCALE' = 'FREE'
+  const priceId = subscription.items.data[0]?.price.id
+  
+  if (priceId === process.env.STRIPE_GROWTH_PRICE_ID) {
+    tier = 'GROWTH'
+  } else if (priceId === process.env.STRIPE_SCALE_PRICE_ID) {
+    tier = 'SCALE'
+  }
+
+  console.log(`Setting tier to ${tier} based on price ${priceId}`)
+
   await prisma.organization.update({
     where: { id: org.id },
     data: {
       stripeSubscriptionId: subscription.id,
-      subscriptionTier: 'PRO',
+      subscriptionTier: tier,
       subscriptionStatus: mapStripeStatus(subscription.status),
     },
   })
@@ -156,16 +188,29 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   const status = mapStripeStatus(subscription.status)
   
+  // Determine tier based on price ID or cancellation status
+  let tier: 'FREE' | 'GROWTH' | 'SCALE' = 'FREE'
+  
+  if (subscription.cancel_at_period_end || subscription.status === 'canceled') {
+    tier = 'FREE'
+  } else {
+    const priceId = subscription.items.data[0]?.price.id
+    if (priceId === process.env.STRIPE_GROWTH_PRICE_ID) {
+      tier = 'GROWTH'
+    } else if (priceId === process.env.STRIPE_SCALE_PRICE_ID) {
+      tier = 'SCALE'
+    }
+  }
+  
   await prisma.organization.update({
     where: { id: org.id },
     data: {
       subscriptionStatus: status,
-      // If subscription is cancelled or past due, might want to handle tier
-      subscriptionTier: subscription.cancel_at_period_end ? 'FREE' : 'PRO',
+      subscriptionTier: tier,
     },
   })
 
-  console.log(`Organization ${org.id} subscription status: ${status}`)
+  console.log(`Organization ${org.id} subscription status: ${status}, tier: ${tier}`)
 }
 
 // Handle subscription cancellation
