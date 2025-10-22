@@ -256,7 +256,7 @@ model Invitation {
 enum SubscriptionTier {
   FREE
   GROWTH
-  PRO
+  SCALE
 }
 
 enum SubscriptionStatus {
