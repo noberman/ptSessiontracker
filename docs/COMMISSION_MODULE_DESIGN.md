@@ -9,9 +9,14 @@ Complete redesign of the commission calculation system using a tier-based framew
 1. Support multiple commission calculation methods across different organizations
 2. Enable tier-based commission rate adjustments based on performance metrics
 3. Allow different commission profiles for different trainer levels
-4. Calculate commissions monthly or quarterly based on organization preference
+4. Calculate commissions monthly or quarterly (set at organization level)
 5. Maintain clear audit trail of commission calculations
 6. Handle no-shows (no commission) and substitutions (commission to executor)
+
+### Organization-Level Settings
+- **Commission Period**: Monthly or Quarterly (set once per organization)
+- **Calculation Day**: When to run calculations (e.g., 1st of month)
+- **Default Profile**: Which profile to assign new trainers
 
 ### Commission Components
 
@@ -76,14 +81,10 @@ interface CommissionTier {
   }
 }
 
-interface TrainerCommissionProfile {
-  id: string
-  trainerId: string
-  profileId: string
-  effectiveFrom: Date
-  effectiveTo?: Date
-  assignedBy: string
-  assignedAt: Date
+// Simple: Trainer just has a commissionProfileId field
+interface User {
+  // ... existing fields
+  commissionProfileId?: string  // Simple foreign key to CommissionProfile
 }
 ```
 
@@ -95,9 +96,9 @@ Commission Profiles are the core organizational unit that groups commission tier
 ### Key Concepts
 
 1. **Profile as Container**: Each profile contains multiple tiers with their own triggers and rewards
-2. **Trainer Assignment**: Trainers are assigned to profiles based on their level (Junior, Senior, Lead, etc.)
+2. **Simple Assignment**: Each trainer has one commission profile selected via dropdown in their edit page
 3. **Flexibility**: Organizations can create unlimited profiles for different trainer categories
-4. **Time-Based**: Profile assignments can change over time as trainers progress
+4. **Organization Timing**: Commission periods (monthly/quarterly) are set at the organization level
 
 ### Use Cases
 
@@ -146,12 +147,12 @@ Specialized Services Profile (Rehab, Sports):
 - Quality-based bonuses
 ```
 
-### Profile Assignment Strategy
+### Profile Assignment
 
-1. **Initial Assignment**: When a trainer joins, they're assigned a default profile based on their role/level
-2. **Performance Promotion**: As trainers meet certain criteria, they can be promoted to better profiles
-3. **Temporary Assignments**: Special profiles for promotional periods or seasonal adjustments
-4. **Grandfathering**: Existing trainers can maintain their current profile when new structures are introduced
+**Simple Dropdown Selection**: 
+- In the trainer edit page, there's a single dropdown to select the commission profile
+- Change takes effect immediately for next commission calculation
+- No historical tracking needed - just the current profile matters
 
 ### Profile Management Workflow
 
@@ -177,71 +178,34 @@ Specialized Services Profile (Rehab, Sports):
    └── Generates detailed calculation records
 ```
 
-### How Profiles Attach to Trainers
+### How Profiles Work
 
-#### Assignment Logic
-1. **One Active Profile Per Trainer**: Each trainer has exactly one active commission profile at any given time
-2. **Time-Based Effectiveness**: Profile assignments have effective dates, allowing for scheduled changes
-3. **Historical Tracking**: Past profile assignments are retained for audit and recalculation purposes
-
-#### Assignment Process
+#### Simple Assignment
 ```typescript
-// Example: Assigning a profile to a trainer
-async function assignProfileToTrainer(
-  trainerId: string, 
-  profileId: string,
-  effectiveFrom: Date,
-  assignedBy: string,
-  notes?: string
-) {
-  // 1. End current assignment if exists
-  await prisma.trainerCommissionProfile.updateMany({
-    where: {
-      trainerId,
-      effectiveTo: null // Currently active
-    },
-    data: {
-      effectiveTo: effectiveFrom
-    }
-  })
-  
-  // 2. Create new assignment
-  return await prisma.trainerCommissionProfile.create({
-    data: {
-      trainerId,
-      profileId,
-      effectiveFrom,
-      assignedBy,
-      notes
-    }
-  })
-}
+// In trainer edit page - just update the profile
+await prisma.user.update({
+  where: { id: trainerId },
+  data: { commissionProfileId: selectedProfileId }
+})
 ```
 
-#### Profile Selection During Commission Calculation
+#### Commission Calculation
 ```typescript
-// The system automatically selects the correct profile
-async function getActiveProfile(trainerId: string, calculationDate: Date) {
-  return await prisma.trainerCommissionProfile.findFirst({
-    where: {
-      trainerId,
-      effectiveFrom: { lte: calculationDate },
-      OR: [
-        { effectiveTo: null },
-        { effectiveTo: { gt: calculationDate } }
-      ]
-    },
-    include: {
-      profile: {
-        include: {
-          tiers: {
-            orderBy: { tierLevel: 'asc' }
-          }
+// During commission calculation, just get the trainer's profile
+const trainer = await prisma.user.findUnique({
+  where: { id: trainerId },
+  include: {
+    commissionProfile: {
+      include: {
+        tiers: {
+          orderBy: { tierLevel: 'asc' }
         }
       }
     }
-  })
-}
+  }
+})
+
+// Use trainer.commissionProfile for calculations
 ```
 
 ### Common Profile Configurations
@@ -305,7 +269,7 @@ model CommissionProfile {
   // Relationships
   organization    Organization @relation(fields: [organizationId], references: [id])
   tiers          CommissionTier[]
-  assignments    TrainerCommissionProfile[]
+  trainers       User[]  // Simple one-to-many relationship
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -340,27 +304,16 @@ model CommissionTier {
   @@unique([profileId, tierLevel])
 }
 
-model TrainerCommissionProfile {
-  id              String   @id @default(cuid())
-  trainerId       String
-  profileId       String
+// No separate TrainerCommissionProfile model needed!
+// Just add commissionProfileId to User model:
+
+model User {
+  // ... existing fields
   
-  effectiveFrom   DateTime @default(now())
-  effectiveTo     DateTime?
+  commissionProfileId String?
+  commissionProfile   CommissionProfile? @relation(fields: [commissionProfileId], references: [id])
   
-  // Audit
-  assignedBy      String
-  assignedAt      DateTime @default(now())
-  notes           String?
-  
-  // Relationships
-  trainer         User @relation(fields: [trainerId], references: [id])
-  profile         CommissionProfile @relation(fields: [profileId], references: [id])
-  assignedByUser  User @relation("AssignedBy", fields: [assignedBy], references: [id])
-  
-  @@index([trainerId])
-  @@index([profileId])
-  @@index([effectiveFrom, effectiveTo])
+  // ... rest of fields
 }
 
 model CommissionCalculation {
@@ -808,32 +761,33 @@ export async function POST(req: Request) {
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Trainer Assignment Interface
+### Trainer Profile Assignment (Simple Dropdown)
+
+In the trainer edit page/module, commission profile assignment is a single dropdown field:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ Assign Commission Profiles                                          │
-├─────────────────────────────────────────────────────────────────────┤
+┌─── Edit Trainer: John Smith ────────────────────────────────────────┐
 │                                                                     │
-│ Filter: [All Locations ▼] [All Roles ▼] Search: [__________]     │
+│ Basic Information                                                  │
+│ Name:     [John Smith        ]                                    │
+│ Email:    [john@example.com  ]                                    │
+│ Role:     [Trainer         ▼]                                     │
 │                                                                     │
-│ ┌────────────────┬─────────────────────┬──────────────┬──────────┐│
-│ │ Trainer        │ Current Profile     │ Effective    │ Actions  ││
-│ ├────────────────┼─────────────────────┼──────────────┼──────────┤│
-│ │ John Smith     │ Progressive Trainer │ Jan 1, 2024  │ [Change] ││
-│ │ Sarah Johnson  │ Elite Trainer       │ Mar 15, 2024 │ [Change] ││
-│ │ Mike Williams  │ Progressive Trainer │ Jan 1, 2024  │ [Change] ││
-│ │ Emily Davis    │ No Profile         │ -            │ [Assign] ││
-│ └────────────────┴─────────────────────┴──────────────┴──────────┘│
+│ Commission Settings                                                │
+│ Profile:  [Senior Trainer Profile ▼]                              │
+│           ├─ Junior Trainer                                       │
+│           ├─ Senior Trainer                                       │
+│           ├─ Lead Trainer                                         │
+│           ├─ Elite Performer                                      │
+│           └─ Contractor Rate                                      │
 │                                                                     │
-│ Bulk Actions:                                                      │
-│ [□] Select All                                                     │
-│ Selected: 0   [Assign Profile ▼] [Apply]                          │
-│                                                                     │
+│ [Save Changes] [Cancel]                                           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Commission Calculation View
+### Commission Calculation View (Report Structure Unchanged)
+
+**Note**: The existing commission report structure and UI remain the same. Only the calculation engine changes to use profiles and tiers.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
