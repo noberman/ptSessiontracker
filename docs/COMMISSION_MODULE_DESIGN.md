@@ -1,1334 +1,1110 @@
 # Commission Module Design Document
 
 ## Executive Summary
-Complete redesign of the commission calculation system to support multiple calculation methods, trainer tiers, package-specific rules, and organization-specific configurations. The system must be flexible enough to handle sale-based, execution-based, and hybrid commission models while maintaining simplicity for organizations with basic needs.
+Complete redesign of the commission calculation system using a tier-based framework that separates triggers (what moves trainers between tiers) from rewards (what they earn at each tier). This approach provides flexibility for complex commission structures while maintaining simplicity and avoiding the pitfalls of custom formula systems.
 
 ## Core Requirements
 
 ### Business Needs
 1. Support multiple commission calculation methods across different organizations
-2. Enable target-based commission rate adjustments
-3. Allow package-specific and trainer-tier-specific commission rules
+2. Enable tier-based commission rate adjustments based on performance metrics
+3. Allow different commission profiles for different trainer levels
 4. Calculate commissions monthly or quarterly based on organization preference
 5. Maintain clear audit trail of commission calculations
 6. Handle no-shows (no commission) and substitutions (commission to executor)
 
-### Commission Types
+### Commission Components
 
-#### 1. Sale Commission
-- Percentage of package value paid when package is sold
-- Calculated at month-end for all packages sold that month
-- Example: 10% of $1,000 package = $100 commission
-
-#### 2. Execution Commission
-- Percentage of session value paid when session is completed
-- Calculated at month-end for all validated sessions that month
+#### 1. Session Commission (Execution-Based)
+- Percentage of validated session value
+- Calculated at month-end for all validated sessions
 - Example: 20% of $100 session = $20 per session
 
-#### 3. Hybrid Commission
-- Combination of sale and execution commissions
-- Example: 10% sale commission + 25% execution commission
+#### 2. Sales Commission (Package Sales)
+- Percentage of package value when sold
+- Calculated at month-end for all packages sold
+- Example: 10% of $1,000 package = $100 commission
 
-## System Architecture
+#### 3. Flat Bonuses
+- Fixed dollar amounts for achieving specific targets
+- Example: $500 bonus for reaching tier 3
 
-### Commission Configuration Structure
+## Tier-Based Architecture
 
-Organizations configure commissions in two steps:
-1. **Set organization-wide calculation period** (Monthly or Quarterly)
-2. **Create commission profiles** and assign them to trainers
+### Core Framework
 
-```javascript
-// Example: Organization with commission profiles
-{
-  // Organization-wide setting
-  calculationPeriod: "MONTHLY",  // Applies to all trainers
-  
-  // Commission profiles (reusable configurations)
-  commissionProfiles: [
-    {
-      id: "level1",
-      title: "Level 1 Commission",
-      calculationMethod: "FLAT",
-      methodConfig: {
-        executionRate: 20,
-        saleRate: 10
-      }
-    },
-    {
-      id: "level2", 
-      title: "Level 2 Commission",
-      calculationMethod: "PROGRESSIVE",
-      methodConfig: {
-        tiers: [
-          { minSessions: 0, maxSessions: 40, executionRate: 25, saleRate: 15 },
-          { minSessions: 41, maxSessions: 60, executionRate: 30, saleRate: 20 },
-          { minSessions: 61, maxSessions: null, executionRate: 35, saleRate: 25 }
-        ]
-      }
-    },
-    {
-      id: "advanced",
-      title: "Advanced Commission",
-      calculationMethod: "FORMULA",
-      methodConfig: {
-        formula: "(sessions_value * 0.35) + (sales_value * 0.20)"
-      }
-    }
-  ],
-  
-  // Trainer assignments (which profile each trainer uses)
-  trainerAssignments: [
-    { trainerId: "user1", trainerName: "John Smith", profileId: "level1" },
-    { trainerId: "user2", trainerName: "Sarah Johnson", profileId: "level2" },
-    { trainerId: "user3", trainerName: "Mike Williams", profileId: "advanced" },
-    { trainerId: "user4", trainerName: "Emily Davis", profileId: "level1" }  // Multiple trainers can use same profile
-  ]
-}
-```
+The commission system uses configurable tiers with two independent components:
 
-### Target Bonuses (Optional)
+1. **Tier Triggers** - Conditions that determine which tier a trainer achieves
+2. **Tier Rewards** - Compensation earned when a tier is achieved
 
-Organizations can add fixed-amount target bonuses on top of percentage-based commissions. These provide additional incentives for reaching specific performance thresholds.
+This separation ensures no circular dependencies and provides maximum flexibility.
 
-#### How Target Bonuses Work:
-- **Condition-based**: Triggered when specific metrics hit defined thresholds
-- **Fixed amounts**: Unlike commission rates, these are flat dollar amounts
-- **Stackable**: Can be combined with any commission calculation method
-- **Common uses**:
-  - Sales milestones ($500 bonus at $10K sales, $1000 at $20K)
-  - Session volume targets (bonus for 50+ sessions)
-  - Validation rate incentives (bonus for 95%+ validation rate)
-
-#### Example Target Bonus Structure:
-```javascript
-// Sales target bonuses
-TARGET_BONUS(sales_value, [
-  [10000, 500],   // $500 bonus at $10K sales
-  [20000, 1000],  // $1000 bonus at $20K sales
-  [30000, 1500]   // $1500 bonus at $30K sales
-])
-
-// Session volume bonuses
-TARGET_BONUS(validated_count, [
-  [50, 300],      // $300 bonus at 50 validated sessions
-  [75, 600],      // $600 bonus at 75 sessions
-  [100, 1000]     // $1000 bonus at 100 sessions
-])
-```
-
-### Commission Calculation Methods
-
-#### Method 1: Flat Rate
-Simple fixed percentage for all commissions.
-
-```javascript
-{
-  calculationMethod: "FLAT",
-  methodConfig: {
-    saleCommission: 10,        // 10% on all sales
-    executionCommission: 20    // 20% on all sessions
-  }
-}
-```
-
-#### Method 2: Progressive Tiers
-Commission rate increases based on volume achieved. All units get the highest achieved rate.
-
-```javascript
-{
-  calculationMethod: "PROGRESSIVE",
-  methodConfig: {
-    tiers: [
-      { minSessions: 0, maxSessions: 40, executionRate: 20, saleRate: 10 },
-      { minSessions: 41, maxSessions: 60, executionRate: 25, saleRate: 15 },
-      { minSessions: 61, maxSessions: null, executionRate: 30, saleRate: 20 }
-    ]
-  }
-}
-```
-
-#### Method 3: Formula-Based (Most Flexible)
-Organizations create custom formulas for unlimited flexibility.
-
-```javascript
-{
-  calculationMethod: "FORMULA",
-  methodConfig: {
-    formula: "(sessions_value * IF(sessions_count > 50, 0.25, 0.20)) + (sales_value * 0.10)",
-    variables: ["sessions_value", "sessions_count", "sales_value"],
-    description: "25% execution for 50+ sessions, otherwise 20%, plus 10% of sales"
-  }
-}
-```
-
-### Commission Profile Examples
-
-#### Example 1: Simple Two-Level System
-```javascript
-{
-  calculationPeriod: "MONTHLY",
-  
-  commissionProfiles: [
-    {
-      id: "standard",
-      title: "Standard Commission",
-      calculationMethod: "FLAT",
-      methodConfig: {
-        executionRate: 25,
-        saleRate: 12
-      }
-    },
-    {
-      id: "advanced",
-      title: "Advanced Commission",
-      calculationMethod: "PROGRESSIVE",
-      methodConfig: {
-        tiers: [
-          { minSessions: 0, maxSessions: 40, executionRate: 28, saleRate: 15 },
-          { minSessions: 41, maxSessions: null, executionRate: 32, saleRate: 18 }
-        ]
-      }
-    }
-  ]
-}
-```
-
-#### Example 2: Multi-Tier System
-```javascript
-{
-  calculationPeriod: "QUARTERLY",
-  
-  commissionProfiles: [
-    {
-      id: "tier1",
-      title: "Tier 1 Commission",
-      calculationMethod: "FLAT",
-      methodConfig: { executionRate: 20, saleRate: 10 }
-    },
-    {
-      id: "tier2",
-      title: "Tier 2 Commission",
-      calculationMethod: "FLAT",
-      methodConfig: { executionRate: 25, saleRate: 15 }
-    },
-    {
-      id: "tier3",
-      title: "Tier 3 Commission",
-      calculationMethod: "PROGRESSIVE",
-      methodConfig: {
-        tiers: [
-          { minSessions: 0, maxSessions: 50, executionRate: 30, saleRate: 18 },
-          { minSessions: 51, maxSessions: null, executionRate: 35, saleRate: 22 }
-        ]
-      }
-    }
-  ]
-}
-```
-
-## Formula-Based Commission System (Advanced)
-
-### Concept Overview
-Instead of predefined calculation methods, organizations can create custom mathematical formulas using a rich set of variables and functions. This provides unlimited flexibility while maintaining a user-friendly interface through a visual formula builder.
-
-### Available Variables
-
-```javascript
-// Core Metrics
-sessions_count          // Number of ALL sessions this period (including unvalidated)
-sessions_value          // Total monetary value of ALL sessions
-validated_count         // Number of VALIDATED sessions only (excludes no-shows)
-validated_value         // Total monetary value of VALIDATED sessions only
-avg_session_value       // Average value per session
-sales_count            // Number of packages sold
-sales_value            // Total monetary value of packages sold
-avg_package_value      // Average package value
-```
-
-### Formula Functions Library
-
-```javascript
-// Conditional Functions
-IF(condition, true_value, false_value)
-IFS(condition1, value1, condition2, value2, ..., default_value)
-SWITCH(expression, case1, value1, case2, value2, ..., default)
-
-// Tier/Breakpoint Functions
-TIER(value, [[min1, max1, rate1], [min2, max2, rate2], ...])
-PROGRESSIVE(base_value, count_value, tier_config)  // All units get highest tier rate
-
-// Mathematical Functions
-MIN(value1, value2, ...)
-MAX(value1, value2, ...)
-ROUND(value, decimals)
-FLOOR(value)
-CEILING(value)
-ABS(value)
-POWER(base, exponent)
-
-// Statistical Functions
-AVERAGE(value1, value2, ...)
-MEDIAN(value1, value2, ...)
-STDEV(value1, value2, ...)
-
-// Lookup Functions
-RATE_FOR_TIER(tier_number)     // Returns configured rate for trainer tier
-TARGET_FOR_TIER(tier_number)   // Returns target sessions for trainer tier
-
-```
-
-### Formula Examples
-
-#### Example 1: Simple Progressive
-```excel
-= sessions_value * TIER(sessions_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]])
-```
-
-#### Example 2: Multi-Factor Calculation
-```excel
-= PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.20], [41,60,0.25], [61,null,0.30]]) +
-  (sales_value * 0.12)
-```
-
-#### Example 3: Using Validated Sessions Only
-```excel
-= PROGRESSIVE(validated_value, validated_count, [[0,30,0.15], [31,50,0.20], [51,null,0.25]]) +
-  (sales_value * 0.10)
-```
-
-### Tier-Based Commission Framework
-
-#### Core Concept
-The commission system uses a flexible tier-based framework that separates **triggers** (what moves you to a tier) from **rewards** (what you earn at that tier). This avoids the complexity of custom formulas while providing powerful configuration options.
-
-#### Framework Components
+### Data Model
 
 ```typescript
-interface TierConfiguration {
-  // TIER TRIGGERS - What moves trainer to this tier
-  trigger: {
-    type: 'SESSION_COUNT' | 'SALES_VOLUME' | 'BOTH_AND' | 'EITHER_OR',
-    sessionThreshold?: number,    // e.g., 20 sessions
-    salesThreshold?: number        // e.g., $5000 in package sales
-  },
+interface CommissionProfile {
+  id: string
+  organizationId: string
+  name: string
+  description?: string
+  isDefault: boolean
+  calculationMethod: 'FLAT' | 'PROGRESSIVE' | 'GRADUATED'
+  tiers: CommissionTier[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface CommissionTier {
+  id: string
+  profileId: string
+  tierLevel: number  // 1, 2, 3, etc.
+  name: string       // "Base", "Performer", "Elite"
   
-  // TIER REWARDS - What trainer earns at this tier
+  // TRIGGERS - What moves trainer to this tier
+  trigger: {
+    type: 'NONE' | 'SESSION_COUNT' | 'SALES_VOLUME' | 'BOTH_AND' | 'EITHER_OR'
+    sessionThreshold?: number    // e.g., 20 sessions
+    salesThreshold?: number      // e.g., $5000 in sales
+  }
+  
+  // REWARDS - What trainer earns at this tier
   rewards: {
-    sessionCommissionPercent?: number,  // % of validated session value
-    salesCommissionPercent?: number,    // % of package sales
-    flatBonus?: number                  // Fixed dollar amount
+    sessionCommissionPercent?: number   // % of session value
+    salesCommissionPercent?: number     // % of package sales
+    flatBonus?: number                 // Fixed $ amount
+  }
+}
+
+interface TrainerCommissionProfile {
+  id: string
+  trainerId: string
+  profileId: string
+  effectiveFrom: Date
+  effectiveTo?: Date
+  assignedBy: string
+  assignedAt: Date
+}
+```
+
+## Commission Profiles System
+
+### Overview
+Commission Profiles are the core organizational unit that groups commission tiers and settings together. Each profile represents a complete commission structure that can be applied to trainers based on their level, performance, or other criteria.
+
+### Key Concepts
+
+1. **Profile as Container**: Each profile contains multiple tiers with their own triggers and rewards
+2. **Trainer Assignment**: Trainers are assigned to profiles based on their level (Junior, Senior, Lead, etc.)
+3. **Flexibility**: Organizations can create unlimited profiles for different trainer categories
+4. **Time-Based**: Profile assignments can change over time as trainers progress
+
+### Use Cases
+
+#### Example 1: Trainer Level-Based Profiles
+```
+Junior Trainer Profile:
+- Lower base commission rates
+- Achievable tier thresholds
+- Focus on session volume
+
+Senior Trainer Profile:
+- Higher base commission rates
+- Higher tier thresholds
+- Includes sales commission
+
+Lead Trainer Profile:
+- Premium commission rates
+- Sales-focused tiers
+- Additional flat bonuses
+```
+
+#### Example 2: Location-Based Profiles
+```
+Downtown Location Profile:
+- Higher rates due to higher session values
+- Premium tier bonuses
+
+Suburban Location Profile:
+- Standard rates
+- Volume-based tiers
+```
+
+#### Example 3: Specialization-Based Profiles
+```
+Personal Training Profile:
+- Session-focused tiers
+- Standard commission rates
+
+Group Fitness Profile:
+- Lower per-session rates
+- Higher volume thresholds
+- Bonus for class fill rates
+
+Specialized Services Profile (Rehab, Sports):
+- Premium commission rates
+- Quality-based bonuses
+```
+
+### Profile Assignment Strategy
+
+1. **Initial Assignment**: When a trainer joins, they're assigned a default profile based on their role/level
+2. **Performance Promotion**: As trainers meet certain criteria, they can be promoted to better profiles
+3. **Temporary Assignments**: Special profiles for promotional periods or seasonal adjustments
+4. **Grandfathering**: Existing trainers can maintain their current profile when new structures are introduced
+
+### Profile Management Workflow
+
+```
+1. Create Profile
+   ├── Define calculation method (Flat/Progressive/Graduated)
+   ├── Set up tiers with triggers and rewards
+   └── Mark as active/inactive
+
+2. Assign to Trainers
+   ├── Select trainers by level/location/specialty
+   ├── Set effective date
+   └── Add notes for audit trail
+
+3. Monitor & Adjust
+   ├── Review performance metrics
+   ├── Adjust tier thresholds if needed
+   └── Transition trainers between profiles
+
+4. Calculate Commissions
+   ├── System uses trainer's active profile
+   ├── Applies tier logic based on profile settings
+   └── Generates detailed calculation records
+```
+
+### How Profiles Attach to Trainers
+
+#### Assignment Logic
+1. **One Active Profile Per Trainer**: Each trainer has exactly one active commission profile at any given time
+2. **Time-Based Effectiveness**: Profile assignments have effective dates, allowing for scheduled changes
+3. **Historical Tracking**: Past profile assignments are retained for audit and recalculation purposes
+
+#### Assignment Process
+```typescript
+// Example: Assigning a profile to a trainer
+async function assignProfileToTrainer(
+  trainerId: string, 
+  profileId: string,
+  effectiveFrom: Date,
+  assignedBy: string,
+  notes?: string
+) {
+  // 1. End current assignment if exists
+  await prisma.trainerCommissionProfile.updateMany({
+    where: {
+      trainerId,
+      effectiveTo: null // Currently active
+    },
+    data: {
+      effectiveTo: effectiveFrom
+    }
+  })
+  
+  // 2. Create new assignment
+  return await prisma.trainerCommissionProfile.create({
+    data: {
+      trainerId,
+      profileId,
+      effectiveFrom,
+      assignedBy,
+      notes
+    }
+  })
+}
+```
+
+#### Profile Selection During Commission Calculation
+```typescript
+// The system automatically selects the correct profile
+async function getActiveProfile(trainerId: string, calculationDate: Date) {
+  return await prisma.trainerCommissionProfile.findFirst({
+    where: {
+      trainerId,
+      effectiveFrom: { lte: calculationDate },
+      OR: [
+        { effectiveTo: null },
+        { effectiveTo: { gt: calculationDate } }
+      ]
+    },
+    include: {
+      profile: {
+        include: {
+          tiers: {
+            orderBy: { tierLevel: 'asc' }
+          }
+        }
+      }
+    }
+  })
+}
+```
+
+### Common Profile Configurations
+
+#### 1. Flat Rate Profile (Simple)
+Perfect for contractors or part-time trainers:
+```
+Profile: "Standard Contractor"
+Method: FLAT
+Single Tier:
+  - Trigger: NONE (always applies)
+  - Rewards: 25% session commission, 0% sales
+```
+
+#### 2. Progressive Performance Profile
+Motivates trainers to increase volume:
+```
+Profile: "Performance Driven"
+Method: PROGRESSIVE
+Tier 1 "Base":
+  - Trigger: NONE
+  - Rewards: 20% session, 5% sales
+Tier 2 "Achiever":
+  - Trigger: 20+ sessions
+  - Rewards: 25% session, 7% sales
+Tier 3 "Elite":
+  - Trigger: 40+ sessions OR $10K sales
+  - Rewards: 30% session, 10% sales, $500 bonus
+```
+
+#### 3. Graduated Brackets Profile
+Similar to tax brackets, rewards incremental achievement:
+```
+Profile: "Graduated Growth"
+Method: GRADUATED
+Tier 1:
+  - Range: Sessions 1-20
+  - Rewards: 20% session commission
+Tier 2:
+  - Range: Sessions 21-40
+  - Rewards: 25% session commission
+Tier 3:
+  - Range: Sessions 41+
+  - Rewards: 30% session commission
+```
+
+### Database Schema
+
+```prisma
+model CommissionProfile {
+  id              String   @id @default(cuid())
+  organizationId  String
+  name            String
+  description     String?
+  isDefault       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  
+  // Calculation method determines how tiers are applied
+  calculationMethod CalculationMethod @default(PROGRESSIVE)
+  
+  // Relationships
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  tiers          CommissionTier[]
+  assignments    TrainerCommissionProfile[]
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([organizationId])
+  @@unique([organizationId, name])
+}
+
+model CommissionTier {
+  id              String   @id @default(cuid())
+  profileId       String
+  tierLevel       Int      // 1, 2, 3, etc.
+  name            String   // "Base", "Performer", "Elite"
+  
+  // Trigger Configuration
+  triggerType     TriggerType @default(NONE)
+  sessionThreshold Int?
+  salesThreshold   Decimal?
+  
+  // Reward Configuration
+  sessionCommissionPercent Decimal? @db.Decimal(5, 2) // e.g., 20.50%
+  salesCommissionPercent   Decimal? @db.Decimal(5, 2) // e.g., 10.25%
+  flatBonus               Decimal? @db.Decimal(10, 2) // e.g., $500.00
+  
+  // Relationships
+  profile         CommissionProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([profileId])
+  @@unique([profileId, tierLevel])
+}
+
+model TrainerCommissionProfile {
+  id              String   @id @default(cuid())
+  trainerId       String
+  profileId       String
+  
+  effectiveFrom   DateTime @default(now())
+  effectiveTo     DateTime?
+  
+  // Audit
+  assignedBy      String
+  assignedAt      DateTime @default(now())
+  notes           String?
+  
+  // Relationships
+  trainer         User @relation(fields: [trainerId], references: [id])
+  profile         CommissionProfile @relation(fields: [profileId], references: [id])
+  assignedByUser  User @relation("AssignedBy", fields: [assignedBy], references: [id])
+  
+  @@index([trainerId])
+  @@index([profileId])
+  @@index([effectiveFrom, effectiveTo])
+}
+
+model CommissionCalculation {
+  id              String   @id @default(cuid())
+  organizationId  String
+  trainerId       String
+  
+  // Period
+  periodStart     DateTime
+  periodEnd       DateTime
+  periodType      PeriodType // MONTHLY, QUARTERLY
+  
+  // Metrics used for calculation
+  sessionCount    Int
+  sessionValue    Decimal @db.Decimal(10, 2)
+  salesCount      Int
+  salesValue      Decimal @db.Decimal(10, 2)
+  
+  // Tier Achievement
+  profileId       String
+  achievedTierLevel Int
+  achievedTierName String
+  
+  // Calculated Commission
+  sessionCommission Decimal @db.Decimal(10, 2)
+  salesCommission   Decimal @db.Decimal(10, 2)
+  flatBonus        Decimal @db.Decimal(10, 2)
+  totalCommission  Decimal @db.Decimal(10, 2)
+  
+  // Calculation Details (JSON)
+  calculationDetails Json  // Stores breakdown for audit
+  
+  // Status
+  status          CalculationStatus @default(PENDING)
+  approvedBy      String?
+  approvedAt      DateTime?
+  paidAt          DateTime?
+  
+  // Relationships
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  trainer         User @relation(fields: [trainerId], references: [id])
+  profile         CommissionProfile @relation(fields: [profileId], references: [id])
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([organizationId])
+  @@index([trainerId])
+  @@index([periodStart, periodEnd])
+  @@unique([trainerId, periodStart, periodEnd])
+}
+
+enum TriggerType {
+  NONE          // Default tier, no trigger required
+  SESSION_COUNT // Based on number of sessions
+  SALES_VOLUME  // Based on sales amount
+  BOTH_AND      // Both session AND sales thresholds must be met
+  EITHER_OR     // Either session OR sales threshold triggers tier
+}
+
+enum CalculationMethod {
+  FLAT        // Single tier, flat rates
+  PROGRESSIVE // Highest achieved tier applies to all
+  GRADUATED   // Each tier applies to its range (like tax brackets)
+}
+
+enum PeriodType {
+  MONTHLY
+  QUARTERLY
+}
+
+enum CalculationStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+}
+```
+
+## Backend Implementation
+
+### Commission Calculation Engine
+
+```typescript
+// src/lib/commission/tier-calculator.ts
+
+interface CalculationContext {
+  trainer: User
+  period: { start: Date; end: Date }
+  metrics: {
+    sessionCount: number
+    sessionValue: number
+    salesCount: number
+    salesValue: number
+  }
+}
+
+export class TierCommissionCalculator {
+  /**
+   * Main calculation method
+   */
+  async calculateCommission(
+    trainerId: string,
+    period: { start: Date; end: Date }
+  ): Promise<CommissionCalculation> {
+    // 1. Get trainer's active commission profile
+    const profile = await this.getActiveProfile(trainerId, period.end)
+    if (!profile) {
+      throw new Error(`No commission profile assigned to trainer ${trainerId}`)
+    }
+    
+    // 2. Gather metrics for the period
+    const metrics = await this.gatherMetrics(trainerId, period)
+    
+    // 3. Determine achieved tier based on triggers
+    const achievedTier = this.determineAchievedTier(profile.tiers, metrics)
+    
+    // 4. Calculate commission based on method and tier
+    const commission = this.calculateTierCommission(
+      profile.calculationMethod,
+      profile.tiers,
+      achievedTier,
+      metrics
+    )
+    
+    // 5. Store calculation record
+    return await this.storeCalculation({
+      trainerId,
+      period,
+      metrics,
+      profile,
+      achievedTier,
+      commission
+    })
+  }
+  
+  /**
+   * Determine which tier the trainer achieved
+   */
+  private determineAchievedTier(
+    tiers: CommissionTier[],
+    metrics: CalculationMetrics
+  ): CommissionTier {
+    // Sort tiers by level descending (highest first)
+    const sortedTiers = [...tiers].sort((a, b) => b.tierLevel - a.tierLevel)
+    
+    for (const tier of sortedTiers) {
+      if (this.tierTriggered(tier, metrics)) {
+        return tier
+      }
+    }
+    
+    // Return base tier if no triggers met
+    return tiers.find(t => t.triggerType === 'NONE') || tiers[0]
+  }
+  
+  /**
+   * Check if tier trigger conditions are met
+   */
+  private tierTriggered(tier: CommissionTier, metrics: CalculationMetrics): boolean {
+    switch (tier.trigger.type) {
+      case 'NONE':
+        return true // Default tier always applies
+        
+      case 'SESSION_COUNT':
+        return metrics.sessionCount >= (tier.trigger.sessionThreshold || 0)
+        
+      case 'SALES_VOLUME':
+        return metrics.salesValue >= (tier.trigger.salesThreshold || 0)
+        
+      case 'BOTH_AND':
+        return (
+          metrics.sessionCount >= (tier.trigger.sessionThreshold || 0) &&
+          metrics.salesValue >= (tier.trigger.salesThreshold || 0)
+        )
+        
+      case 'EITHER_OR':
+        return (
+          metrics.sessionCount >= (tier.trigger.sessionThreshold || 0) ||
+          metrics.salesValue >= (tier.trigger.salesThreshold || 0)
+        )
+        
+      default:
+        return false
+    }
+  }
+  
+  /**
+   * Calculate commission based on method
+   */
+  private calculateTierCommission(
+    method: CalculationMethod,
+    tiers: CommissionTier[],
+    achievedTier: CommissionTier,
+    metrics: CalculationMetrics
+  ): CommissionBreakdown {
+    switch (method) {
+      case 'FLAT':
+        // Simple calculation with single tier
+        return this.calculateFlatCommission(achievedTier, metrics)
+        
+      case 'PROGRESSIVE':
+        // Achieved tier rate applies to all metrics
+        return this.calculateProgressiveCommission(achievedTier, metrics)
+        
+      case 'GRADUATED':
+        // Each tier applies to its range
+        return this.calculateGraduatedCommission(tiers, metrics)
+        
+      default:
+        throw new Error(`Unknown calculation method: ${method}`)
+    }
+  }
+  
+  /**
+   * Progressive calculation - achieved tier applies to all
+   */
+  private calculateProgressiveCommission(
+    tier: CommissionTier,
+    metrics: CalculationMetrics
+  ): CommissionBreakdown {
+    const sessionCommission = metrics.sessionValue * (tier.rewards.sessionCommissionPercent || 0) / 100
+    const salesCommission = metrics.salesValue * (tier.rewards.salesCommissionPercent || 0) / 100
+    const flatBonus = tier.rewards.flatBonus || 0
+    
+    return {
+      sessionCommission,
+      salesCommission,
+      flatBonus,
+      totalCommission: sessionCommission + salesCommission + flatBonus,
+      breakdown: [{
+        tierName: tier.name,
+        tierLevel: tier.tierLevel,
+        sessionCommission,
+        salesCommission,
+        flatBonus
+      }]
+    }
+  }
+  
+  /**
+   * Graduated calculation - each tier applies to its range
+   */
+  private calculateGraduatedCommission(
+    tiers: CommissionTier[],
+    metrics: CalculationMetrics
+  ): CommissionBreakdown {
+    const sortedTiers = [...tiers].sort((a, b) => a.tierLevel - b.tierLevel)
+    const breakdown = []
+    
+    let remainingSessions = metrics.sessionCount
+    let remainingSales = metrics.salesValue
+    let totalSessionCommission = 0
+    let totalSalesCommission = 0
+    let totalFlatBonus = 0
+    
+    for (const tier of sortedTiers) {
+      if (remainingSessions <= 0 && remainingSales <= 0) break
+      
+      // Calculate how much applies to this tier
+      const tierSessions = Math.min(
+        remainingSessions,
+        (tier.trigger.sessionThreshold || Infinity) - 
+        (sortedTiers[tier.tierLevel - 2]?.trigger.sessionThreshold || 0)
+      )
+      
+      const tierSales = Math.min(
+        remainingSales,
+        (tier.trigger.salesThreshold || Infinity) -
+        (sortedTiers[tier.tierLevel - 2]?.trigger.salesThreshold || 0)
+      )
+      
+      // Calculate commission for this tier's portion
+      const sessionComm = (tierSessions / metrics.sessionCount) * metrics.sessionValue * 
+                          (tier.rewards.sessionCommissionPercent || 0) / 100
+      const salesComm = tierSales * (tier.rewards.salesCommissionPercent || 0) / 100
+      
+      // Flat bonus only applies if tier is achieved
+      const flatBonus = this.tierTriggered(tier, metrics) ? (tier.rewards.flatBonus || 0) : 0
+      
+      totalSessionCommission += sessionComm
+      totalSalesCommission += salesComm
+      totalFlatBonus += flatBonus
+      
+      breakdown.push({
+        tierName: tier.name,
+        tierLevel: tier.tierLevel,
+        sessionCommission: sessionComm,
+        salesCommission: salesComm,
+        flatBonus
+      })
+      
+      remainingSessions -= tierSessions
+      remainingSales -= tierSales
+    }
+    
+    return {
+      sessionCommission: totalSessionCommission,
+      salesCommission: totalSalesCommission,
+      flatBonus: totalFlatBonus,
+      totalCommission: totalSessionCommission + totalSalesCommission + totalFlatBonus,
+      breakdown
+    }
   }
 }
 ```
 
-#### Visual Configuration Interface
+### API Endpoints
+
+```typescript
+// src/app/api/commission/profiles/route.ts
+
+// GET /api/commission/profiles - List all profiles for organization
+export async function GET(req: Request) {
+  const session = await getServerSession(authOptions)
+  
+  const profiles = await prisma.commissionProfile.findMany({
+    where: { 
+      organizationId: session.user.organizationId,
+      isActive: true
+    },
+    include: {
+      tiers: { orderBy: { tierLevel: 'asc' } },
+      _count: { select: { assignments: true } }
+    }
+  })
+  
+  return NextResponse.json(profiles)
+}
+
+// POST /api/commission/profiles - Create new profile
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions)
+  const body = await req.json()
+  
+  const profile = await prisma.commissionProfile.create({
+    data: {
+      organizationId: session.user.organizationId,
+      name: body.name,
+      description: body.description,
+      calculationMethod: body.calculationMethod,
+      tiers: {
+        create: body.tiers.map((tier, index) => ({
+          tierLevel: index + 1,
+          name: tier.name,
+          triggerType: tier.trigger.type,
+          sessionThreshold: tier.trigger.sessionThreshold,
+          salesThreshold: tier.trigger.salesThreshold,
+          sessionCommissionPercent: tier.rewards.sessionCommissionPercent,
+          salesCommissionPercent: tier.rewards.salesCommissionPercent,
+          flatBonus: tier.rewards.flatBonus
+        }))
+      }
+    }
+  })
+  
+  return NextResponse.json(profile)
+}
+```
+
+## User Interface
+
+### Commission Profile Configuration
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Commission Profile: Progressive Trainer Commission                  │
+│ Create Commission Profile                                           │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
+│ Profile Name: [Progressive Trainer Commission    ]                 │
+│ Description:  [Standard commission structure for trainers        ] │
+│                                                                     │
+│ Calculation Method:                                                │
+│ ● Progressive (Achieved tier rate applies to all)                  │
+│ ○ Graduated (Each tier applies to its range)                      │
+│ ○ Flat (Single tier with flat rates)                             │
+│                                                                     │
+├─────────────────────────────────────────────────────────────────────┤
 │ TIER CONFIGURATION                                                  │
 │                                                                     │
-│ ┌─── Tier 1 (Base) ───────────────────────────────────────────┐   │
-│ │ TRIGGERS                                                      │   │
-│ │ ○ No trigger (default tier)                                  │   │
+│ ┌─── Tier 1: Base ────────────────────────────────────────────┐   │
 │ │                                                               │   │
-│ │ REWARDS                                                       │   │
-│ │ ☑ Session Commission: [10]% of validated session value       │   │
-│ │ ☑ Sales Commission:   [5 ]% of package sales                 │   │
-│ │ ☐ Flat Bonus:         $[  ]                                  │   │
+│ │ Trigger:    ● No trigger (default tier)                     │   │
+│ │                                                               │   │
+│ │ Rewards:                                                     │   │
+│ │   Session Commission: [10  ]%                               │   │
+│ │   Sales Commission:   [5   ]%                               │   │
+│ │   Flat Bonus:        $[    ]                                │   │
+│ │                                                               │   │
+│ │ [Remove Tier]                                                │   │
 │ └───────────────────────────────────────────────────────────────┘   │
 │                                                                     │
-│ ┌─── Tier 2 (Performer) ──────────────────────────────────────┐   │
-│ │ TRIGGERS                                                      │   │
-│ │ ● When sessions reach: [15] sessions                         │   │
-│ │ ○ When sales reach: $[    ]                                  │   │
-│ │ ○ Both conditions must be met (AND)                          │   │
-│ │ ○ Either condition can be met (OR)                           │   │
+│ ┌─── Tier 2: Performer ───────────────────────────────────────┐   │
 │ │                                                               │   │
-│ │ REWARDS                                                       │   │
-│ │ ☑ Session Commission: [15]% of validated session value       │   │
-│ │ ☑ Sales Commission:   [8 ]% of package sales                 │   │
-│ │ ☑ Flat Bonus:         $[100]                                 │   │
+│ │ Trigger:                                                      │   │
+│ │   ● Session threshold: [15  ] sessions                       │   │
+│ │   ○ Sales threshold: $[     ]                               │   │
+│ │   ○ Both thresholds must be met                             │   │
+│ │   ○ Either threshold triggers tier                          │   │
+│ │                                                               │   │
+│ │ Rewards:                                                     │   │
+│ │   Session Commission: [15  ]%                               │   │
+│ │   Sales Commission:   [8   ]%                               │   │
+│ │   Flat Bonus:        $[100 ]                                │   │
+│ │                                                               │   │
+│ │ [Remove Tier]                                                │   │
 │ └───────────────────────────────────────────────────────────────┘   │
 │                                                                     │
-│ ┌─── Tier 3 (Elite) ──────────────────────────────────────────┐   │
-│ │ TRIGGERS                                                      │   │
-│ │ ○ When sessions reach: [  ] sessions                         │   │
-│ │ ○ When sales reach: $[    ]                                  │   │
-│ │ ● Both conditions must be met (AND)                          │   │
-│ │    Sessions: [25]  Sales: $[5000]                            │   │
+│ ┌─── Tier 3: Elite ───────────────────────────────────────────┐   │
 │ │                                                               │   │
-│ │ REWARDS                                                       │   │
-│ │ ☑ Session Commission: [20]% of validated session value       │   │
-│ │ ☑ Sales Commission:   [12]% of package sales                 │   │
-│ │ ☑ Flat Bonus:         $[500]                                 │   │
+│ │ Trigger:                                                      │   │
+│ │   ○ Session threshold: [    ] sessions                       │   │
+│ │   ○ Sales threshold: $[     ]                               │   │
+│ │   ● Both thresholds must be met                             │   │
+│ │      Sessions: [25  ]  Sales: $[5000]                       │   │
+│ │                                                               │   │
+│ │ Rewards:                                                     │   │
+│ │   Session Commission: [20  ]%                               │   │
+│ │   Sales Commission:   [12  ]%                               │   │
+│ │   Flat Bonus:        $[500 ]                                │   │
+│ │                                                               │   │
+│ │ [Remove Tier]                                                │   │
 │ └───────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │ [+ Add Tier]                                                       │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
-│ TIER APPLICATION METHOD                                            │
+│ TEST CONFIGURATION                                                  │
 │                                                                     │
-│ ● Progressive (All sessions at achieved tier rate)                 │
-│ ○ Graduated (Each tier applies to sessions in that range)         │
+│ Test with sample data:                                             │
+│ Sessions: [22  ]  Session Value: $[2200]                          │
+│ Sales: [5   ]     Sales Value: $[3500 ]                          │
 │                                                                     │
-├─────────────────────────────────────────────────────────────────────┤
-│ TEST YOUR CONFIGURATION                                            │
-│                                                                     │
-│ Test Scenario:                                                     │
-│ Sessions Delivered: [22]     Package Sales: $[3500]               │
-│                                                                     │
-│ [Calculate]                                                        │
+│ [Calculate Test]                                                   │
 │                                                                     │
 │ Results:                                                           │
-│ ✓ Achieved Tier: Tier 2 (Performer)                              │
-│   - Trigger: 22 sessions > 15 threshold                          │
+│ ✓ Achieved: Tier 2 (Performer)                                    │
+│   Session Commission (15%): $330.00                               │
+│   Sales Commission (8%):    $280.00                               │
+│   Flat Bonus:               $100.00                               │
+│   ─────────────────────────────────                              │
+│   Total:                    $710.00                               │
 │                                                                     │
-│ Commission Breakdown:                                              │
-│   Session Commission (15% × $2200):  $330.00                      │
-│   Sales Commission (8% × $3500):     $280.00                      │
-│   Flat Bonus:                        $100.00                      │
-│   ─────────────────────────────────────────                      │
-│   Total Commission:                  $710.00                      │
-│                                                                     │
-│ [Save Configuration] [Cancel]                                      │
+│ [Save Profile] [Cancel]                                           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Example Configurations
-
-**1. Simple Session-Based Progressive**
-```
-Tier 1: 0-10 sessions → 10% of session value
-Tier 2: 11-20 sessions → 15% of session value + $100 bonus
-Tier 3: 21+ sessions → 20% of session value + $500 bonus
-```
-
-**2. Sales-Focused with Mixed Rewards**
-```
-Tier 1: Default → 5% of sales
-Tier 2: $3000+ sales → 8% of sales + 10% of sessions
-Tier 3: $6000+ sales → 12% of sales + 15% of sessions + $200 bonus
-```
-
-**3. Complex Multi-Condition**
-```
-Tier 1: Default → 10% sessions + 5% sales
-Tier 2: 15+ sessions OR $3000+ sales → 15% sessions + 8% sales  
-Tier 3: 25+ sessions AND $5000+ sales → 20% sessions + 10% sales + $250
-```
-
-#### Why This Framework Works
-
-1. **No Formula Complexity** - Users configure tiers, not write formulas
-2. **Covers Real Scenarios** - Handles 99% of commission structures
-3. **Clear Mental Model** - Triggers and rewards are separate concepts
-4. **Flexible Composition** - Mix session, sales, and bonus rewards
-5. **Easy to Audit** - Clear what tier was achieved and why
-6. **Safe from Errors** - No syntax errors or calculation bugs possible
-
-### Visual Formula Builder Interface (Advanced Mode - Future Enhancement)
-
-For organizations that need custom formulas beyond the tier framework, an advanced mode could be added:
+### Trainer Assignment Interface
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Advanced Formula Editor - Use Tier Configuration for simpler setup │
-├────────────────────────┬────────────────────────────────────────────┤
-│ AVAILABLE VARIABLES    │ FORMULA EDITOR                             │
-│                        │                                            │
-│ Validated Sessions     │ ┌──────────────────────────────────────┐  │
-│ ├─ validated_count     │ │ // Custom formula for edge cases    │  │
-│ └─ validated_value     │ │                                      │  │
-│                        │ │ // Base commission on sessions      │  │
-│ Package Sales          │ │ session_commission =                │  │
-│ ├─ sales_count         │ │   validated_value * 0.15;           │  │
-│ └─ sales_value         │ │                                      │  │
-│                        │ │ // Sales bonus with conditions      │  │
-│ [Show All Variables]   │ │ sales_commission = IF(               │  │
-│                        │ │   sales_value > 5000,               │  │
-│ ────────────────────   │ │   sales_value * 0.10,               │  │
-│ FUNCTIONS              │ │   sales_value * 0.05                │  │
-│                        │ │ );                                   │  │
-│ ► Mathematical         │ │                                      │  │
-│ ► Conditional          │ │ // Performance multiplier           │  │
-│ ► Date/Time           │ │ multiplier = IF(                    │  │
-│                        │ │   validated_count > 30, 1.2, 1.0    │  │
-│ [Function Reference]   │ │ );                                   │  │
-│                        │ │                                      │  │
-│                        │ │ // Total commission                  │  │
-│                        │ │ (session_commission + sales_commission)│  │
-│                        │ │   * multiplier                       │  │
-│                        │ └──────────────────────────────────────┘  │
-│                        │                                            │
-│                        │ [Validate] [Test] [Save Formula]          │
-└────────────────────────┴────────────────────────────────────────────┘
+│ Assign Commission Profiles                                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│ Filter: [All Locations ▼] [All Roles ▼] Search: [__________]     │
+│                                                                     │
+│ ┌────────────────┬─────────────────────┬──────────────┬──────────┐│
+│ │ Trainer        │ Current Profile     │ Effective    │ Actions  ││
+│ ├────────────────┼─────────────────────┼──────────────┼──────────┤│
+│ │ John Smith     │ Progressive Trainer │ Jan 1, 2024  │ [Change] ││
+│ │ Sarah Johnson  │ Elite Trainer       │ Mar 15, 2024 │ [Change] ││
+│ │ Mike Williams  │ Progressive Trainer │ Jan 1, 2024  │ [Change] ││
+│ │ Emily Davis    │ No Profile         │ -            │ [Assign] ││
+│ └────────────────┴─────────────────────┴──────────────┴──────────┘│
+│                                                                     │
+│ Bulk Actions:                                                      │
+│ [□] Select All                                                     │
+│ Selected: 0   [Assign Profile ▼] [Apply]                          │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Formula Validation System
+### Commission Calculation View
 
-```typescript
-class FormulaValidator {
-  validateFormula(formula: string, organization: Organization): ValidationResult {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    
-    // 1. Syntax Validation
-    try {
-      const ast = this.parseFormula(formula);
-    } catch (e) {
-      errors.push(`Syntax error: ${e.message}`);
-      return { valid: false, errors, warnings };
-    }
-    
-    // 2. Variable Validation
-    const usedVars = this.extractVariables(formula);
-    for (const varName of usedVars) {
-      if (!this.isValidVariable(varName)) {
-        errors.push(`Unknown variable: ${varName}`);
-      }
-    }
-    
-    // 3. Business Logic Validation
-    const testScenarios = [
-      { name: "No activity", data: { sessions_count: 0, sessions_value: 0 }},
-      { name: "Minimum activity", data: { sessions_count: 1, sessions_value: 100 }},
-      { name: "Average month", data: { sessions_count: 40, sessions_value: 4000 }},
-      { name: "High performer", data: { sessions_count: 80, sessions_value: 8000 }},
-      { name: "Maximum values", data: { sessions_count: 200, sessions_value: 20000 }}
-    ];
-    
-    for (const scenario of testScenarios) {
-      const result = this.evaluateFormula(formula, scenario.data);
-      
-      // Check for reasonable bounds
-      if (result < 0) {
-        errors.push(`Negative commission in scenario: ${scenario.name}`);
-      }
-      
-      if (result > scenario.data.sessions_value * 0.5) {
-        warnings.push(`Commission >50% of session value in: ${scenario.name}`);
-      }
-      
-      if (result > 50000) {
-        warnings.push(`Unusually high commission (${result}) in: ${scenario.name}`);
-      }
-    }
-    
-    // 4. Performance Validation
-    const executionTime = this.measureExecutionTime(formula, testScenarios[2].data);
-    if (executionTime > 100) {
-      warnings.push(`Formula may be slow to calculate (${executionTime}ms)`);
-    }
-    
-    return {
-      valid: errors.length === 0,
-      errors,
-      warnings,
-      testResults: testScenarios.map(s => ({
-        scenario: s.name,
-        result: this.evaluateFormula(formula, s.data)
-      }))
-    };
-  }
-}
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Commission Report - March 2024                                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│ Filters: [All Locations ▼] [All Profiles ▼] Status: [Pending ▼]  │
+│                                                                     │
+│ ┌──────────────┬────────┬────────┬──────────┬──────────┬─────────┐│
+│ │ Trainer      │Sessions│ Sales  │ Tier     │Commission│ Status  ││
+│ ├──────────────┼────────┼────────┼──────────┼──────────┼─────────┤│
+│ │ John Smith   │ 22     │ $3,500 │ Tier 2   │ $710.00  │ Pending ││
+│ │ ├ Sessions   │        │        │ 15% rate │ $330.00  │         ││
+│ │ ├ Sales      │        │        │ 8% rate  │ $280.00  │         ││
+│ │ └ Bonus      │        │        │ Tier 2   │ $100.00  │         ││
+│ │              │        │        │          │          │         ││
+│ │ Sarah Johnson│ 45     │ $8,200 │ Tier 3   │ $2,140.00│ Approved││
+│ │ ├ Sessions   │        │        │ 20% rate │ $900.00  │         ││
+│ │ ├ Sales      │        │        │ 12% rate │ $984.00  │         ││
+│ │ └ Bonus      │        │        │ Tier 3   │ $500.00  │         ││
+│ └──────────────┴────────┴────────┴──────────┴──────────┴─────────┘│
+│                                                                     │
+│ Summary:                                                           │
+│ Total Trainers: 15                                                │
+│ Total Commission: $18,450.00                                       │
+│ Average per Trainer: $1,230.00                                    │
+│                                                                     │
+│ [Export to Excel] [Approve All] [View Details]                    │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Formula Storage and Versioning
+## Example Configurations
 
-```prisma
-model CommissionFormula {
-  id                String @id @default(cuid())
-  organizationId    String
-  name              String
-  description       String?
-  
-  // Formula Definition
-  formula           String   @db.Text      // The formula expression
-  compiledFormula   Json?                  // Pre-compiled AST for performance
-  usedVariables     String[]               // Variables referenced in formula
-  usedFunctions     String[]               // Functions used in formula
-  
-  // Configuration
-  isActive          Boolean @default(true)
-  isPrimary         Boolean @default(false) // Primary formula for organization
-  effectiveFrom     DateTime @default(now())
-  effectiveTo       DateTime?
-  
-  // Validation & Testing
-  isValid           Boolean @default(false)
-  validationErrors  Json?
-  validationWarnings Json?
-  lastValidatedAt   DateTime?
-  testScenarios     Json?    // Saved test scenarios with expected results
-  
-  // Versioning
-  version           Int @default(1)
-  previousVersionId String?  // Link to previous version
-  changeNotes       String?
-  
-  // Audit
-  createdById       String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  // Relations
-  organization      Organization @relation(...)
-  createdBy         User @relation("FormulaCreator", ...)
-  calculations      CommissionCalculation[] // Track which calculations used this formula
-  previousVersion   CommissionFormula? @relation("FormulaVersionHistory", ...)
-  
-  @@index([organizationId, isActive])
-  @@index([organizationId, isPrimary])
-}
-```
-
-### Formula Execution Engine
-
-```typescript
-class FormulaExecutionEngine {
-  private readonly functionLibrary: Map<string, Function>;
-  private readonly cache: Map<string, CompiledFormula>;
-  
-  constructor() {
-    this.functionLibrary = this.initializeFunctions();
-    this.cache = new Map();
-  }
-  
-  async calculateCommission(
-    formula: CommissionFormula,
-    context: CommissionContext
-  ): Promise<CommissionResult> {
-    // 1. Get compiled formula (from cache if available)
-    const compiled = this.getCompiledFormula(formula);
-    
-    // 2. Prepare variable context
-    const variables = await this.prepareVariables(context);
-    
-    // 3. Execute formula with timeout protection
-    const result = await this.executeWithTimeout(compiled, variables, 1000);
-    
-    // 4. Apply business rules
-    const finalResult = this.applyBusinessRules(result, context);
-    
-    // 5. Create audit record
-    await this.createAuditRecord({
-      formulaId: formula.id,
-      context,
-      variables,
-      rawResult: result,
-      finalResult,
-      executionTimeMs: performance.now() - startTime
-    });
-    
-    return {
-      amount: finalResult,
-      formulaUsed: formula.id,
-      calculationDate: new Date(),
-      breakdown: this.generateBreakdown(compiled, variables)
-    };
-  }
-  
-  private generateBreakdown(formula: CompiledFormula, variables: Variables): Breakdown {
-    // Step through formula showing intermediate results
-    // Useful for transparency and debugging
-    return {
-      steps: [
-        { expression: "sessions_count", value: 45 },
-        { expression: "TIER(45, [[0,30,0.15],[31,50,0.20]])", value: 0.20 },
-        { expression: "sessions_value * 0.20", value: 900 },
-        { expression: "sales_value * 0.10", value: 1200 },
-        { expression: "Final", value: 2100 }
-      ]
-    };
-  }
-}
-
-### Formula Templates Library
-
-Organizations can start with pre-built templates and customize them:
-
+### 1. Simple Progressive Structure
 ```javascript
-const FORMULA_TEMPLATES = {
-  simple_percentage: {
-    name: "Simple Percentage",
-    description: "Fixed percentage of session and sales value",
-    formula: "(sessions_value * 0.20) + (sales_value * 0.10)",
-    variables: ["sessions_value", "sales_value"]
-  },
-  
-  progressive_tiers: {
-    name: "Progressive Tiers",
-    description: "Commission rate increases with volume",
-    formula: "sessions_value * TIER(sessions_count, [[0,30,0.15],[31,50,0.20],[51,null,0.25]])",
-    variables: ["sessions_value", "sessions_count"]
-  },
-  
-  tiered_with_bonuses: {
-    name: "Tiered with Target Bonuses",
-    description: "Progressive tiers plus target-based bonuses",
-    formula: `
-      PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]]) +
-      TARGET_BONUS(sessions_count, [[50, 300], [75, 600], [100, 1000]])
-    `,
-    variables: ["sessions_value", "sessions_count"]
-  },
-  
-  hybrid_advanced: {
-    name: "Advanced Hybrid",
-    description: "Complex calculation combining execution and sales",
-    formula: `
-      PROGRESSIVE(sessions_value, sessions_count, [[0,40,0.18],[41,60,0.22],[61,null,0.26]]) +
-      (sales_value * 0.12)
-    `,
-    variables: ["sessions_value", "sessions_count", "sales_value"]
-  }
-};
-```
-
-### Implementation Considerations
-
-#### 1. Formula Parser Selection
-- **Option A**: Use existing library like math.js or expr-eval
-- **Option B**: Build custom parser with better control  
-- **Option C**: Use sandboxed JavaScript evaluation with safety checks
-
-```javascript
-// Example using math.js with custom functions
-import { create, all } from 'mathjs';
-
-const math = create(all);
-
-// Add custom functions
-math.import({
-  TIER: function(value, tiers) {
-    for (const tier of tiers) {
-      if (value >= tier[0] && (tier[1] === null || value <= tier[1])) {
-        return tier[2];
-      }
-    }
-    return 0;
-  },
-  
-  PROGRESSIVE: function(baseValue, count, tiers) {
-    const rate = math.TIER(count, tiers);
-    return baseValue * rate;
-  },
-  
-  TARGET_BONUS: function(metric, targets) {
-    // Returns the highest bonus for which the metric qualifies
-    let bonus = 0;
-    for (const [threshold, amount] of targets) {
-      if (metric >= threshold) {
-        bonus = amount; // Keep updating to get highest qualified bonus
-      }
-    }
-    return bonus;
-  },
-  
-  TIERED_BONUS: function(metric, targets) {
-    // Alternative: adds all qualifying bonuses together
-    let totalBonus = 0;
-    for (const [threshold, amount] of targets) {
-      if (metric >= threshold) {
-        totalBonus += amount;
-      }
-    }
-    return totalBonus;
-  },
-  
-  IF: function(condition, trueValue, falseValue) {
-    return condition ? trueValue : falseValue;
-  }
-});
-
-// Safe evaluation
-function evaluateFormula(formula, variables) {
-  const scope = { ...variables };
-  return math.evaluate(formula, scope);
-}
-```
-
-#### 2. Security Considerations
-
-```typescript
-class SecureFormulaEvaluator {
-  private readonly blacklistedKeywords = [
-    'eval', 'Function', 'require', 'import', 'process', 
-    'global', 'window', '__proto__', 'constructor'
-  ];
-  
-  private readonly maxExecutionTime = 1000; // ms
-  private readonly maxIterations = 10000;
-  
-  validateSecurity(formula: string): boolean {
-    // Check for blacklisted keywords
-    for (const keyword of this.blacklistedKeywords) {
-      if (formula.includes(keyword)) {
-        throw new Error(`Security violation: formula contains blacklisted keyword "${keyword}"`);
-      }
-    }
-    
-    // Check formula length
-    if (formula.length > 5000) {
-      throw new Error('Formula too long (max 5000 characters)');
-    }
-    
-    // Check nesting depth
-    const nestingDepth = this.calculateNestingDepth(formula);
-    if (nestingDepth > 10) {
-      throw new Error('Formula nesting too deep (max 10 levels)');
-    }
-    
-    return true;
-  }
-  
-  executeWithSandbox(formula: string, variables: object): number {
-    // Use VM2 or similar for sandboxed execution
-    const vm = new VM({
-      timeout: this.maxExecutionTime,
-      sandbox: {
-        ...variables,
-        ...this.safeFunctions
-      }
-    });
-    
-    return vm.run(`(function() { return ${formula}; })()`);
-  }
-}
-```
-
-#### 3. Formula Testing Interface
-
-```typescript
-interface FormulaTestSuite {
-  name: string;
-  scenarios: TestScenario[];
-}
-
-interface TestScenario {
-  name: string;
-  description: string;
-  inputs: Record<string, number>;
-  expectedResult: number;
-  tolerance: number; // For floating point comparison
-}
-
-// Example test suite
-const commissionTestSuite: FormulaTestSuite = {
-  name: "Standard Commission Tests",
-  scenarios: [
+{
+  name: "Standard Progressive",
+  calculationMethod: "PROGRESSIVE",
+  tiers: [
     {
-      name: "New Trainer - Low Volume",
-      description: "First month, minimal sessions",
-      inputs: {
-        sessions_count: 10,
-        sessions_value: 1000,
-        sales_value: 2000
-      },
-      expectedResult: 350,
-      tolerance: 0.01
+      tierLevel: 1,
+      name: "Base",
+      trigger: { type: "NONE" },
+      rewards: {
+        sessionCommissionPercent: 10,
+        salesCommissionPercent: 5
+      }
     },
     {
-      name: "Senior Trainer - High Volume",
-      description: "Experienced trainer at peak performance",
-      inputs: {
-        sessions_count: 75,
-        sessions_value: 7500,
-        sales_value: 15000
+      tierLevel: 2,
+      name: "Performer",
+      trigger: { 
+        type: "SESSION_COUNT",
+        sessionThreshold: 20
       },
-      expectedResult: 3750,
-      tolerance: 0.01
+      rewards: {
+        sessionCommissionPercent: 15,
+        salesCommissionPercent: 8,
+        flatBonus: 100
+      }
+    },
+    {
+      tierLevel: 3,
+      name: "Elite",
+      trigger: {
+        type: "SESSION_COUNT",
+        sessionThreshold: 40
+      },
+      rewards: {
+        sessionCommissionPercent: 20,
+        salesCommissionPercent: 10,
+        flatBonus: 500
+      }
     }
   ]
-};
-```
-
-## Data Model
-
-### Database Schema Extensions
-
-```prisma
-model Organization {
-  // existing fields...
-  commissionPeriod     CommissionPeriod @default(MONTHLY)
-  defaultProfileId     String?  // Default profile for new trainers
-  
-  commissionProfiles   CommissionProfile[]
-}
-
-model CommissionProfile {
-  id               String @id @default(cuid())
-  organizationId   String
-  title            String  // "Level 1 Commission", "Standard Commission", etc.
-  calculationMethod CommissionType  // FLAT, PROGRESSIVE, FORMULA
-  methodConfig     Json   // Method-specific configuration
-  isActive         Boolean @default(true)
-  isDefault        Boolean @default(false)  // Mark as org default
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
-  organization     Organization @relation(...)
-  users            User[]  // Trainers using this profile
-}
-
-model CommissionCalculation {
-  id               String @id @default(cuid())
-  userId           String
-  organizationId   String
-  periodStart      DateTime
-  periodEnd        DateTime
-  
-  // Metrics
-  totalSales       Float
-  totalSessions    Int
-  sessionValue     Float
-  
-  // Commission amounts
-  saleCommission   Float
-  executionCommission Float
-  totalCommission  Float
-  
-  // Applied rates
-  appliedSaleRate  Float
-  appliedExecRate  Float
-  appliedTier      String?
-  
-  // Metadata
-  profileId         String  // Which profile was used
-  profileTitle      String  // Title at time of calculation
-  calculationMethod String
-  calculationConfig Json   // The actual config used
-  
-  status           CalculationStatus @default(CALCULATED)
-  paidAt           DateTime?
-  
-  createdAt        DateTime @default(now())
-  
-  user             User @relation(...)
-  organization     Organization @relation(...)
-}
-
-model User {
-  // existing fields...
-  
-  // Commission profile assignment
-  commissionProfileId String?
-  commissionProfile   CommissionProfile? @relation(...)
-  
-  // Track profile changes
-  profileAssignedAt   DateTime?
-  profileAssignedBy   String?
-}
-
-enum CommissionPeriod {
-  MONTHLY
-  QUARTERLY
-}
-
-enum CommissionType {
-  FLAT
-  PROGRESSIVE
-  FORMULA
-}
-
-enum CalculationStatus {
-  CALCULATED
-  PAID
-  DISPUTED
 }
 ```
 
-## User Experience
-
-### Organization Admin Configuration Flow
-
-1. **Initial Setup Wizard**
-   ```
-   Step 1: Set Calculation Period (Organization-wide)
-   ( ) Monthly  
-   (•) Quarterly
-   
-   [Next]
-   ```
-
-2. **Create Commission Profiles**
-   ```
-   Step 2: Create Your First Commission Profile
-   
-   Profile Title: [Standard Commission]
-   
-   Calculation Method:
-   (•) Flat Rate
-   ( ) Progressive Tiers
-   ( ) Custom Formula
-   
-   Flat Rate Configuration:
-   Execution Rate: [20]%
-   Sales Rate: [10]%
-   
-   [Save & Continue] [Add Another Profile]
-   
-   ---
-   
-   Commission Profiles Created:
-   ✓ Standard Commission (Flat 20%/10%)
-   
-   [Add Another Profile] [Continue to Trainer Assignment]
-   ```
-
-3. **Assign Profiles to Trainers**
-   ```
-   Step 3: Assign Commission Profiles to Your Trainers
-   
-   ┌────────────────┬────────────────────────┐
-   │ Trainer Name   │ Commission Profile     │
-   ├────────────────┼────────────────────────┤
-   │ John Smith     │ [Level 1 Commission ▼] │
-   │ Sarah Johnson  │ [Level 2 Commission ▼] │
-   │ Mike Williams  │ [Level 1 Commission ▼] │
-   │ Emily Davis    │ [Level 1 Commission ▼] │
-   └────────────────┴────────────────────────┘
-   
-   [Bulk Assign] [Complete Setup]
-   ```
-
-### Ongoing Management Interface
-
-1. **Commission Profile Management**
-   ```
-   Commission Profiles
-   
-   Organization Period: Monthly
-   
-   ┌───────────────────┬────────────┬────────────┬─────────┐
-   │ Profile Title     │ Method     │ # Trainers │ Actions │
-   ├───────────────────┼────────────┼────────────┼─────────┤
-   │ Level 1 Commission│ Flat (20%) │ 8          │ [Edit]  │
-   │ Level 2 Commission│ Progressive│ 5          │ [Edit]  │
-   │ Advanced Formula  │ Formula    │ 2          │ [Edit]  │
-   └───────────────────┴────────────┴────────────┴─────────┘
-   
-   [+ Create New Profile] [Set Default]
-   ```
-
-2. **Trainer Assignment View**
-   ```
-   Trainer Commission Assignments
-   
-   Filter: [All Trainers ▼] Search: [________]
-   
-   ┌───────────────┬───────────────────┬───────────────┐
-   │ Trainer       │ Current Profile   │ Actions       │
-   ├───────────────┼───────────────────┼───────────────┤
-   │ John Smith    │ Level 1 Commission│ [Change ▼]   │
-   │ Sarah Johnson │ Level 2 Commission│ [Change ▼]   │
-   │ Mike Williams │ Level 1 Commission│ [Change ▼]   │
-   └───────────────┴───────────────────┴───────────────┘
-   
-   [Bulk Reassign] [Export]
-   ```
-
-
-### Settings Page - Commission Section
-
-```
-Settings > Commission
-
-Organization Commission Settings
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Calculation Period: [Monthly ▼]  [Change]
-
-┌─ Commission Profiles ─────────────────────────────────────┐
-│                                                           │
-│ ┌────────────────────┬────────────┬──────────┬──────────┐ │
-│ │ Profile Title      │ Method     │ Trainers │ Actions  │ │
-│ ├────────────────────┼────────────┼──────────┼──────────┤ │
-│ │ Level 1 Commission │ Flat (20%) │ 8        │ [Edit]   │ │
-│ │ Level 2 Commission │ Progressive│ 5        │ [Edit]   │ │
-│ │ Advanced Formula   │ Formula    │ 2        │ [Edit]   │ │
-│ └────────────────────┴────────────┴──────────┴──────────┘ │
-│                                                           │
-│ [+ Create New Profile] [Set Default]                     │
-└───────────────────────────────────────────────────────────┘
-
-Quick Actions:
-[Export Configuration] [Import Configuration] [View Reports]
-```
-
-### Onboarding Wizard Updates
-
-```
-Onboarding Step 4: Commission Setup
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Set up commission structure for your trainers
-
-1. Calculation Period:
-   (•) Monthly
-   ( ) Quarterly
-
-2. Create commission profile:
-   
-   Profile Title: [Standard Commission]
-   
-   Calculation Method:
-   (•) Flat Rate - Simple percentage
-   ( ) Progressive - Rate increases with volume
-   ( ) Formula - Custom calculation
-   
-   Flat Rate Configuration:
-   Execution Commission: [25]%
-   Sales Commission: [10]%
-   
-   [Save Profile]
-   
-   Current Profiles:
-   • Standard Commission (Flat 25%/10%) - Applied to all trainers
-   
-   [+ Add Another Profile] [Continue] [Skip for Now]
-   
-   Note: Trainers will use the first profile by default.
-   You can create more profiles and reassign trainers later.
-```
-
-### User Profile - Commission Assignment
-
-```
-Edit User: Sarah Johnson
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Basic Information
-├─ Name: Sarah Johnson
-├─ Email: sarah.j@gym.com
-└─ Role: Trainer
-
-Commission Settings
-├─ Commission Profile: [Level 2 Commission ▼]
-│   Available Profiles:
-│   • Level 1 Commission (Flat 20%)
-│   • Level 2 Commission (Progressive) ✓
-│   • Advanced Formula (Formula)
-│   • Use Organization Default
-│
-└─ Profile assigned: Jan 15, 2024 by Admin
-
-[Save Changes] [Cancel]
-```
-
-
-## Calculation Engine
-
-### Core Algorithm
-
-```typescript
-interface CommissionCalculator {
-  calculateCommission(
-    trainer: User,
-    period: { start: Date, end: Date },
-    method: CommissionMethod,
-    config: CommissionConfig
-  ): CommissionResult
-}
-
-class CommissionEngine implements CommissionCalculator {
-  async calculateCommission(trainer, period, organization) {
-    // Get trainer's commission profile
-    const profile = await this.getTrainerProfile(trainer.commissionProfileId);
-    
-    if (!profile) {
-      // Use organization default profile if trainer has none assigned
-      const defaultProfile = await this.getDefaultProfile(organization.id);
-      if (!defaultProfile) {
-        throw new Error(`No commission profile assigned to trainer ${trainer.name}`);
+### 2. Sales-Focused Structure
+```javascript
+{
+  name: "Sales Champion",
+  calculationMethod: "PROGRESSIVE",
+  tiers: [
+    {
+      tierLevel: 1,
+      name: "Base",
+      trigger: { type: "NONE" },
+      rewards: {
+        salesCommissionPercent: 8
       }
-      profile = defaultProfile;
+    },
+    {
+      tierLevel: 2,
+      name: "Sales Pro",
+      trigger: {
+        type: "SALES_VOLUME",
+        salesThreshold: 5000
+      },
+      rewards: {
+        sessionCommissionPercent: 10,
+        salesCommissionPercent: 12,
+        flatBonus: 200
+      }
+    },
+    {
+      tierLevel: 3,
+      name: "Sales Elite",
+      trigger: {
+        type: "SALES_VOLUME",
+        salesThreshold: 10000
+      },
+      rewards: {
+        sessionCommissionPercent: 15,
+        salesCommissionPercent: 15,
+        flatBonus: 750
+      }
     }
-    
-    // Gather metrics for the period
-    const metrics = await this.gatherMetrics(trainer, period);
-    
-    // Calculate based on profile's method
-    switch(profile.calculationMethod) {
-      case 'FLAT':
-        return this.calculateFlat(metrics, profile.methodConfig);
-      case 'PROGRESSIVE':
-        return this.calculateProgressive(metrics, profile.methodConfig);
-      case 'FORMULA':
-        return this.calculateFormula(metrics, profile.methodConfig);
-    }
-  }
-  
-  private async gatherMetrics(trainer, period) {
-    // Gather ALL sessions and sales for the trainer
-    // The profile determines the calculation method and rates
-    return {
-      totalSessions: await this.countSessions(trainer, period),
-      sessionValue: await this.sumSessionValue(trainer, period),
-      totalSales: await this.sumSales(trainer, period),
-      avgSessionValue: await this.avgSessionValue(trainer, period)
-    };
-  }
-  
-  private calculateProgressive(metrics, config) {
-    // Find achieved tier based on sessions/revenue
-    const achievedTier = config.tiers.find(tier => 
-      metrics.totalSessions >= tier.minSessions && 
-      (!tier.maxSessions || metrics.totalSessions <= tier.maxSessions)
-    );
-    
-    if (config.retroactive) {
-      // Apply tier rate to all sessions
-      return {
-        saleCommission: metrics.totalSales * achievedTier.saleRate / 100,
-        executionCommission: metrics.totalSessions * metrics.avgSessionValue * achievedTier.executionRate / 100
-      };
-    } else {
-      // Apply each tier rate to sessions in that tier
-      return this.calculateGraduatedCommission(metrics, config.tiers);
-    }
-  }
+  ]
 }
 ```
 
-## Edge Cases & Considerations
-
-### 1. Mid-Period Changes
-- **Issue**: Commission structure changes mid-month
-- **Solution**: Pro-rate or grandfather existing calculations
-- **Implementation**: Store config version with each calculation
-
-### 2. Trainer Tier Changes
-- **Issue**: Trainer promoted from PT1 to PT2 mid-period
-- **Solution**: Apply new tier from promotion date forward
-- **Implementation**: Track tier changes with effective dates
-
-### 3. Package Refunds
-- **Issue**: Commission paid on refunded package
-- **Solution**: Create negative adjustment in next period
-- **Implementation**: Commission adjustment records
-
-### 4. Substitute Trainers
-- **Issue**: Who gets execution commission for substituted session
-- **Solution**: Commission goes to executing trainer
-- **Implementation**: Track actual trainer on each session
-
-### 5. Group Sessions
-- **Issue**: Multiple trainers, one session
-- **Solution**: Split commission or assign to lead trainer
-- **Implementation**: Support multi-trainer sessions
-
-### 6. Cross-Location Sessions
-- **Issue**: Trainer works at multiple locations
-- **Solution**: Commission rules follow trainer's primary location
-- **Implementation**: Location-specific commission overrides
-
-### 7. Partial Months
-- **Issue**: Trainer starts mid-month
-- **Solution**: Pro-rate targets or use absolute counts
-- **Implementation**: Configurable target adjustment
-
-### 8. Commission Disputes
-- **Issue**: Trainer disputes calculation
-- **Solution**: Audit log and recalculation capability
-- **Implementation**: Full calculation history with inputs
+### 3. Balanced Multi-Condition
+```javascript
+{
+  name: "Balanced Performance",
+  calculationMethod: "PROGRESSIVE",
+  tiers: [
+    {
+      tierLevel: 1,
+      name: "Base",
+      trigger: { type: "NONE" },
+      rewards: {
+        sessionCommissionPercent: 10,
+        salesCommissionPercent: 5
+      }
+    },
+    {
+      tierLevel: 2,
+      name: "Growth",
+      trigger: {
+        type: "EITHER_OR",
+        sessionThreshold: 15,
+        salesThreshold: 3000
+      },
+      rewards: {
+        sessionCommissionPercent: 15,
+        salesCommissionPercent: 8
+      }
+    },
+    {
+      tierLevel: 3,
+      name: "Excellence",
+      trigger: {
+        type: "BOTH_AND",
+        sessionThreshold: 30,
+        salesThreshold: 6000
+      },
+      rewards: {
+        sessionCommissionPercent: 20,
+        salesCommissionPercent: 12,
+        flatBonus: 1000
+      }
+    }
+  ]
+}
+```
 
 ## Implementation Phases
 
-### Phase 1: Formula Foundation (MVP - Recommended Start)
-- [ ] Basic formula parser using math.js
-- [ ] Core variables (sessions_count, sessions_value, sales_value)
-- [ ] Essential functions (IF, TIER, PROGRESSIVE)
-- [ ] Formula validation and security
-- [ ] Simple formula builder UI
-- [ ] 3-4 pre-built templates
-- [ ] Test scenario runner
-- [ ] Monthly commission dashboard
+### Phase 1: Core System (Weeks 1-2)
+- [ ] Database schema implementation
+- [ ] Basic tier calculation engine
+- [ ] Progressive calculation method
+- [ ] Profile CRUD operations
+- [ ] Trainer assignment system
 
-### Phase 2: Enhanced Formula System
-- [ ] Visual formula builder with drag-drop
-- [ ] Extended variable library (performance metrics, trainer attributes)
-- [ ] Advanced functions (statistical, lookup functions)
-- [ ] Formula version control
-- [ ] A/B testing capability
-- [ ] Real-time formula preview
-- [ ] Excel export with formula details
+### Phase 2: User Interface (Weeks 3-4)
+- [ ] Profile configuration UI
+- [ ] Tier builder interface
+- [ ] Test calculator
+- [ ] Trainer assignment page
+- [ ] Basic reporting view
 
-### Phase 3: Legacy Method Support (Optional)
-- [ ] Flat rate calculation
-- [ ] Progressive tier calculation (UI wrapper around formula)
-- [ ] Package-based scope implementation
-- [ ] Migration tool from old methods to formulas
-- [ ] Quarterly calculations
+### Phase 3: Advanced Features (Weeks 5-6)
+- [ ] Graduated calculation method
+- [ ] Bulk trainer assignments
+- [ ] Commission approval workflow
+- [ ] Excel export functionality
+- [ ] Audit trail and history
 
-### Phase 4: Enterprise Features
-- [ ] Formula marketplace (share between organizations)
-- [ ] AI-suggested formula optimization
-- [ ] Commission forecasting with what-if analysis
-- [ ] Multi-location formula variations
-- [ ] Integration with payroll systems
+### Phase 4: Optimization (Week 7-8)
+- [ ] Performance optimization for large datasets
+- [ ] Caching layer for calculations
+- [ ] Advanced filtering and search
+- [ ] Email notifications
+- [ ] API for external integrations
 
-## Formula Adoption Strategy
+## Technical Considerations
 
-### Migration Path from Simple to Advanced
+### Performance
+- Pre-calculate metrics at session validation time
+- Cache tier determinations per period
+- Use database indexes on frequently queried fields
+- Batch process calculations during off-peak hours
 
-1. **Start Simple**: Organizations begin with templates
-2. **Gradual Customization**: Modify templates as needed
-3. **Advanced Usage**: Create custom formulas from scratch
+### Data Integrity
+- Use transactions for all commission calculations
+- Maintain immutable calculation records
+- Version control for profile changes
+- Soft delete for audit trail
 
-### Example Progressive Adoption
+### Security
+- Role-based access to commission data
+- Encryption for sensitive financial data
+- Audit logging for all changes
+- Regular backups of calculation data
 
-**Month 1: Use Template**
-```
-Formula: Simple Percentage Template
-(sessions_value * 0.20) + (sales_value * 0.10)
-```
+## Migration Strategy
 
-**Month 3: Customize Rates**
-```
-Formula: Modified Template
-(sessions_value * 0.22) + (sales_value * 0.12)
-```
+### From Current System
+1. Export existing commission data
+2. Map current flat/progressive rates to new tier structure
+3. Create default profiles matching current setup
+4. Assign trainers to appropriate profiles
+5. Run parallel calculations for verification
+6. Switch over after validation period
 
-**Month 6: Add Conditions**
-```
-Formula: Enhanced with Tiers
-(sessions_value * TIER(sessions_count, [[0,30,0.20],[31,50,0.22],[51,null,0.25]])) + 
-(sales_value * 0.12)
-```
-
-**Month 12: Full Custom**
-```
-Formula: Organization-Specific
-PROGRESSIVE(sessions_value, sessions_count, custom_tiers) +
-(sales_value * 0.15) +
-// Final calculated commission value
+### Data Migration Script
+```typescript
+async function migrateToTierSystem() {
+  // 1. Create default profiles for each existing commission type
+  const existingTypes = await getDistinctCommissionTypes()
+  
+  for (const type of existingTypes) {
+    const profile = await createProfileFromLegacyType(type)
+    
+    // 2. Assign trainers to new profiles
+    const trainers = await getTrainersWithCommissionType(type)
+    await assignTrainersToProfile(trainers, profile.id)
+  }
+  
+  // 3. Verify calculations match
+  await runParallelValidation()
+}
 ```
 
 ## Success Metrics
 
-1. **Accuracy**: 100% calculation accuracy with formula validation
-2. **Flexibility**: Support ANY commission model via formulas
-3. **Efficiency**: Calculate 100 trainers in <5 seconds
-4. **Transparency**: Step-by-step formula breakdown for trainers
-5. **Adoption**: 80% of organizations using formulas within 6 months
+1. **Accuracy**: 100% calculation accuracy with clear audit trails
+2. **Flexibility**: Support for 95% of commission structures without custom code
+3. **Performance**: Calculate 1000+ trainer commissions in < 30 seconds
+4. **Usability**: 90% of users can configure profiles without support
+5. **Adoption**: Full migration within 30 days of launch
 
-## Technical Considerations
+## Advantages of Tier-Based Approach
 
-1. **Performance**: Cache calculations, use database views for aggregates
-2. **Accuracy**: Decimal precision for financial calculations
-3. **Auditability**: Immutable calculation records
-4. **Scalability**: Queue system for bulk calculations
-5. **Testing**: Comprehensive test suite for all methods
+### Why Not Formulas?
+1. **Simplicity**: No syntax to learn or debug
+2. **Safety**: No risk of calculation errors from bad formulas
+3. **Performance**: Optimized calculations vs interpreted formulas
+4. **Auditability**: Clear tier achievement and reward application
+5. **Support**: Easy to troubleshoot and explain to users
 
-## Security & Compliance
+### Business Benefits
+1. **Transparent**: Trainers understand exactly how commission is calculated
+2. **Motivating**: Clear targets and rewards drive performance
+3. **Flexible**: Handles virtually all real-world commission structures
+4. **Scalable**: Same system works for 10 or 10,000 trainers
+5. **Maintainable**: Changes are easy to make and test
 
-1. **Access Control**: Role-based access to commission data
-2. **Data Privacy**: Encrypt sensitive commission information
-3. **Audit Trail**: Log all configuration changes
-4. **Compliance**: Support local labor law requirements
-5. **Data Retention**: Keep records per legal requirements
+## Conclusion
+
+The tier-based commission framework provides the perfect balance of flexibility and simplicity. By separating triggers from rewards and offering multiple calculation methods, the system can handle complex business requirements while remaining intuitive for users to configure and understand. This approach avoids the pitfalls of formula-based systems while delivering all the functionality organizations need for sophisticated commission structures.
