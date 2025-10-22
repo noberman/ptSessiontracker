@@ -296,60 +296,174 @@ TARGET_FOR_TIER(tier_number)   // Returns target sessions for trainer tier
   (sales_value * 0.10)
 ```
 
-### Visual Formula Builder Interface
+### Tier-Based Commission Framework
+
+#### Core Concept
+The commission system uses a flexible tier-based framework that separates **triggers** (what moves you to a tier) from **rewards** (what you earn at that tier). This avoids the complexity of custom formulas while providing powerful configuration options.
+
+#### Framework Components
+
+```typescript
+interface TierConfiguration {
+  // TIER TRIGGERS - What moves trainer to this tier
+  trigger: {
+    type: 'SESSION_COUNT' | 'SALES_VOLUME' | 'BOTH_AND' | 'EITHER_OR',
+    sessionThreshold?: number,    // e.g., 20 sessions
+    salesThreshold?: number        // e.g., $5000 in package sales
+  },
+  
+  // TIER REWARDS - What trainer earns at this tier
+  rewards: {
+    sessionCommissionPercent?: number,  // % of validated session value
+    salesCommissionPercent?: number,    // % of package sales
+    flatBonus?: number                  // Fixed dollar amount
+  }
+}
+```
+
+#### Visual Configuration Interface
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Commission Formula Builder - Profile: Advanced Commission          │
+│ Commission Profile: Progressive Trainer Commission                  │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│ TIER CONFIGURATION                                                  │
+│                                                                     │
+│ ┌─── Tier 1 (Base) ───────────────────────────────────────────┐   │
+│ │ TRIGGERS                                                      │   │
+│ │ ○ No trigger (default tier)                                  │   │
+│ │                                                               │   │
+│ │ REWARDS                                                       │   │
+│ │ ☑ Session Commission: [10]% of validated session value       │   │
+│ │ ☑ Sales Commission:   [5 ]% of package sales                 │   │
+│ │ ☐ Flat Bonus:         $[  ]                                  │   │
+│ └───────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│ ┌─── Tier 2 (Performer) ──────────────────────────────────────┐   │
+│ │ TRIGGERS                                                      │   │
+│ │ ● When sessions reach: [15] sessions                         │   │
+│ │ ○ When sales reach: $[    ]                                  │   │
+│ │ ○ Both conditions must be met (AND)                          │   │
+│ │ ○ Either condition can be met (OR)                           │   │
+│ │                                                               │   │
+│ │ REWARDS                                                       │   │
+│ │ ☑ Session Commission: [15]% of validated session value       │   │
+│ │ ☑ Sales Commission:   [8 ]% of package sales                 │   │
+│ │ ☑ Flat Bonus:         $[100]                                 │   │
+│ └───────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│ ┌─── Tier 3 (Elite) ──────────────────────────────────────────┐   │
+│ │ TRIGGERS                                                      │   │
+│ │ ○ When sessions reach: [  ] sessions                         │   │
+│ │ ○ When sales reach: $[    ]                                  │   │
+│ │ ● Both conditions must be met (AND)                          │   │
+│ │    Sessions: [25]  Sales: $[5000]                            │   │
+│ │                                                               │   │
+│ │ REWARDS                                                       │   │
+│ │ ☑ Session Commission: [20]% of validated session value       │   │
+│ │ ☑ Sales Commission:   [12]% of package sales                 │   │
+│ │ ☑ Flat Bonus:         $[500]                                 │   │
+│ └───────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│ [+ Add Tier]                                                       │
+│                                                                     │
+├─────────────────────────────────────────────────────────────────────┤
+│ TIER APPLICATION METHOD                                            │
+│                                                                     │
+│ ● Progressive (All sessions at achieved tier rate)                 │
+│ ○ Graduated (Each tier applies to sessions in that range)         │
+│                                                                     │
+├─────────────────────────────────────────────────────────────────────┤
+│ TEST YOUR CONFIGURATION                                            │
+│                                                                     │
+│ Test Scenario:                                                     │
+│ Sessions Delivered: [22]     Package Sales: $[3500]               │
+│                                                                     │
+│ [Calculate]                                                        │
+│                                                                     │
+│ Results:                                                           │
+│ ✓ Achieved Tier: Tier 2 (Performer)                              │
+│   - Trigger: 22 sessions > 15 threshold                          │
+│                                                                     │
+│ Commission Breakdown:                                              │
+│   Session Commission (15% × $2200):  $330.00                      │
+│   Sales Commission (8% × $3500):     $280.00                      │
+│   Flat Bonus:                        $100.00                      │
+│   ─────────────────────────────────────────                      │
+│   Total Commission:                  $710.00                      │
+│                                                                     │
+│ [Save Configuration] [Cancel]                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Example Configurations
+
+**1. Simple Session-Based Progressive**
+```
+Tier 1: 0-10 sessions → 10% of session value
+Tier 2: 11-20 sessions → 15% of session value + $100 bonus
+Tier 3: 21+ sessions → 20% of session value + $500 bonus
+```
+
+**2. Sales-Focused with Mixed Rewards**
+```
+Tier 1: Default → 5% of sales
+Tier 2: $3000+ sales → 8% of sales + 10% of sessions
+Tier 3: $6000+ sales → 12% of sales + 15% of sessions + $200 bonus
+```
+
+**3. Complex Multi-Condition**
+```
+Tier 1: Default → 10% sessions + 5% sales
+Tier 2: 15+ sessions OR $3000+ sales → 15% sessions + 8% sales  
+Tier 3: 25+ sessions AND $5000+ sales → 20% sessions + 10% sales + $250
+```
+
+#### Why This Framework Works
+
+1. **No Formula Complexity** - Users configure tiers, not write formulas
+2. **Covers Real Scenarios** - Handles 99% of commission structures
+3. **Clear Mental Model** - Triggers and rewards are separate concepts
+4. **Flexible Composition** - Mix session, sales, and bonus rewards
+5. **Easy to Audit** - Clear what tier was achieved and why
+6. **Safe from Errors** - No syntax errors or calculation bugs possible
+
+### Visual Formula Builder Interface (Advanced Mode - Future Enhancement)
+
+For organizations that need custom formulas beyond the tier framework, an advanced mode could be added:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Advanced Formula Editor - Use Tier Configuration for simpler setup │
 ├────────────────────────┬────────────────────────────────────────────┤
 │ AVAILABLE VARIABLES    │ FORMULA EDITOR                             │
 │                        │                                            │
-│ All Sessions           │ ┌──────────────────────────────────────┐  │
-│ ├─ sessions_count      │ │ // Progressive tier calculation      │  │
-│ └─ sessions_value      │ │ base_rate = PROGRESSIVE(             │  │
-│                        │ │   validated_value,                   │  │
-│ Validated Sessions     │ │   validated_count,                   │  │
-│ ├─ validated_count     │ │   [[0, 30, 0.20],                   │  │
-│ └─ validated_value     │ │    [31, 50, 0.25],                  │  │
-│                        │ │    [51, null, 0.30]]                │  │
-│ Package Sales          │ │ );                                   │  │
-│ ├─ sales_count         │ │                                      │  │
-│ ├─ sales_value         │ │ // Add sales commission             │  │
-│ └─ avg_package_value   │ │ sales_commission = sales_value * 0.15;│  │
-│                        │ │                                      │  │
-│ Averages               │ │                                      │  │
-│ └─ avg_session_value   │ │ // Total commission                  │  │
-│ ────────────────────   │ │ base_rate + sales_commission        │  │
-│ HELPER FUNCTIONS       │ │                                      │  │
-│                        │ │                                      │  │
+│ Validated Sessions     │ ┌──────────────────────────────────────┐  │
+│ ├─ validated_count     │ │ // Custom formula for edge cases    │  │
+│ └─ validated_value     │ │                                      │  │
+│                        │ │ // Base commission on sessions      │  │
+│ Package Sales          │ │ session_commission =                │  │
+│ ├─ sales_count         │ │   validated_value * 0.15;           │  │
+│ └─ sales_value         │ │                                      │  │
+│                        │ │ // Sales bonus with conditions      │  │
+│ [Show All Variables]   │ │ sales_commission = IF(               │  │
+│                        │ │   sales_value > 5000,               │  │
+│ ────────────────────   │ │   sales_value * 0.10,               │  │
+│ FUNCTIONS              │ │   sales_value * 0.05                │  │
+│                        │ │ );                                   │  │
 │ ► Mathematical         │ │                                      │  │
-│   MIN() MAX() ROUND()  │ │                                      │  │
+│ ► Conditional          │ │ // Performance multiplier           │  │
+│ ► Date/Time           │ │ multiplier = IF(                    │  │
+│                        │ │   validated_count > 30, 1.2, 1.0    │  │
+│ [Function Reference]   │ │ );                                   │  │
+│                        │ │                                      │  │
+│                        │ │ // Total commission                  │  │
+│                        │ │ (session_commission + sales_commission)│  │
+│                        │ │   * multiplier                       │  │
 │                        │ └──────────────────────────────────────┘  │
-│ ► Conditional Logic    │                                            │
-│   IF() IFS() SWITCH()  │ [Validate Formula] [Format Code]          │
 │                        │                                            │
-│ ► Tier Calculations    ├────────────────────────────────────────────┤
-│   TIER()               │ TEST YOUR FORMULA                          │
-│   PROGRESSIVE()        │                                            │
-│                        │                                            │
-│ ► Target Bonuses       │ Test Values:                               │
-│   TARGET_BONUS()       │ sessions_count: [50    ]                  │
-│   TIERED_BONUS()       │                                            │
-│                        │                                            │
-│ [Show All Functions]   │
-│                        │ validated_count: [48    ]                 │
-│                        │ validated_value: [$4800 ]                 │
-│                        │ sales_count: [10    ]                     │
-│                        │ sales_value: [$15000]                     │
-│                        │                                            │
-│                        │ [Run Test]                                 │
-│                        │                                            │
-│                        │ Result: $3,470.00                         │
-│                        │ ├─ Base (Progressive): $1,200.00          │
-│                        │ ├─ Sales (15%): $1,770.00                 │
-│                        │ └─ Target Bonus: $500.00                   │
-│                        │                                            │
-│                        │ [Save Formula] [Cancel]                   │
+│                        │ [Validate] [Test] [Save Formula]          │
 └────────────────────────┴────────────────────────────────────────────┘
 ```
 
