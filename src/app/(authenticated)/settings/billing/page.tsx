@@ -109,7 +109,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
           <CardTitle className="flex items-center justify-between">
             <span>Current Plan</span>
             <Badge 
-              variant={currentTier === 'PRO' ? 'success' : 'gray'} 
+              variant={currentTier === 'SCALE' ? 'success' : 'gray'} 
               size="sm"
             >
               {tierConfig.name}
@@ -207,28 +207,28 @@ export default async function BillingPage({ searchParams }: PageProps) {
               ) : null}
             </div>
 
-            {/* Pro Plan */}
+            {/* Scale Plan */}
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-lg">{SUBSCRIPTION_TIERS.PRO.name}</h3>
+                <h3 className="font-semibold text-lg">{SUBSCRIPTION_TIERS.SCALE.name}</h3>
                 <p className="text-2xl font-bold mt-1">
-                  ${SUBSCRIPTION_TIERS.PRO.price}
+                  ${SUBSCRIPTION_TIERS.SCALE.price}
                   <span className="text-sm font-normal text-text-secondary">/month</span>
                 </p>
               </div>
               <ul className="space-y-2">
-                {SUBSCRIPTION_TIERS.PRO.features.map((feature, index) => (
+                {SUBSCRIPTION_TIERS.SCALE.features.map((feature, index) => (
                   <li key={index} className="flex items-start gap-2 text-sm">
                     <CheckCircle className="w-4 h-4 text-success-500 mt-0.5" />
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
-              {currentTier === 'PRO' ? (
+              {currentTier === 'SCALE' ? (
                 <Badge variant="success" size="sm">Current Plan</Badge>
               ) : (
-                <UpgradeButton className="w-full" size="sm" tier="PRO">
-                  Upgrade to {SUBSCRIPTION_TIERS.PRO.name}
+                <UpgradeButton className="w-full" size="sm" tier="SCALE">
+                  Upgrade to {SUBSCRIPTION_TIERS.SCALE.name}
                 </UpgradeButton>
               )}
             </div>
