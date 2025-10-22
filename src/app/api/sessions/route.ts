@@ -325,6 +325,14 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check if package has remaining sessions
+    if (pkg.remainingSessions <= 0) {
+      return NextResponse.json(
+        { error: 'Package has no remaining sessions. Please purchase a new package.' },
+        { status: 400 }
+      )
+    }
+
     // For trainers, verify they have permission to create sessions for this client
     if (session.user.role === 'TRAINER') {
       // Check if trainer has access to the client's location (via primary location OR UserLocation)
