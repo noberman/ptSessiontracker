@@ -22,20 +22,20 @@ async function fixTestGymSubscription() {
 
     console.log(`Current status: ${testGym.subscriptionTier}`)
     
-    if (testGym.subscriptionTier === 'PRO') {
-      console.log('✅ Already on PRO! Webhooks are working!')
+    if (testGym.subscriptionTier === 'SCALE') {
+      console.log('✅ Already on SCALE! Webhooks are working!')
       return
     }
 
-    // Check if we should update to PRO
+    // Check if we should update to SCALE
     console.log('\nTest Gym has a Stripe subscription but shows as FREE.')
     console.log('This happens when the webhook wasn\'t set up yet.')
     
-    // Update to PRO
+    // Update to SCALE
     const updated = await prisma.organization.update({
       where: { id: testGym.id },
       data: {
-        subscriptionTier: 'PRO',
+        subscriptionTier: 'SCALE',
         subscriptionStatus: 'ACTIVE',
         // Note: We don't have the subscription ID from Stripe here
         // You could get it from Stripe API if needed

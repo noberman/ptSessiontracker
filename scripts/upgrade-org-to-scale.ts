@@ -52,7 +52,7 @@ async function main() {
   const updated = await prisma.organization.update({
     where: { id: orgToUpgrade.id },
     data: {
-      subscriptionTier: 'PRO', // Using PRO as SCALE might not exist in enum
+      subscriptionTier: 'SCALE',
       subscriptionStatus: 'ACTIVE'
     }
   })
