@@ -179,7 +179,6 @@ export function CommissionDashboard({
                 <tr className="text-left text-sm text-text-secondary">
                   <th className="pb-3 font-medium">Trainer</th>
                   <th className="pb-3 font-medium text-center">Sessions</th>
-                  <th className="pb-3 font-medium text-right">Current Tier</th>
                   <th className="pb-3 font-medium text-right">Rate</th>
                   <th className="pb-3 font-medium text-right">Session Value</th>
                   <th className="pb-3 font-medium text-right">Commission</th>
@@ -208,11 +207,6 @@ export function CommissionDashboard({
                         <td className="py-4 text-center">
                           <Badge>{commission.totalSessions}</Badge>
                         </td>
-                        <td className="py-4 text-right">
-                          <Badge variant="secondary">
-                            {commission.tierAchieved ? `Tier ${commission.tierAchieved.minSessions}` : 'Tier 1'}
-                          </Badge>
-                        </td>
                         <td className="py-4 text-right text-text-primary">
                           {commission.commissionRate}%
                         </td>
@@ -227,7 +221,7 @@ export function CommissionDashboard({
                       {/* Expanded Details */}
                       {expandedTrainer === commission.trainerId && commission.tiersApplied && (
                         <tr>
-                          <td colSpan={6} className="p-4 bg-background-secondary">
+                          <td colSpan={5} className="p-4 bg-background-secondary">
                             <div className="space-y-2">
                               <div className="text-sm font-medium text-text-primary mb-2">
                                 Tier Breakdown:

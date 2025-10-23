@@ -37,11 +37,11 @@ export interface TrainerCommission {
 /**
  * Get commission tiers from database
  */
-async function getCommissionTiers(): Promise<CommissionTier[]> {
-  console.log('🔍 CALCULATOR: Getting commission tiers...')
+async function getCommissionTiers(organizationId?: string): Promise<CommissionTier[]> {
+  console.log('🔍 CALCULATOR: Getting commission tiers for org:', organizationId || 'no org')
   
   // Use getOrCreateCommissionTiers which will ensure tiers exist
-  const tiers = await getOrCreateCommissionTiers()
+  const tiers = await getOrCreateCommissionTiers(organizationId)
   
   console.log('✅ CALCULATOR: Tiers loaded successfully:', tiers.map(t => `${t.minSessions}-${t.maxSessions || '∞'}:${(t.percentage * 100).toFixed(1)}%`).join(', '))
   
@@ -158,7 +158,8 @@ function calculateGraduatedTier(
 export async function calculateTrainerCommission(
   trainerId: string,
   month: Date,
-  method: CommissionMethod = 'PROGRESSIVE'
+  method: CommissionMethod = 'PROGRESSIVE',
+  organizationId?: string
 ): Promise<TrainerCommission | null> {
   const startDate = startOfMonth(month)
   const endDate = endOfMonth(month)
@@ -197,8 +198,8 @@ export async function calculateTrainerCommission(
   const validatedSessions = sessions.filter(s => s.validated).length
   const totalValue = sessions.reduce((sum, s) => sum + s.sessionValue, 0)
   
-  // Get commission tiers
-  const tiers = await getCommissionTiers()
+  // Get commission tiers - use trainer's organization ID if not provided
+  const tiers = await getCommissionTiers(organizationId || trainer.organizationId || undefined)
   
   const commissionData: Partial<TrainerCommission> = {
     trainerId,
@@ -265,7 +266,7 @@ export async function calculateMonthlyCommissions(
   const commissions: TrainerCommission[] = []
   
   for (const trainer of trainers) {
-    const commission = await calculateTrainerCommission(trainer.id, month, method)
+    const commission = await calculateTrainerCommission(trainer.id, month, method, organizationId)
     if (commission) {
       commissions.push(commission)
     }
