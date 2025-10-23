@@ -31,18 +31,28 @@ export default async function MyCommissionPage({
   const [year, month] = monthParam.split('-').map(Number)
   const selectedMonth = new Date(year, month - 1)
   
+  // Get trainer's organization ID
+  const trainer = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { organizationId: true }
+  })
+  
+  const organizationId = trainer?.organizationId || undefined
+  
   // Get commission method
   const method = params.method || await getCommissionMethod()
   
-  // Calculate trainer's commission
+  // Calculate trainer's commission with organization ID
   const commission = await calculateTrainerCommission(
     session.user.id,
     selectedMonth,
-    method
+    method,
+    organizationId
   )
   
-  // Get commission tiers for display
+  // Get commission tiers for THIS organization only
   const tiers = await prisma.commissionTier.findMany({
+    where: { organizationId },
     orderBy: { minSessions: 'asc' }
   })
   
