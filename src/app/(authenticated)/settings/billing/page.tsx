@@ -155,17 +155,10 @@ export default async function BillingPage({ searchParams }: PageProps) {
           )}
           
           {currentTier === 'GROWTH' && (
-            <div className="pt-4 border-t flex gap-3">
+            <div className="pt-4 border-t">
               <UpgradeButton className="w-full md:w-auto" tier="SCALE">
                 Upgrade to Scale
               </UpgradeButton>
-              <CancelSubscriptionButton className="w-full md:w-auto" />
-            </div>
-          )}
-          
-          {currentTier === 'SCALE' && (
-            <div className="pt-4 border-t">
-              <CancelSubscriptionButton className="w-full md:w-auto" />
             </div>
           )}
         </CardContent>
@@ -266,7 +259,12 @@ export default async function BillingPage({ searchParams }: PageProps) {
               <p className="text-sm text-text-secondary">
                 Manage your payment methods, view invoices, and update billing details in the Stripe customer portal.
               </p>
-              <ManagePaymentButton />
+              <div className="flex gap-3">
+                <ManagePaymentButton />
+                {(currentTier === 'GROWTH' || currentTier === 'SCALE') && (
+                  <CancelSubscriptionButton />
+                )}
+              </div>
             </CardContent>
           </Card>
           
