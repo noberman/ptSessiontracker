@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { BillingNotification } from '@/components/billing/BillingNotification'
 import { InvoiceHistory } from '@/components/billing/InvoiceHistory'
 import { ManagePaymentButton } from '@/components/billing/ManagePaymentButton'
+import { CancelSubscriptionButton } from '@/components/billing/CancelSubscriptionButton'
 
 interface PageProps {
   searchParams: Promise<{ 
@@ -150,6 +151,13 @@ export default async function BillingPage({ searchParams }: PageProps) {
           {currentTier === 'FREE' && (
             <div className="pt-4 border-t">
               <UpgradeButton className="w-full md:w-auto" />
+            </div>
+          )}
+          
+          {(currentTier === 'GROWTH' || currentTier === 'SCALE') && (
+            <div className="pt-4 border-t flex gap-3">
+              <UpgradeButton className="w-full md:w-auto" />
+              <CancelSubscriptionButton className="w-full md:w-auto" />
             </div>
           )}
         </CardContent>
