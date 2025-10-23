@@ -194,12 +194,14 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   const status = mapStripeStatus(subscription.status)
   
-  // Determine tier based on price ID or cancellation status
+  // Determine tier based on price ID
   let tier: 'FREE' | 'GROWTH' | 'SCALE' = 'FREE'
   
-  if (subscription.cancel_at_period_end || subscription.status === 'canceled') {
+  // Only downgrade to FREE if subscription is actually canceled/deleted, not just scheduled to cancel
+  if (subscription.status === 'canceled' || subscription.status === 'incomplete_expired') {
     tier = 'FREE'
   } else {
+    // Keep current tier even if cancel_at_period_end is true (they still have access)
     const priceId = subscription.items.data[0]?.price.id
     if (priceId === process.env.STRIPE_GROWTH_PRICE_ID) {
       tier = 'GROWTH'
