@@ -46,8 +46,8 @@ export function CancelSubscriptionButton({ className }: CancelSubscriptionButton
             <AlertCircle className="w-5 h-5 text-warning-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-warning-900">
               <p className="font-medium">Are you sure you want to cancel?</p>
-              <p className="mt-1">You'll lose access to premium features at the end of your billing period.</p>
-              <p className="mt-2 text-xs">You'll be redirected to manage your subscription.</p>
+              <p className="mt-1">You&apos;ll lose access to premium features at the end of your billing period.</p>
+              <p className="mt-2 text-xs">You&apos;ll be redirected to manage your subscription.</p>
             </div>
           </div>
         </div>
