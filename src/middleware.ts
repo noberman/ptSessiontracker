@@ -81,6 +81,11 @@ export default withAuth(
           return true
         }
         
+        // Webhook endpoints (protected by signature verification instead of auth)
+        if (path.startsWith('/api/stripe/webhook')) {
+          return true
+        }
+        
         // Everything else needs auth
         return !!token
       },
