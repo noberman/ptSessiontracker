@@ -154,9 +154,17 @@ export default async function BillingPage({ searchParams }: PageProps) {
             </div>
           )}
           
-          {(currentTier === 'GROWTH' || currentTier === 'SCALE') && (
+          {currentTier === 'GROWTH' && (
             <div className="pt-4 border-t flex gap-3">
-              <UpgradeButton className="w-full md:w-auto" />
+              <UpgradeButton className="w-full md:w-auto" tier="SCALE">
+                Upgrade to Scale
+              </UpgradeButton>
+              <CancelSubscriptionButton className="w-full md:w-auto" />
+            </div>
+          )}
+          
+          {currentTier === 'SCALE' && (
+            <div className="pt-4 border-t">
               <CancelSubscriptionButton className="w-full md:w-auto" />
             </div>
           )}
