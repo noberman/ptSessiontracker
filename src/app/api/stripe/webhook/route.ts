@@ -134,7 +134,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     },
   })
 
-  console.log(`Organization ${organizationId} upgraded to PRO`)
+  console.log(`Organization ${organizationId} upgraded to ${tier}`)
 }
 
 // Handle new subscription creation

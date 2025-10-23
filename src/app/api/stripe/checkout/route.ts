@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
         organizationId: user.organizationId,
         userId: user.id,
         userEmail: user.email,
+        tier: tier,
       },
       subscription_data: {
         metadata: {
