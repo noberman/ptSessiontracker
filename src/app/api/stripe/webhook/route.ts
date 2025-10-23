@@ -5,6 +5,12 @@ import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 
 // IMPORTANT: This must be a raw body endpoint
+
+// Handle OPTIONS requests for CORS
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 200 })
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text()
   const headersList = await headers()
