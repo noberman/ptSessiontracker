@@ -129,10 +129,18 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
     setError('')
     
     try {
-      // Create demo session
+      // Create demo session with current date/time
       const now = new Date()
-      const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD format
-      const timeStr = now.toTimeString().split(' ')[0].substring(0, 5) // HH:MM format
+      // Format date as YYYY-MM-DD (required by API)
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
+      
+      // Format time as HH:MM
+      const hours = String(now.getHours()).padStart(2, '0')
+      const minutes = String(now.getMinutes()).padStart(2, '0')
+      const timeStr = `${hours}:${minutes}`
       
       const sessionResponse = await fetch('/api/sessions', {
         method: 'POST',
