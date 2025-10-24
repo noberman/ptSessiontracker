@@ -163,7 +163,6 @@ export function PackageTable({
       // Refresh the page to update counts
       router.refresh()
     } catch (error) {
-      console.error('Error deleting package:', error)
       alert(error instanceof Error ? error.message : 'Failed to delete package')
     } finally {
       setDeletingId(null)

@@ -272,10 +272,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting package:', error)
     return NextResponse.json(
-      { 
-        error: error instanceof Error ? error.message : 'Failed to delete package',
-        details: error instanceof Error ? error.stack : undefined
-      },
+      { error: error instanceof Error ? error.message : 'Failed to delete package' },
       { status: 500 }
     )
   }

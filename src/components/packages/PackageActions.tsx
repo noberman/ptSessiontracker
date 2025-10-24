@@ -26,27 +26,19 @@ export function PackageActions({
     setError('')
 
     try {
-      console.log('Attempting to delete package:', packageId)
       const response = await fetch(`/api/packages/${packageId}`, {
         method: 'DELETE',
       })
-
-      console.log('Delete response status:', response.status)
       
       if (!response.ok) {
         const data = await response.json()
-        console.error('Delete failed:', data)
         throw new Error(data.error || 'Failed to delete package')
       }
-
-      // Successfully deleted or deactivated
-      console.log('Package deleted/deactivated successfully')
       
       // Redirect to packages list after successful deletion
       router.push('/packages')
       router.refresh()
     } catch (err) {
-      console.error('Delete error:', err)
       setError(err instanceof Error ? err.message : 'Failed to delete package')
       setIsDeleting(false)
       setShowConfirm(false)
