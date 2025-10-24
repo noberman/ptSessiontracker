@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { DateInput } from '@/components/ui/DateInput'
 import { Sparkles, ChevronRight, CheckCircle, ArrowRight, Mail, MousePointer } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { DemoSessionTable } from '../DemoSessionTable'
@@ -495,9 +496,9 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Date</label>
-                  <Input
-                    type="date"
+                  <DateInput
                     value={new Date().toISOString().split('T')[0]}
+                    onChange={() => {}}
                     disabled
                   />
                 </div>
