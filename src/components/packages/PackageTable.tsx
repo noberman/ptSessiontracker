@@ -252,8 +252,7 @@ export function PackageTable({
                           onClick: () => handleDeletePackage(pkg.id),
                           icon: 'delete',
                           variant: 'danger',
-                          show: canDelete,
-                          disabled: deletingId === pkg.id
+                          show: canDelete
                         }
                       ]}
                     />
