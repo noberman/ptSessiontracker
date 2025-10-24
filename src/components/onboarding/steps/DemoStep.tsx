@@ -130,14 +130,18 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
     
     try {
       // Create demo session
+      const now = new Date()
+      const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD format
+      const timeStr = now.toTimeString().split(' ')[0].substring(0, 5) // HH:MM format
+      
       const sessionResponse = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId: createdClient.id,
           packageId: createdPackage.id,
-          sessionDate: new Date().toISOString(),
-          sessionTime: new Date().toLocaleTimeString(),
+          sessionDate: dateStr,
+          sessionTime: timeStr,
           notes: 'Demo session created during onboarding',
           trainerId: session?.user?.id,
           isDemo: true
