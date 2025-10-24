@@ -55,6 +55,7 @@ export function PackageTable({
   const [packages, setPackages] = useState(initialPackages)
   const [pagination, setPagination] = useState(initialPagination)
   const [loading, setLoading] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -138,6 +139,37 @@ export function PackageTable({
     )
   }
 
+  const handleDeletePackage = async (packageId: string) => {
+    if (deletingId) return // Prevent multiple simultaneous deletions
+    
+    const confirmed = window.confirm('Are you sure you want to delete this package? This action cannot be undone.')
+    if (!confirmed) return
+    
+    setDeletingId(packageId)
+    
+    try {
+      const response = await fetch(`/api/packages/${packageId}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to delete package')
+      }
+      
+      // Remove package from local state
+      setPackages(prev => prev.filter(pkg => pkg.id !== packageId))
+      
+      // Refresh the page to update counts
+      router.refresh()
+    } catch (error) {
+      console.error('Error deleting package:', error)
+      alert(error instanceof Error ? error.message : 'Failed to delete package')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   return (
     <Card padding="none">
       <div className="overflow-x-auto relative">
@@ -216,11 +248,12 @@ export function PackageTable({
                           show: canEdit
                         },
                         {
-                          label: 'Delete',
-                          onClick: () => console.log('Delete package', pkg.id),
+                          label: deletingId === pkg.id ? 'Deleting...' : 'Delete',
+                          onClick: () => handleDeletePackage(pkg.id),
                           icon: 'delete',
                           variant: 'danger',
-                          show: canDelete
+                          show: canDelete,
+                          disabled: deletingId === pkg.id
                         }
                       ]}
                     />
