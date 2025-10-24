@@ -12,7 +12,7 @@ interface CommissionSetupStepProps {
 
 export function CommissionSetupStep({ onNext }: CommissionSetupStepProps) {
   const [method, setMethod] = useState<'FLAT' | 'PROGRESSIVE'>('FLAT')
-  const [flatRate, setFlatRate] = useState(50)
+  const [flatRate, setFlatRate] = useState<number | ''>(50)
   const [tiers, setTiers] = useState([
     { min: 1, max: 10, percentage: 40 },
     { min: 11, max: 20, percentage: 50 },
@@ -32,7 +32,7 @@ export function CommissionSetupStep({ onNext }: CommissionSetupStepProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           method,
-          ...(method === 'FLAT' ? { rate: flatRate } : { tiers })
+          ...(method === 'FLAT' ? { rate: typeof flatRate === 'number' ? flatRate : 0 } : { tiers })
         }),
       })
 
@@ -57,7 +57,7 @@ export function CommissionSetupStep({ onNext }: CommissionSetupStepProps) {
     newTiers[index] = { ...newTiers[index], [field]: value }
     
     // If updating the min of a tier, update the max of the previous tier
-    if (field === 'min' && index > 0) {
+    if (field === 'min' && index > 0 && value) {
       newTiers[index - 1].max = value - 1
     }
     // If updating the max of a tier, update the min of the next tier
@@ -141,7 +141,12 @@ export function CommissionSetupStep({ onNext }: CommissionSetupStepProps) {
                     min="0"
                     max="100"
                     value={flatRate}
-                    onChange={(e) => setFlatRate(parseInt(e.target.value) || 0)}
+                    onChange={(e) => setFlatRate(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                    onBlur={(e) => {
+                      if (e.target.value === '') {
+                        setFlatRate(0)
+                      }
+                    }}
                     className="w-20"
                   />
                   <span className="text-sm">% of session value</span>
@@ -178,7 +183,12 @@ export function CommissionSetupStep({ onNext }: CommissionSetupStepProps) {
                         type="number"
                         min="1"
                         value={tier.min}
-                        onChange={(e) => updateTier(index, 'min', parseInt(e.target.value) || 1)}
+                        onChange={(e) => updateTier(index, 'min', e.target.value === '' ? '' : parseInt(e.target.value) || 1)}
+                        onBlur={(e) => {
+                          if (e.target.value === '') {
+                            updateTier(index, 'min', 1)
+                          }
+                        }}
                         className="w-20"
                         placeholder="Min"
                       />
@@ -190,7 +200,12 @@ export function CommissionSetupStep({ onNext }: CommissionSetupStepProps) {
                           type="number"
                           min={tier.min + 1}
                           value={tier.max || ''}
-                          onChange={(e) => updateTier(index, 'max', parseInt(e.target.value) || null)}
+                          onChange={(e) => updateTier(index, 'max', e.target.value === '' ? null : parseInt(e.target.value))}
+                          onBlur={(e) => {
+                            if (e.target.value === '') {
+                              updateTier(index, 'max', tier.min + 10)
+                            }
+                          }}
                           className="w-20"
                           placeholder="Max"
                         />
@@ -201,7 +216,12 @@ export function CommissionSetupStep({ onNext }: CommissionSetupStepProps) {
                         min="0"
                         max="100"
                         value={tier.percentage}
-                        onChange={(e) => updateTier(index, 'percentage', parseInt(e.target.value) || 0)}
+                        onChange={(e) => updateTier(index, 'percentage', e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                        onBlur={(e) => {
+                          if (e.target.value === '') {
+                            updateTier(index, 'percentage', 0)
+                          }
+                        }}
                         className="w-20"
                         placeholder="%"
                       />
