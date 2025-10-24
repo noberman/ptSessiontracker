@@ -265,11 +265,17 @@ export async function DELETE(
       },
     })
 
-    return NextResponse.json({ message: 'Package deleted successfully' })
+    return NextResponse.json({ 
+      message: 'Package deleted successfully',
+      deactivated: packageData._count.sessions > 0
+    })
   } catch (error) {
     console.error('Error deleting package:', error)
     return NextResponse.json(
-      { error: 'Failed to delete package' },
+      { 
+        error: error instanceof Error ? error.message : 'Failed to delete package',
+        details: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     )
   }
