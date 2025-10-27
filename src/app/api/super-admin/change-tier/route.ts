@@ -10,8 +10,16 @@ export async function POST(request: Request) {
     // Check super-admin authentication
     const session = await getServerSession(authOptions)
     
-    if (!session?.user || session.user.email !== process.env.SUPER_ADMIN_EMAIL) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized - No session' }, { status: 401 })
+    }
+    
+    // Check if user is super admin by role
+    const { isSuperAdmin } = await import('@/lib/auth/super-admin')
+    const isAdmin = await isSuperAdmin(session.user.id)
+    
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized - Not super admin' }, { status: 401 })
     }
     
     const { organizationId, tier } = await request.json()
