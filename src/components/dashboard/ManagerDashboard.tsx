@@ -331,8 +331,9 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
       cumulativeTotal += Number(stat.count)
       cumulativeValidated += Number(stat.validated_count)
       
-      dataPoint['Total Sessions'] = cumulativeTotal
-      dataPoint['Validated'] = cumulativeValidated
+      // Store totals for display but don't add to chart data
+      // dataPoint['Total Sessions'] = cumulativeTotal
+      // dataPoint['Validated'] = cumulativeValidated
       
       // Add to cumulative trainer counts
       if (stat.trainerSessions) {
@@ -648,6 +649,21 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
           <CardTitle>Cumulative Sessions by Trainer</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Summary stats */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="text-sm">
+              <span className="text-text-secondary">Total Sessions: </span>
+              <span className="font-semibold text-text-primary">
+                {data.stats.totalSessions}
+              </span>
+            </div>
+            <div className="text-sm">
+              <span className="text-text-secondary">Validated Sessions: </span>
+              <span className="font-semibold text-success">
+                {data.stats.validatedSessions} ({data.stats.validationRate}%)
+              </span>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -655,21 +671,7 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
               <YAxis fontSize={12} />
               <Tooltip />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="Total Sessions" 
-                stroke="#000000" 
-                strokeWidth={2}
-                strokeDasharray="5 5"
-              />
-              <Line 
-                type="monotone" 
-                dataKey="Validated" 
-                stroke="#10b981" 
-                strokeWidth={2}
-                strokeDasharray="3 3"
-              />
-              {/* Add lines for top trainers */}
+              {/* Add lines for trainers/PT managers only */}
               {topTrainers.map((trainerName, index) => (
                 <Line 
                   key={trainerName}

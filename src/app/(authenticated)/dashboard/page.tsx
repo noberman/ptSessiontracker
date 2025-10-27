@@ -11,12 +11,21 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  // Get user's accessible locations
+  // Get user's accessible locations and organization info
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
       locations: {
         select: { locationId: true }
+      },
+      organizationId: true,
+      organization: {
+        select: {
+          id: true,
+          subscriptionTier: true,
+          lastIssue: true,
+          lastIssueDate: true
+        }
       }
     }
   })
@@ -31,6 +40,10 @@ export default async function DashboardPage() {
       userName={session.user.name || ''}
       actualRole={session.user.role}
       locationIds={locationIds}
+      organizationId={user?.organizationId || ''}
+      subscriptionTier={user?.organization?.subscriptionTier || 'FREE'}
+      lastIssue={user?.organization?.lastIssue}
+      lastIssueDate={user?.organization?.lastIssueDate}
     />
   )
 }

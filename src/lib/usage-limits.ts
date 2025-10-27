@@ -124,6 +124,25 @@ export async function canCreateSession(organizationId: string): Promise<{
 }> {
   const usage = await getOrganizationUsage(organizationId)
   
+  // FIRST: Check if organization exceeds trainer limits
+  if (usage.trainers.limit !== -1 && usage.trainers.current > usage.trainers.limit) {
+    return {
+      allowed: false,
+      reason: `Your organization has ${usage.trainers.current} trainers but your plan allows only ${usage.trainers.limit}. Please deactivate ${usage.trainers.current - usage.trainers.limit} trainer(s) or upgrade your plan to continue logging sessions.`,
+      usage: usage.sessions,
+    }
+  }
+  
+  // SECOND: Check if organization exceeds location limits
+  if (usage.locations.limit !== -1 && usage.locations.current > usage.locations.limit) {
+    return {
+      allowed: false,
+      reason: `Your organization has ${usage.locations.current} locations but your plan allows only ${usage.locations.limit}. Please deactivate ${usage.locations.current - usage.locations.limit} location(s) or upgrade your plan to continue logging sessions.`,
+      usage: usage.sessions,
+    }
+  }
+  
+  // THIRD: Check session limits
   if (usage.sessions.limit === -1) {
     return { allowed: true, usage: usage.sessions }
   }
@@ -212,7 +231,7 @@ export function getUpgradeRecommendation(
 
 /**
  * Check if a specific trainer can log sessions
- * This checks both trainer suspension status and organization limits
+ * This checks organization limits (not individual suspension)
  */
 export async function canTrainerLogSessions(
   trainerId: string,
@@ -222,13 +241,12 @@ export async function canTrainerLogSessions(
   reason?: string
   usage?: UsageStats['sessions']
 }> {
-  // Check if trainer is suspended
+  // Check if trainer exists and is active
   const trainer = await prisma.user.findUnique({
     where: { id: trainerId },
     select: { 
-      suspendedAt: true, 
-      suspendedReason: true,
-      active: true
+      active: true,
+      organizationId: true
     }
   })
   
@@ -246,20 +264,21 @@ export async function canTrainerLogSessions(
     }
   }
   
-  if (trainer.suspendedAt) {
-    return { 
-      allowed: false, 
-      reason: `Your account is suspended due to plan limits. Contact your admin to upgrade.`
+  if (trainer.organizationId !== organizationId) {
+    return {
+      allowed: false,
+      reason: 'Trainer belongs to different organization'
     }
   }
   
-  // Check organization session limit
+  // Check organization limits (this will block if over trainer/location limits)
   const canCreate = await canCreateSession(organizationId)
   return canCreate
 }
 
 /**
  * Check if a location can be used for sessions
+ * This checks organization limits (not individual suspension)
  */
 export async function canUseLocation(
   locationId: string,
@@ -271,8 +290,6 @@ export async function canUseLocation(
   const location = await prisma.location.findUnique({
     where: { id: locationId },
     select: { 
-      suspendedAt: true,
-      suspendedReason: true,
       active: true,
       organizationId: true
     }
@@ -299,10 +316,12 @@ export async function canUseLocation(
     }
   }
   
-  if (location.suspendedAt) {
+  // Check organization limits (this will block if over trainer/location limits)
+  const canCreate = await canCreateSession(organizationId)
+  if (!canCreate.allowed) {
     return {
       allowed: false,
-      reason: `This location is suspended due to plan limits. Contact your admin to upgrade.`
+      reason: canCreate.reason
     }
   }
   

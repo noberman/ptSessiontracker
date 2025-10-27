@@ -51,9 +51,6 @@ model Location {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   organizationId String?
-  // Suspension fields for over-limit handling
-  suspendedAt    DateTime?     // When location was suspended due to plan limits
-  suspendedReason String?      // "TIER_DOWNGRADE", "BETA_EXPIRED", "LIMIT_EXCEEDED"
   clients        Client[]
   organization   Organization? @relation(fields: [organizationId], references: [id])
   sessions       Session[]
@@ -75,9 +72,6 @@ model User {
   updatedAt       DateTime      @updatedAt
   organizationId  String?
   onboardingCompletedAt DateTime? @map("onboarding_completed_at")
-  // Suspension fields for over-limit handling
-  suspendedAt     DateTime?     // When user was suspended due to plan limits
-  suspendedReason String?       // "TIER_DOWNGRADE", "BETA_EXPIRED", "LIMIT_EXCEEDED"
   assignedClients Client[]      @relation("ClientPrimaryTrainer")
   sessions        Session[]
   sentInvitations Invitation[]  @relation("UserInvitations")

@@ -9,15 +9,29 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Eye, ChevronDown } from 'lucide-react'
 import { CompletionModal } from '@/components/onboarding/CompletionModal'
+import { LimitWarnings } from '@/components/LimitWarnings'
 
 interface DashboardWrapperProps {
   userId: string
   userName: string
   actualRole: string
   locationIds: string[]
+  organizationId?: string
+  subscriptionTier?: 'FREE' | 'GROWTH' | 'SCALE'
+  lastIssue?: string | null
+  lastIssueDate?: Date | null
 }
 
-export function DashboardWrapper({ userId, userName, actualRole, locationIds }: DashboardWrapperProps) {
+export function DashboardWrapper({ 
+  userId, 
+  userName, 
+  actualRole, 
+  locationIds,
+  organizationId,
+  subscriptionTier,
+  lastIssue,
+  lastIssueDate
+}: DashboardWrapperProps) {
   // For development, allow switching between views
   const [viewRole, setViewRole] = useState(actualRole)
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false)
@@ -88,6 +102,16 @@ export function DashboardWrapper({ userId, userName, actualRole, locationIds }: 
 
   return (
     <div>
+      {/* Limit Warnings - Show for managers and admins */}
+      {organizationId && subscriptionTier && ['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(actualRole) && (
+        <LimitWarnings 
+          organizationId={organizationId}
+          subscriptionTier={subscriptionTier}
+          lastIssue={lastIssue}
+          lastIssueDate={lastIssueDate}
+        />
+      )}
+      
       {/* Development Role Switcher - Fixed position in dev mode */}
       {isDevelopment && (
         <div className="fixed top-20 right-4 z-50">

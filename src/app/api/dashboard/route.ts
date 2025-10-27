@@ -83,7 +83,7 @@ export async function GET(request: Request) {
     }
     // eslint-disable-next-line prefer-const
     let trainersWhere: any = { 
-      role: 'TRAINER', 
+      role: { in: ['TRAINER', 'PT_MANAGER'] }, // Include PT_MANAGER since they can also log sessions
       active: true,
       organizationId // Filter trainers by organization
     }

@@ -138,7 +138,9 @@ export function TrainerPerformanceTable({
                         )}
                       </button>
                       <div>
-                        <p className="font-medium text-text-primary">{trainer.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-text-primary">{trainer.name}</p>
+                        </div>
                         <p className="text-sm text-text-secondary">{trainer.email}</p>
                       </div>
                     </div>
