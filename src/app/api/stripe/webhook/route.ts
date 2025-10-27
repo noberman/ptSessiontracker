@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
+import { handleSubscriptionDowngrade } from '@/lib/handle-downgrade'
 import Stripe from 'stripe'
 
 // IMPORTANT: This must be a raw body endpoint
@@ -192,6 +193,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     return
   }
 
+  const previousTier = org.subscriptionTier
   const status = mapStripeStatus(subscription.status)
   
   // Determine tier based on price ID
@@ -219,6 +221,22 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   })
 
   console.log(`Organization ${org.id} subscription status: ${status}, tier: ${tier}`)
+  
+  // Handle downgrade if tier decreased
+  if (previousTier !== tier && tierLevel(tier) < tierLevel(previousTier)) {
+    console.log(`Downgrade detected: ${previousTier} → ${tier}`)
+    await handleSubscriptionDowngrade(org.id, previousTier, tier)
+  }
+}
+
+// Helper function to determine tier level for comparison
+function tierLevel(tier: string): number {
+  switch (tier) {
+    case 'SCALE': return 3
+    case 'GROWTH': return 2
+    case 'FREE': return 1
+    default: return 0
+  }
 }
 
 // Handle subscription cancellation
@@ -234,6 +252,8 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     return
   }
 
+  const previousTier = org.subscriptionTier
+
   await prisma.organization.update({
     where: { id: org.id },
     data: {
@@ -242,6 +262,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       stripeSubscriptionId: null,
     },
   })
+  
+  // Handle downgrade to FREE
+  if (previousTier !== 'FREE') {
+    console.log(`Downgrade on deletion: ${previousTier} → FREE`)
+    await handleSubscriptionDowngrade(org.id, previousTier, 'FREE')
+  }
 
   // Log the downgrade
   await prisma.auditLog.create({
