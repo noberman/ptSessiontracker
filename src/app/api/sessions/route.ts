@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { EmailService } from '@/lib/email/sender'
 import { renderSessionValidationEmail } from '@/lib/email/render'
 import { getOrganizationId } from '@/lib/organization-context'
-import { canCreateSession } from '@/lib/usage-limits'
+import { canCreateSession, canTrainerLogSessions, canUseLocation } from '@/lib/usage-limits'
 import crypto from 'crypto'
 
 export async function GET(request: Request) {
@@ -273,6 +273,18 @@ export async function POST(request: Request) {
       actualTrainerId = trainerId
     }
 
+    // Check if the trainer can log sessions (suspension check)
+    const canTrainerLog = await canTrainerLogSessions(actualTrainerId, orgId)
+    if (!canTrainerLog.allowed) {
+      return NextResponse.json(
+        { 
+          error: canTrainerLog.reason,
+          needsUpgrade: true
+        },
+        { status: 403 }
+      )
+    }
+
     // Get the client and package details
     const [client, pkg] = await Promise.all([
       prisma.client.findUnique({
@@ -315,6 +327,20 @@ export async function POST(request: Request) {
         { error: 'Package is inactive' },
         { status: 400 }
       )
+    }
+
+    // Check if the client's location can be used (suspension check)
+    if (client.locationId) {
+      const canUseLocationResult = await canUseLocation(client.locationId, orgId)
+      if (!canUseLocationResult.allowed) {
+        return NextResponse.json(
+          { 
+            error: canUseLocationResult.reason,
+            needsUpgrade: true
+          },
+          { status: 403 }
+        )
+      }
     }
 
     // Check if package has expired
