@@ -182,10 +182,11 @@ export async function checkAndHandleBetaExpiry() {
 
 /**
  * Grant beta access to an organization
+ * @param durationDays - Number of days for beta access. Pass null for indefinite beta.
  */
 export async function grantBetaAccess(
   organizationId: string,
-  durationDays: number = 30
+  durationDays: number | null = null
 ) {
   const org = await prisma.organization.findUnique({
     where: { id: organizationId },
@@ -203,8 +204,14 @@ export async function grantBetaAccess(
     throw new Error('Organization already has beta access')
   }
   
-  const expiresAt = new Date()
-  expiresAt.setDate(expiresAt.getDate() + durationDays)
+  // Calculate expiry date if duration is specified
+  const expiresAt = durationDays 
+    ? (() => {
+        const date = new Date()
+        date.setDate(date.getDate() + durationDays)
+        return date
+      })()
+    : null  // No expiry = indefinite beta
   
   // Grant beta access
   const updated = await prisma.organization.update({
@@ -236,7 +243,7 @@ export async function grantBetaAccess(
     }
   })
   
-  console.log(`[Beta] Granted ${durationDays}-day beta access to organization ${organizationId}`)
+  console.log(`[Beta] Granted ${durationDays ? `${durationDays}-day` : 'indefinite'} beta access to organization ${organizationId}`)
   
   return updated
 }

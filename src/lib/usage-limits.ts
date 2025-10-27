@@ -36,7 +36,8 @@ export async function getOrganizationUsage(organizationId: string): Promise<Usag
   }
 
   // Check for beta access override
-  const effectiveTier = (org.betaAccess && org.betaExpiresAt && org.betaExpiresAt > new Date())
+  // Beta is active if betaAccess is true AND (no expiry OR expiry is in the future)
+  const effectiveTier = (org.betaAccess && (!org.betaExpiresAt || org.betaExpiresAt > new Date()))
     ? 'SCALE'  // Beta users get SCALE tier access
     : org.subscriptionTier
     

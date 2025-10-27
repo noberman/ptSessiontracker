@@ -22,12 +22,14 @@ export async function POST(
   
   try {
     const body = await request.json()
-    const { durationDays = 30 } = body
+    const { durationDays = null } = body // Default to null (indefinite) if not specified
     
     const result = await grantBetaAccess(id, durationDays)
     
     return NextResponse.json({
-      message: `Beta access granted for ${durationDays} days`,
+      message: durationDays 
+        ? `Beta access granted for ${durationDays} days`
+        : 'Beta access granted indefinitely (until manually revoked)',
       organization: result
     })
   } catch (error: any) {
