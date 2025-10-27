@@ -14,7 +14,9 @@ import {
   Shield,
   Upload,
   Trash2,
-  LogOut
+  LogOut,
+  Sparkles,
+  CreditCard
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { getSubscriptionDisplayName } from '@/lib/subscription-utils'
@@ -31,6 +33,8 @@ interface Organization {
   lastActivity: Date
   isClone?: boolean
   clonedFrom?: string | null
+  betaAccess?: boolean
+  betaExpiresAt?: Date | null
 }
 
 interface SuperAdminDashboardProps {
@@ -41,6 +45,7 @@ export default function SuperAdminDashboard({ organizations }: SuperAdminDashboa
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [betaDays, setBetaDays] = useState<{[key: string]: string}>({}) // Store beta days input for each org
 
   const filteredOrgs = organizations.filter(org => 
     org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -117,6 +122,107 @@ export default function SuperAdminDashboard({ organizations }: SuperAdminDashboa
       alert('Failed to delete clones')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleGrantBeta = async (orgId: string) => {
+    const days = betaDays[orgId]
+    const durationDays = days ? parseInt(days) : null // null means indefinite
+    
+    if (days && isNaN(parseInt(days))) {
+      alert('Please enter a valid number of days or leave empty for indefinite beta')
+      return
+    }
+    
+    setLoading(`beta-${orgId}`)
+    try {
+      const response = await fetch('/api/super-admin/grant-beta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          organizationId: orgId,
+          durationDays 
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        alert(`Failed to grant beta: ${data.error || 'Unknown error'}`)
+        return
+      }
+      
+      alert(`Beta access granted${durationDays ? ` for ${durationDays} days` : ' indefinitely'}`)
+      // Refresh the page to update the list
+      window.location.reload()
+    } catch (error) {
+      console.error('Grant beta error:', error)
+      alert('Failed to grant beta access')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const handleRevokeBeta = async (orgId: string) => {
+    if (!confirm('Are you sure you want to revoke beta access?')) {
+      return
+    }
+    
+    setLoading(`revoke-${orgId}`)
+    try {
+      const response = await fetch('/api/super-admin/revoke-beta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: orgId })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        alert(`Failed to revoke beta: ${data.error || 'Unknown error'}`)
+        return
+      }
+      
+      alert('Beta access revoked')
+      window.location.reload()
+    } catch (error) {
+      console.error('Revoke beta error:', error)
+      alert('Failed to revoke beta access')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const handleChangeTier = async (orgId: string, newTier: string) => {
+    if (!confirm(`Change organization to ${newTier} tier?`)) {
+      return
+    }
+    
+    setLoading(`tier-${orgId}`)
+    try {
+      const response = await fetch('/api/super-admin/change-tier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          organizationId: orgId,
+          tier: newTier 
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        alert(`Failed to change tier: ${data.error || 'Unknown error'}`)
+        return
+      }
+      
+      alert(`Tier changed to ${newTier}`)
+      window.location.reload()
+    } catch (error) {
+      console.error('Change tier error:', error)
+      alert('Failed to change tier')
+    } finally {
+      setLoading(null)
     }
   }
 
@@ -290,14 +396,29 @@ export default function SuperAdminDashboard({ organizations }: SuperAdminDashboa
                             CLONE
                           </span>
                         )}
+                        {org.betaAccess && (
+                          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">
+                            BETA
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm text-gray-500">{org.email}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTierColor(org.subscriptionTier)}`}>
-                      {getSubscriptionDisplayName(org.subscriptionTier)}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTierColor(org.subscriptionTier)}`}>
+                        {getSubscriptionDisplayName(org.subscriptionTier)}
+                      </span>
+                      {org.betaAccess && (
+                        <span className="text-xs text-gray-500">
+                          Beta: {org.betaExpiresAt 
+                            ? `Expires ${new Date(org.betaExpiresAt).toLocaleDateString()}`
+                            : 'Indefinite'
+                          }
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
@@ -321,27 +442,72 @@ export default function SuperAdminDashboard({ organizations }: SuperAdminDashboa
                     {formatDistanceToNow(new Date(org.lastActivity), { addSuffix: true })}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleLoginAs(org.id)}
-                        disabled={loading === `login-${org.id}`}
-                        className="flex items-center gap-1"
-                      >
-                        <LogIn className="h-3 w-3" />
-                        Login As
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleExportData(org.id)}
-                        disabled={loading === `export-${org.id}`}
-                        className="flex items-center gap-1"
-                      >
-                        <Download className="h-3 w-3" />
-                        Export
-                      </Button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleLoginAs(org.id)}
+                          disabled={loading === `login-${org.id}`}
+                          className="flex items-center gap-1"
+                        >
+                          <LogIn className="h-3 w-3" />
+                          Login As
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleExportData(org.id)}
+                          disabled={loading === `export-${org.id}`}
+                          className="flex items-center gap-1"
+                        >
+                          <Download className="h-3 w-3" />
+                          Export
+                        </Button>
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        {!org.betaAccess ? (
+                          <>
+                            <input
+                              type="text"
+                              placeholder="Days (or empty)"
+                              className="w-20 px-2 py-1 text-xs border rounded"
+                              value={betaDays[org.id] || ''}
+                              onChange={(e) => setBetaDays({...betaDays, [org.id]: e.target.value})}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleGrantBeta(org.id)}
+                              disabled={loading === `beta-${org.id}`}
+                              className="flex items-center gap-1 text-yellow-600 hover:bg-yellow-50"
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              Beta
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRevokeBeta(org.id)}
+                            disabled={loading === `revoke-${org.id}`}
+                            className="flex items-center gap-1 text-red-600 hover:bg-red-50"
+                          >
+                            Revoke Beta
+                          </Button>
+                        )}
+                        <select
+                          onChange={(e) => handleChangeTier(org.id, e.target.value)}
+                          className="text-xs px-2 py-1 border rounded"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>Change Tier</option>
+                          <option value="FREE">FREE</option>
+                          <option value="GROWTH">GROWTH</option>
+                          <option value="SCALE">SCALE</option>
+                        </select>
+                      </div>
                     </div>
                   </td>
                 </tr>

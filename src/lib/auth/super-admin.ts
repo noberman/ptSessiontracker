@@ -228,7 +228,9 @@ export async function getOrganizationsForSuperAdmin(includeClones = false) {
     clientCount: org._count.clients,
     lastActivity: org.users[0]?.createdAt || org.createdAt,
     isClone: org.isClone,
-    clonedFrom: org.clonedFrom
+    clonedFrom: org.clonedFrom,
+    betaAccess: org.betaAccess,
+    betaExpiresAt: org.betaExpiresAt
   }))
 }
 
