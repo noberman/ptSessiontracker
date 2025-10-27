@@ -119,7 +119,7 @@ export function LimitWarnings({
           )}
           {nearSessionLimit && (
             <p>
-              ⚠️ You've used {usage.sessions.current} of {usage.sessions.limit} sessions this month ({usage.sessions.percentage}%).
+              ⚠️ You&apos;ve used {usage.sessions.current} of {usage.sessions.limit} sessions this month ({usage.sessions.percentage}%).
               Consider upgrading if you need more sessions.
             </p>
           )}
