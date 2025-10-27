@@ -35,7 +35,12 @@ export async function getOrganizationUsage(organizationId: string): Promise<Usag
     throw new Error('Organization not found')
   }
 
-  const tier = SUBSCRIPTION_TIERS[org.subscriptionTier]
+  // Check for beta access override
+  const effectiveTier = (org.betaAccess && org.betaExpiresAt && org.betaExpiresAt > new Date())
+    ? 'SCALE'  // Beta users get SCALE tier access
+    : org.subscriptionTier
+    
+  const tier = SUBSCRIPTION_TIERS[effectiveTier]
   const limits = tier.limits
 
   // Get current counts
@@ -203,4 +208,103 @@ export function getUpgradeRecommendation(
 
   // If on GROWTH, recommend SCALE
   return 'SCALE'
+}
+
+/**
+ * Check if a specific trainer can log sessions
+ * This checks both trainer suspension status and organization limits
+ */
+export async function canTrainerLogSessions(
+  trainerId: string,
+  organizationId: string
+): Promise<{
+  allowed: boolean
+  reason?: string
+  usage?: UsageStats['sessions']
+}> {
+  // Check if trainer is suspended
+  const trainer = await prisma.user.findUnique({
+    where: { id: trainerId },
+    select: { 
+      suspendedAt: true, 
+      suspendedReason: true,
+      active: true
+    }
+  })
+  
+  if (!trainer) {
+    return { 
+      allowed: false, 
+      reason: 'Trainer not found' 
+    }
+  }
+  
+  if (!trainer.active) {
+    return { 
+      allowed: false, 
+      reason: 'Your account is inactive' 
+    }
+  }
+  
+  if (trainer.suspendedAt) {
+    return { 
+      allowed: false, 
+      reason: `Your account is suspended due to plan limits. Contact your admin to upgrade.`
+    }
+  }
+  
+  // Check organization session limit
+  const canCreate = await canCreateSession(organizationId)
+  return canCreate
+}
+
+/**
+ * Check if a location can be used for sessions
+ */
+export async function canUseLocation(
+  locationId: string,
+  organizationId: string
+): Promise<{
+  allowed: boolean
+  reason?: string
+}> {
+  const location = await prisma.location.findUnique({
+    where: { id: locationId },
+    select: { 
+      suspendedAt: true,
+      suspendedReason: true,
+      active: true,
+      organizationId: true
+    }
+  })
+  
+  if (!location) {
+    return {
+      allowed: false,
+      reason: 'Location not found'
+    }
+  }
+  
+  if (location.organizationId !== organizationId) {
+    return {
+      allowed: false,
+      reason: 'Location belongs to different organization'
+    }
+  }
+  
+  if (!location.active) {
+    return {
+      allowed: false,
+      reason: 'Location is inactive'
+    }
+  }
+  
+  if (location.suspendedAt) {
+    return {
+      allowed: false,
+      reason: `This location is suspended due to plan limits. Contact your admin to upgrade.`
+    }
+  }
+  
+  return { allowed: true }
 }

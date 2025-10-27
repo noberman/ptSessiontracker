@@ -39,6 +39,11 @@ model Organization {
   clonedFrom           String?            // Original org ID if this is a clone
   clonedAt             DateTime?          // When this clone was created
   
+  // Beta Access (Added Oct 2024)
+  betaAccess           Boolean            @default(false) // Beta test override
+  betaExpiresAt        DateTime?          // When beta access expires
+  betaPreviousTier     SubscriptionTier?  // Tier to revert to after beta
+  
   // Relations
   locations            Location[]
   users                User[]
@@ -76,6 +81,10 @@ model User {
   active           Boolean   @default(true)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  
+  // Suspension fields (Added Oct 2024)
+  suspendedAt      DateTime? // When suspended due to limits
+  suspendedReason  String?   // TIER_DOWNGRADE, BETA_EXPIRED, LIMIT_EXCEEDED
 
   // Relations
   organization     Organization? @relation(fields: [organizationId], references: [id])
@@ -136,6 +145,10 @@ model Location {
   organizationId String?  // Multi-tenant field
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  
+  // Suspension fields (Added Oct 2024)
+  suspendedAt    DateTime? // When suspended due to limits
+  suspendedReason String?  // TIER_DOWNGRADE, BETA_EXPIRED, LIMIT_EXCEEDED
 
   // Relations
   organization   Organization? @relation(fields: [organizationId], references: [id])
