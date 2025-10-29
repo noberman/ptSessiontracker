@@ -21,17 +21,22 @@ Complete redesign of the commission calculation system using a tier-based framew
 ### Commission Components
 
 #### 1. Session Commission (Execution-Based)
-- Percentage of validated session value
-- Calculated at month-end for all validated sessions
-- Example: 20% of $100 session = $20 per session
+- **Percentage-based**: Percentage of validated session value
+  - Example: 20% of $100 session = $20 per session
+- **Flat fee per session**: Fixed dollar amount per session regardless of value
+  - Example: $50 per session (10 sessions = $500)
+- **Hybrid**: Both flat fee AND percentage
+  - Example: $30 per session + 5% of value
 
 #### 2. Sales Commission (Package Sales)
-- Percentage of package value when sold
-- Calculated at month-end for all packages sold
-- Example: 10% of $1,000 package = $100 commission
+- **Percentage-based**: Percentage of package value when sold
+  - Example: 10% of $1,000 package = $100 commission
+- **Flat fee per sale**: Fixed dollar amount per package sold
+  - Example: $75 per package sold
 
-#### 3. Flat Bonuses
-- Fixed dollar amounts for achieving specific targets
+#### 3. Tier Bonuses
+- Fixed dollar amounts for achieving specific tier thresholds
+- One-time payment when tier is reached
 - Example: $500 bonus for reaching tier 3
 
 ## Tier-Based Architecture
@@ -75,9 +80,16 @@ interface CommissionTier {
   
   // REWARDS - What trainer earns at this tier
   rewards: {
+    // Session-based rewards (can use one or both)
     sessionCommissionPercent?: number   // % of session value
+    sessionFlatFee?: number            // Fixed $ per session
+    
+    // Sales-based rewards (can use one or both)
     salesCommissionPercent?: number     // % of package sales
-    flatBonus?: number                 // Fixed $ amount
+    salesFlatFee?: number              // Fixed $ per package sold
+    
+    // Tier achievement bonus
+    tierBonus?: number                 // One-time $ bonus for reaching tier
   }
 }
 
@@ -210,14 +222,33 @@ const trainer = await prisma.user.findUnique({
 
 ### Common Profile Configurations
 
-#### 1. Flat Rate Profile (Simple)
-Perfect for contractors or part-time trainers:
+#### 1. Flat Rate Profiles
+
+**1a. Percentage-Based Contractor**
 ```
-Profile: "Standard Contractor"
+Profile: "Standard Contractor - Percentage"
 Method: FLAT
 Single Tier:
   - Trigger: NONE (always applies)
   - Rewards: 25% session commission, 0% sales
+```
+
+**1b. Fixed Fee Contractor**
+```
+Profile: "Standard Contractor - Fixed Fee"
+Method: FLAT
+Single Tier:
+  - Trigger: NONE (always applies)
+  - Rewards: $50 per session (sessionFlatFee)
+```
+
+**1c. Hybrid Contractor**
+```
+Profile: "Premium Contractor - Hybrid"
+Method: FLAT
+Single Tier:
+  - Trigger: NONE (always applies)
+  - Rewards: $30 per session + 5% of session value
 ```
 
 #### 2. Progressive Performance Profile
@@ -289,10 +320,16 @@ model CommissionTier {
   sessionThreshold Int?
   salesThreshold   Decimal?
   
-  // Reward Configuration
-  sessionCommissionPercent Decimal? @db.Decimal(5, 2) // e.g., 20.50%
-  salesCommissionPercent   Decimal? @db.Decimal(5, 2) // e.g., 10.25%
-  flatBonus               Decimal? @db.Decimal(10, 2) // e.g., $500.00
+  // Reward Configuration - Session Based
+  sessionCommissionPercent Decimal? @db.Decimal(5, 2)  // e.g., 20.50%
+  sessionFlatFee          Decimal? @db.Decimal(10, 2) // e.g., $50.00 per session
+  
+  // Reward Configuration - Sales Based  
+  salesCommissionPercent   Decimal? @db.Decimal(5, 2)  // e.g., 10.25%
+  salesFlatFee            Decimal? @db.Decimal(10, 2) // e.g., $75.00 per sale
+  
+  // Reward Configuration - Bonuses
+  tierBonus               Decimal? @db.Decimal(10, 2) // e.g., $500.00 one-time
   
   // Relationships
   profile         CommissionProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
@@ -535,21 +572,37 @@ export class TierCommissionCalculator {
     tier: CommissionTier,
     metrics: CalculationMetrics
   ): CommissionBreakdown {
-    const sessionCommission = metrics.sessionValue * (tier.rewards.sessionCommissionPercent || 0) / 100
-    const salesCommission = metrics.salesValue * (tier.rewards.salesCommissionPercent || 0) / 100
-    const flatBonus = tier.rewards.flatBonus || 0
+    // Calculate session commission (flat fee OR percentage, or both)
+    let sessionCommission = 0
+    if (tier.rewards.sessionFlatFee) {
+      sessionCommission += metrics.sessionCount * tier.rewards.sessionFlatFee
+    }
+    if (tier.rewards.sessionCommissionPercent) {
+      sessionCommission += metrics.sessionValue * tier.rewards.sessionCommissionPercent / 100
+    }
+    
+    // Calculate sales commission (flat fee OR percentage, or both)
+    let salesCommission = 0
+    if (tier.rewards.salesFlatFee) {
+      salesCommission += metrics.salesCount * tier.rewards.salesFlatFee
+    }
+    if (tier.rewards.salesCommissionPercent) {
+      salesCommission += metrics.salesValue * tier.rewards.salesCommissionPercent / 100
+    }
+    
+    const tierBonus = tier.rewards.tierBonus || 0
     
     return {
       sessionCommission,
       salesCommission,
-      flatBonus,
-      totalCommission: sessionCommission + salesCommission + flatBonus,
+      tierBonus,
+      totalCommission: sessionCommission + salesCommission + tierBonus,
       breakdown: [{
         tierName: tier.name,
         tierLevel: tier.tierLevel,
         sessionCommission,
         salesCommission,
-        flatBonus
+        tierBonus
       }]
     }
   }
@@ -662,9 +715,14 @@ export async function POST(req: Request) {
           triggerType: tier.trigger.type,
           sessionThreshold: tier.trigger.sessionThreshold,
           salesThreshold: tier.trigger.salesThreshold,
+          // Session rewards
           sessionCommissionPercent: tier.rewards.sessionCommissionPercent,
+          sessionFlatFee: tier.rewards.sessionFlatFee,
+          // Sales rewards
           salesCommissionPercent: tier.rewards.salesCommissionPercent,
-          flatBonus: tier.rewards.flatBonus
+          salesFlatFee: tier.rewards.salesFlatFee,
+          // Bonuses
+          tierBonus: tier.rewards.tierBonus
         }))
       }
     }
@@ -699,9 +757,11 @@ export async function POST(req: Request) {
 │ │ Trigger:    ● No trigger (default tier)                     │   │
 │ │                                                               │   │
 │ │ Rewards:                                                     │   │
-│ │   Session Commission: [10  ]%                               │   │
-│ │   Sales Commission:   [5   ]%                               │   │
-│ │   Flat Bonus:        $[    ]                                │   │
+│ │   Session Commission:                                        │   │
+│ │     ● Percentage: [10  ]%  ○ Flat Fee: $[    ]  ○ Both     │   │
+│ │   Sales Commission:                                          │   │
+│ │     ● Percentage: [5   ]%  ○ Flat Fee: $[    ]              │   │
+│ │   Tier Bonus:        $[    ]  (one-time)                    │   │
 │ │                                                               │   │
 │ │ [Remove Tier]                                                │   │
 │ └───────────────────────────────────────────────────────────────┘   │
@@ -715,9 +775,11 @@ export async function POST(req: Request) {
 │ │   ○ Either threshold triggers tier                          │   │
 │ │                                                               │   │
 │ │ Rewards:                                                     │   │
-│ │   Session Commission: [15  ]%                               │   │
-│ │   Sales Commission:   [8   ]%                               │   │
-│ │   Flat Bonus:        $[100 ]                                │   │
+│ │   Session Commission:                                        │   │
+│ │     ○ Percentage: [    ]%  ● Flat Fee: $[50  ]  ○ Both     │   │
+│ │   Sales Commission:                                          │   │
+│ │     ● Percentage: [8   ]%  ○ Flat Fee: $[    ]              │   │
+│ │   Tier Bonus:        $[100 ]  (one-time)                    │   │
 │ │                                                               │   │
 │ │ [Remove Tier]                                                │   │
 │ └───────────────────────────────────────────────────────────────┘   │
@@ -750,12 +812,12 @@ export async function POST(req: Request) {
 │ [Calculate Test]                                                   │
 │                                                                     │
 │ Results:                                                           │
-│ ✓ Achieved: Tier 2 (Performer)                                    │
-│   Session Commission (15%): $330.00                               │
-│   Sales Commission (8%):    $280.00                               │
-│   Flat Bonus:               $100.00                               │
-│   ─────────────────────────────────                              │
-│   Total:                    $710.00                               │
+│ ✓ Achieved: Tier 2 (Standard)                                     │
+│   Session Commission ($50/session × 22): $1,100.00                │
+│   Sales Commission (8% × $3,500):         $280.00                 │
+│   Tier Bonus:                             $100.00                 │
+│   ─────────────────────────────────────────                       │
+│   Total:                                 $1,480.00                 │
 │                                                                     │
 │ [Save Profile] [Cancel]                                           │
 └─────────────────────────────────────────────────────────────────────┘
@@ -910,7 +972,49 @@ In the trainer edit page/module, commission profile assignment is a single dropd
 }
 ```
 
-### 3. Balanced Multi-Condition
+### 3. Flat Fee Progressive Structure
+```javascript
+{
+  name: "Progressive Flat Fee",
+  calculationMethod: "PROGRESSIVE",
+  tiers: [
+    {
+      tierLevel: 1,
+      name: "Base",
+      trigger: { type: "NONE" },
+      rewards: {
+        sessionFlatFee: 40  // $40 per session base rate
+      }
+    },
+    {
+      tierLevel: 2,
+      name: "Standard",
+      trigger: { 
+        type: "SESSION_COUNT",
+        sessionThreshold: 20
+      },
+      rewards: {
+        sessionFlatFee: 50,  // $50 per session after 20 sessions
+        tierBonus: 100      // $100 bonus for reaching this tier
+      }
+    },
+    {
+      tierLevel: 3,
+      name: "Premium",
+      trigger: {
+        type: "SESSION_COUNT",
+        sessionThreshold: 40
+      },
+      rewards: {
+        sessionFlatFee: 60,  // $60 per session after 40 sessions
+        tierBonus: 500      // $500 bonus for reaching this tier
+      }
+    }
+  ]
+}
+```
+
+### 4. Balanced Multi-Condition
 ```javascript
 {
   name: "Balanced Performance",
