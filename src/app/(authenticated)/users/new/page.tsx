@@ -15,16 +15,21 @@ export default async function NewUserPage() {
   }
 
   // Only managers and admins can add users
-  if (!['PT_MANAGER', 'ADMIN'].includes(session.user.role)) {
+  if (!['CLUB_MANAGER', 'PT_MANAGER', 'ADMIN'].includes(session.user.role)) {
     redirect('/dashboard')
   }
 
-  // Get current user with organization
+  // Get current user with organization and locations (for CLUB_MANAGER)
   const currentUser = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
       id: true,
       organizationId: true,
+      locations: {
+        select: {
+          locationId: true,
+        },
+      },
     },
   })
 
@@ -32,11 +37,23 @@ export default async function NewUserPage() {
     redirect('/dashboard')
   }
 
+  // For CLUB_MANAGER, only show their assigned locations
+  // For others, show all active locations in the organization
+  const locationFilter = session.user.role === 'CLUB_MANAGER' 
+    ? {
+        organizationId: currentUser.organizationId,
+        active: true,
+        id: {
+          in: currentUser.locations.map(l => l.locationId),
+        },
+      }
+    : {
+        organizationId: currentUser.organizationId,
+        active: true,
+      }
+
   const locations = await prisma.location.findMany({
-    where: {
-      organizationId: currentUser.organizationId,
-      active: true,
-    },
+    where: locationFilter,
     select: {
       id: true,
       name: true,
