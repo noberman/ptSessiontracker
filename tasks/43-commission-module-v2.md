@@ -581,3 +581,302 @@ railway run npm run migrate:commission
 - [ ] Existing users migrated
 - [ ] No calculation discrepancies
 - [ ] Old system removed after stabilization
+
+---
+
+## Phase 7: Database Cleanup (After 2 weeks stable)
+
+### Why Wait?
+- Ensure no rollback needed
+- Verify all calculations correct
+- Confirm no missing edge cases
+- Have historical data backed up
+
+### Step 1: Backup Old Data
+```sql
+-- Create archive of v1 commission data before removal
+CREATE TABLE _archive_commission_tiers AS 
+SELECT *, NOW() as archived_at, 'v1_cleanup' as archive_reason
+FROM commission_tiers;
+
+CREATE TABLE _archive_org_commission_settings AS
+SELECT id, commission_method, NOW() as archived_at 
+FROM organizations;
+```
+
+### Step 2: Remove V1 Schema
+```prisma
+// Remove from schema.prisma:
+
+// From Organization model, remove:
+// commissionMethod     String             @default("PROGRESSIVE")
+// commissionTiers      CommissionTier[]
+
+// Delete entire model:
+// model CommissionTier { ... }
+```
+
+### Step 3: Create Cleanup Migration
+```sql
+-- Migration: remove_v1_commission_system.sql
+
+-- Drop v1 foreign keys first
+ALTER TABLE commission_tiers 
+DROP CONSTRAINT IF EXISTS commission_tiers_organization_id_fkey;
+
+-- Remove v1 fields from organizations
+ALTER TABLE organizations 
+DROP COLUMN IF EXISTS commission_method;
+
+-- Drop v1 tables
+DROP TABLE IF EXISTS commission_tiers;
+
+-- Clean up any orphaned data
+DELETE FROM audit_logs 
+WHERE entity_type = 'CommissionTier' 
+AND created_at < NOW() - INTERVAL '30 days';
+```
+
+### Step 4: Remove V1 Code
+```typescript
+// Delete these files:
+// - src/lib/commission/calculator.ts (v1 calculator)
+// - src/lib/commission/types.ts (v1 types)
+// - src/app/api/commission/route.ts (v1 endpoints)
+// - Any UI components specific to v1
+
+// Update these files:
+// - Remove v1 imports
+// - Remove v1 calculation fallbacks
+// - Clean up type definitions
+```
+
+### Step 5: Verify Cleanup
+- [ ] No references to `commissionMethod` in codebase
+- [ ] No references to `commission_tiers` table
+- [ ] All commission calculations using v2 system
+- [ ] Archive tables created successfully
+- [ ] All tests still passing
+
+### Cleanup Checklist
+- [ ] Archive tables created with timestamp
+- [ ] V1 schema removed from Prisma
+- [ ] Migration successfully deployed
+- [ ] V1 code files deleted
+- [ ] No TypeScript errors
+- [ ] Production working correctly
+
+---
+
+## UX Design Considerations
+
+### 1. Profile Management Interface
+
+#### Profile List View
+```
+┌─────────────────────────────────────────────────────────┐
+│ Commission Profiles                          [+ Create] │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐│
+│ │ 🎯 Standard Trainer                    5 trainers   ││
+│ │ Progressive • 3 tiers • 10-20% commission           ││
+│ │                                    [Edit] [Delete]  ││
+│ └─────────────────────────────────────────────────────┘│
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐│
+│ │ 💰 Flat Rate Contractor                2 trainers   ││
+│ │ Flat • $50 per session • No bonuses                 ││
+│ │                                    [Edit] [Delete]  ││
+│ └─────────────────────────────────────────────────────┘│
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐│
+│ │ ⭐ Elite Performer                      1 trainer    ││
+│ │ Progressive • 4 tiers • Up to 25% + bonuses         ││
+│ │                                    [Edit] [Delete]  ││
+│ └─────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────┘
+```
+
+**UX Principles:**
+- Show key info at a glance (method, tiers, rates)
+- Display trainer count to prevent accidental deletion
+- Use icons to differentiate profile types
+- One-click access to edit
+
+#### Profile Creation Flow
+
+**Step 1: Basic Info**
+```
+Name: [Elite Trainer Program        ]
+Description: [For trainers with 2+ years]
+Calculation: ( ) Progressive - All sessions at highest tier
+             (•) Graduated - Each tier applies to its range
+             ( ) Flat - Same rate regardless of volume
+```
+
+**Step 2: Tier Configuration**
+```
+┌─ Tier 1: Base ──────────────────────────────┐
+│ Trigger: Automatic (0+ sessions)            │
+│                                              │
+│ 💵 Session Reward:                          │
+│   ( ) Percentage: [  ]% of session value    │
+│   (•) Flat Fee: $[50] per session          │
+│   ( ) None                                  │
+│                                              │
+│ 📦 Sales Reward:                           │
+│   (•) Percentage: [8]% of package value     │
+│   ( ) Flat Fee: $[  ] per package          │
+│   ( ) None                                  │
+│                                              │
+│ 🎁 Tier Bonus: $[0]                        │
+└──────────────────────────────────────────────┘
+
+[+ Add Next Tier]
+```
+
+**UX Decisions:**
+- Radio buttons for exclusive choices (percentage vs flat)
+- Clear labeling with icons
+- Show currency symbols for clarity
+- Progressive disclosure (add tiers as needed)
+
+### 2. Trainer Assignment
+
+#### In User Edit Form
+```
+Commission Settings
+───────────────────
+Profile: [Standard Trainer    ▼]
+         ├─ 🎯 Standard Trainer (10-20%)
+         ├─ 💰 Flat Rate ($50/session)
+         ├─ ⭐ Elite (up to 25% + bonus)
+         └─ 🚀 Sales Focused (heavy on packages)
+
+Preview: "With current month's 23 sessions, 
+         this trainer would earn ~$1,150"
+```
+
+**UX Features:**
+- Dropdown shows key differentiator for each profile
+- Live preview of commission impact
+- Icons for quick visual scanning
+
+### 3. Commission Calculation Display
+
+#### Trainer Dashboard View
+```
+┌─── Your Commission - November 2024 ─────────────┐
+│                                                 │
+│ Profile: Standard Trainer                      │
+│ Current Tier: Tier 2 (15-29 sessions)         │
+│                                                 │
+│ Progress: ████████████░░░░░ 23/30             │
+│          23 sessions (7 more for Tier 3!)      │
+│                                                 │
+│ Earnings Breakdown:                            │
+│ ├─ Sessions (23 × $50): $1,150                │
+│ ├─ Package Sales (2):    $160                 │
+│ └─ Tier 2 Bonus:        $100                  │
+│                          ─────                 │
+│ Total Commission:        $1,410                │
+│                                                 │
+│ [View Details]                                 │
+└─────────────────────────────────────────────────┘
+```
+
+**UX Principles:**
+- Show progress toward next tier
+- Break down earnings clearly
+- Motivate with "X more for next tier"
+- Keep it scannable
+
+### 4. Admin Commission Report
+
+#### Report View with Filters
+```
+Commission Report - November 2024
+──────────────────────────────────
+Filters: [All Profiles ▼] [All Locations ▼]
+
+Group by: (•) Trainer  ( ) Profile  ( ) Location
+
+┌────────────┬─────────┬────────┬───────────┐
+│ Trainer    │ Profile │ Tier   │ Commission│
+├────────────┼─────────┼────────┼───────────┤
+│ John Smith │ Standard│ Tier 2 │   $1,410  │
+│  23 sessions, 2 packages sold  │           │
+├────────────┼─────────┼────────┼───────────┤
+│ Jane Doe   │ Elite   │ Tier 3 │   $3,250  │
+│  45 sessions, 5 packages sold  │           │
+├────────────┼─────────┼────────┼───────────┤
+│ Bob Wilson │ Flat    │ Tier 1 │   $750    │
+│  15 sessions, 0 packages sold  │           │
+└────────────┴─────────┴────────┴───────────┘
+
+Total: $5,410         [Export Excel] [Approve All]
+```
+
+### 5. Error States & Edge Cases
+
+#### No Profile Assigned
+```
+⚠️ No Commission Profile
+This trainer has no commission profile assigned.
+They will not earn any commission until you:
+
+[Assign Profile] [Create New Profile]
+```
+
+#### Profile Deletion Warning
+```
+⚠️ Delete "Standard Trainer" Profile?
+
+This profile is currently assigned to:
+• 5 active trainers
+• 2 archived trainers
+
+These trainers will be unassigned and won't 
+earn commission until reassigned.
+
+Historical calculations will be preserved.
+
+[Cancel] [Reassign Trainers] [Delete Anyway]
+```
+
+### 6. Mobile Responsiveness
+
+#### Mobile Profile View (360px width)
+```
+┌─────────────────────────┐
+│ Commission Profiles     │
+│                    [+]  │
+├─────────────────────────┤
+│ 🎯 Standard Trainer     │
+│ 5 trainers • 10-20%     │
+│ [Edit]                  │
+├─────────────────────────┤
+│ 💰 Flat Rate           │
+│ 2 trainers • $50/sess   │
+│ [Edit]                  │
+└─────────────────────────┘
+```
+
+### UX Best Practices Applied
+
+1. **Progressive Disclosure**: Don't show all options at once
+2. **Immediate Feedback**: Show impact of changes instantly
+3. **Prevent Errors**: Warn before destructive actions
+4. **Motivate Users**: Show progress toward goals
+5. **Scannable**: Use icons, colors, and spacing
+6. **Mobile-First**: Ensure touch-friendly on small screens
+7. **Contextual Help**: Explain complex concepts inline
+
+### Accessibility Considerations
+
+- **Keyboard Navigation**: All forms and buttons accessible via Tab
+- **Screen Readers**: Proper ARIA labels for icons
+- **Color Contrast**: WCAG AA compliant contrast ratios
+- **Error Messages**: Clear, actionable error text
+- **Focus States**: Visible focus indicators
