@@ -31,8 +31,10 @@ export function SessionDetailsPanel({
 
   const formatDate = (dateString: string) => {
     // The date string from the database is already in local time
-    // Do NOT add 'Z' or any timezone conversion - just use it as-is
-    const date = new Date(dateString)
+    // Remove 'Z' if present to ensure JavaScript treats it as local time
+    // This prevents JavaScript from doing UTC->local conversion
+    const cleanDateString = dateString.replace('Z', '').replace(/\.\d{3}Z$/, '')
+    const date = new Date(cleanDateString)
     
     return date.toLocaleDateString('en-US', {
       month: 'short',
