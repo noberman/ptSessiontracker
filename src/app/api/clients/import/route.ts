@@ -219,6 +219,13 @@ export async function POST(request: Request) {
     
     let locations, trainers, existingClients, packageTypes, existingPackages
     
+    // Debug logging for organization context
+    console.log('📦 Import validation - Organization Context:', {
+      organizationId,
+      userRole: session.user.role,
+      userId: session.user.id
+    })
+    
     try {
       [locations, trainers, existingClients, packageTypes, existingPackages] = await Promise.all([
         prisma.location.findMany({ 
@@ -296,6 +303,20 @@ export async function POST(request: Request) {
       )
     }
 
+    // Debug logging for fetched data
+    console.log('📦 Import validation - Fetched data:', {
+      locationsCount: locations.length,
+      trainersCount: trainers.length,
+      packageTypesCount: packageTypes.length,
+      packageTypes: packageTypes.map(pt => ({ 
+        id: pt.id, 
+        name: pt.name, 
+        orgId: pt.organizationId,
+        sessions: pt.defaultSessions,
+        price: pt.defaultPrice 
+      }))
+    })
+    
     const locationMap = Object.fromEntries(
       locations.map(l => [l.name.toLowerCase(), l])
     )
@@ -470,6 +491,12 @@ export async function POST(request: Request) {
           .reduce((sum, r) => sum + (r.packageType?.defaultPrice || 0), 0)
       }
 
+      // Log what we're returning
+      console.log('📦 Import validation - Response package types:', {
+        count: packageTypes.length,
+        types: packageTypes.map(t => t.name)
+      })
+      
       return NextResponse.json({
         action: 'validate',
         summary,
