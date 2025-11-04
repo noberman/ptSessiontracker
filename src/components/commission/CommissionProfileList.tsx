@@ -121,11 +121,11 @@ export function CommissionProfileList({ userRole }: CommissionProfileListProps) 
   const getMethodBadgeVariant = (method: string) => {
     switch (method) {
       case 'PROGRESSIVE':
-        return 'primary'
+        return 'default'
       case 'GRADUATED':
         return 'secondary'
       case 'FLAT':
-        return 'default'
+        return 'gray'
       default:
         return 'default'
     }
