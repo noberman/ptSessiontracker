@@ -411,10 +411,11 @@ export async function POST(request: Request) {
       }
 
       // Numeric validation
+      // Total sessions comes from PackageType or CSV (if provided)
+      const totalSessions = row.totalSessions || matchedPackageType?.defaultSessions || 0
+      
       if (row.totalSessions && (isNaN(row.totalSessions) || row.totalSessions < 0)) {
         errors.push('Total sessions must be a positive number')
-      } else if (!row.totalSessions && !matchedPackageType?.defaultSessions) {
-        errors.push('Total sessions is required (either in CSV or from Package Type)')
       }
       
       if (isNaN(row.remainingSessions) || row.remainingSessions < 0) {
@@ -422,8 +423,8 @@ export async function POST(request: Request) {
       }
 
       // Logical validation - remaining sessions cannot exceed total sessions
-      if (row.totalSessions && row.remainingSessions > row.totalSessions) {
-        errors.push(`Remaining sessions (${row.remainingSessions}) cannot exceed total sessions (${row.totalSessions})`)
+      if (totalSessions > 0 && row.remainingSessions > totalSessions) {
+        errors.push(`Remaining sessions (${row.remainingSessions}) cannot exceed total sessions (${totalSessions})`)
       }
 
       // Check if client exists and has existing packages
