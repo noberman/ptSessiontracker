@@ -388,8 +388,11 @@ export async function POST(request: Request) {
         matchedPackageType = packageTypeMap[row.packageName?.toLowerCase()]
       }
       
-      // REQUIRE PackageType for proper pricing
-      if (!matchedPackageType && packageTypes.length > 0) {
+      // Check if organization has package types defined
+      if (packageTypes.length === 0) {
+        errors.push('No Package Types are defined for your organization. Please go to Settings > Package Types to create them before importing.')
+      } else if (!matchedPackageType) {
+        // Package types exist but this one doesn't match
         errors.push(`Package "${row.packageName}" doesn't match any defined package types. Please select from: ${packageTypes.map(t => t.name).join(', ')}`)
       } else if (matchedPackageType) {
         // Use PackageType defaults
@@ -820,31 +823,32 @@ export async function GET() {
       value: type.defaultPrice || (1000 + index * 200)
     }))
   } else {
-    // Fallback to generic examples
-    samplePackages = [
-      { name: '10 Session PT Package', sessions: 10, value: 1000 },
-      { name: 'Group Training Monthly', sessions: 12, value: 360 },
-      { name: '20 Session PT Package', sessions: 20, value: 1800 },
-      { name: 'Custom Training Plan', sessions: 15, value: 1350 },
-      { name: '5 Session Starter Pack', sessions: 5, value: 450 },
-      { name: 'Group Fitness Weekly', sessions: 8, value: 240 },
-    ]
+    // No package types defined - template will show generic structure only
+    samplePackages = []
   }
 
-  samplePackages.forEach((pkg, index) => {
-    const firstName = firstNames[index % firstNames.length]
-    const lastName = lastNames[index % lastNames.length]
-    const name = `${firstName} ${lastName}`
-    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`
-    const phone = index % 2 === 0 ? `+1555000${1000 + index}` : '' // Add phone for some records
-    const location = locations[index % locations.length]?.name || 'Wood Square'
-    const trainerEmail = index < 4 ? `trainer${(index % 3) + 1}@gym.com` : '' // Some without trainer
-    const remainingSessions = Math.floor(Math.random() * pkg.sessions) + 1
-    const expiryDate = index % 3 === 0 ? '' : new Date(Date.now() + (90 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0] // Some without expiry
-    
-    // Updated to match new format - removed Total Sessions, Total Value, and Session Value
-    csv += `${name},${email},${phone},${location},${trainerEmail},${pkg.name},${remainingSessions},${expiryDate}\n`
-  })
+  if (samplePackages.length > 0) {
+    samplePackages.forEach((pkg, index) => {
+      const firstName = firstNames[index % firstNames.length]
+      const lastName = lastNames[index % lastNames.length]
+      const name = `${firstName} ${lastName}`
+      const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`
+      const phone = index % 2 === 0 ? `+1555000${1000 + index}` : '' // Add phone for some records
+      const location = locations[index % locations.length]?.name || 'Wood Square'
+      const trainerEmail = index < 4 ? `trainer${(index % 3) + 1}@gym.com` : '' // Some without trainer
+      const remainingSessions = Math.floor(Math.random() * pkg.sessions) + 1
+      const expiryDate = index % 3 === 0 ? '' : new Date(Date.now() + (90 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0] // Some without expiry
+      
+      // Updated to match new format - removed Total Sessions, Total Value, and Session Value
+      csv += `${name},${email},${phone},${location},${trainerEmail},${pkg.name},${remainingSessions},${expiryDate}\n`
+    })
+  } else {
+    // No package types - add a comment row explaining the requirement
+    csv += `# IMPORTANT: No Package Types are defined for your organization,,,,,,,,\n`
+    csv += `# Please go to Settings > Package Types to create them before importing,,,,,,,,\n`
+    csv += `# Example format shown below:,,,,,,,,\n`
+    csv += `John Doe,john.doe@example.com,+15551234567,Main Location,trainer@gym.com,[Package Type Name],10,2025-12-31\n`
+  }
 
   return new Response(csv, {
     headers: {
