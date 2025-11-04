@@ -35,9 +35,13 @@ interface CommissionProfile {
   id?: string
   name: string
   isDefault: boolean
+  isActive?: boolean
   calculationMethod: 'PROGRESSIVE' | 'GRADUATED' | 'FLAT'
   triggerType: 'NONE' | 'SESSION_COUNT' | 'SALES_VOLUME' | 'EITHER_OR' | 'BOTH_AND'
   tiers: CommissionTier[]
+  _count?: {
+    users: number
+  }
 }
 
 interface CommissionProfileModalProps {

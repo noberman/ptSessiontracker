@@ -23,7 +23,7 @@ export const SessionValidationEmail: React.FC<SessionValidationEmailData> = ({
 }) => {
   // Handle sessionDate as either a Date object or ISO string
   const date = typeof sessionDate === 'string' 
-    ? new Date(sessionDate + (sessionDate.endsWith('Z') ? '' : 'Z'))
+    ? new Date(sessionDate + ((sessionDate as string).endsWith('Z') ? '' : 'Z'))
     : sessionDate
     
   const formattedDate = date.toLocaleDateString('en-US', {

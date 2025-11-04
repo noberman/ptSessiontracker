@@ -20,10 +20,10 @@ import { DeleteProfileDialog } from './DeleteProfileDialog'
 interface CommissionProfile {
   id: string
   name: string
-  description: string | null
   isDefault: boolean
   isActive: boolean
   calculationMethod: 'PROGRESSIVE' | 'GRADUATED' | 'FLAT'
+  triggerType: 'NONE' | 'SESSION_COUNT' | 'SALES_VOLUME' | 'EITHER_OR' | 'BOTH_AND'
   _count: {
     users: number
   }
@@ -31,7 +31,6 @@ interface CommissionProfile {
     id: string
     tierLevel: number
     name: string
-    triggerType: string
     sessionThreshold: number | null
     salesThreshold: number | null
     sessionCommissionPercent: number | null
@@ -209,12 +208,6 @@ export function CommissionProfileList({ userRole }: CommissionProfileListProps) 
                     {profile.calculationMethod}
                   </Badge>
                 </div>
-
-                {profile.description && (
-                  <p className="text-sm text-text-secondary mb-3">
-                    {profile.description}
-                  </p>
-                )}
 
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                   <div className="flex items-center gap-1 text-text-secondary">

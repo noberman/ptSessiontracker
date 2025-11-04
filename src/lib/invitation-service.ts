@@ -175,7 +175,7 @@ export async function checkInvitationLimit(organizationId: string) {
     return { allowed: false, reason: 'Organization not found' }
   }
 
-  const tier = SUBSCRIPTION_TIERS[org.subscriptionTier]
+  const tier = SUBSCRIPTION_TIERS[org.subscriptionTier || 'FREE']
   
   // Unlimited for Scale tier
   if (tier.limits.trainers === -1) {

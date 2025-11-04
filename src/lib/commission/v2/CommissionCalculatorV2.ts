@@ -210,7 +210,7 @@ export class CommissionCalculatorV2 {
       tierReached: currentTier.tierLevel,
       calculationSnapshot: {
         method: 'PROGRESSIVE',
-        tierUsed: currentTier.name,
+        tierUsed: `Tier ${currentTier.tierLevel}`,
         tierLevel: currentTier.tierLevel,
         sessionCount: sessions.length,
         packageCount: packages.length,
@@ -296,13 +296,13 @@ export class CommissionCalculatorV2 {
       tierReached: currentTier.tierLevel,
       calculationSnapshot: {
         method: 'GRADUATED',
-        tierReached: currentTier.name,
+        tierReached: `Tier ${currentTier.tierLevel}`,
         tierLevel: currentTier.tierLevel,
         sessionCount: sessions.length,
         packageCount: packages.length,
         tierBreakdown: sortedTiers.map(tier => ({
           tierLevel: tier.tierLevel,
-          tierName: tier.name,
+          tierName: `Tier ${tier.tierLevel}`,
           sessionThreshold: tier.sessionThreshold,
           rates: {
             sessionFlatFee: tier.sessionFlatFee,
@@ -355,7 +355,7 @@ export class CommissionCalculatorV2 {
       tierReached: 1,
       calculationSnapshot: {
         method: 'FLAT',
-        tierUsed: flatTier.name,
+        tierUsed: `Tier ${flatTier.tierLevel}`,
         sessionCount: sessions.length,
         packageCount: packages.length,
         rates: {

@@ -477,7 +477,7 @@ export default function SuperAdminDashboard({ organizations }: SuperAdminDashboa
         <BetaModal
           organizationId={betaModalOrg.id}
           organizationName={betaModalOrg.name}
-          currentTier={betaModalOrg.subscriptionTier}
+          currentTier={betaModalOrg.subscriptionTier || 'FREE'}
           onClose={() => setBetaModalOrg(null)}
           onSuccess={() => {
             setBetaModalOrg(null)

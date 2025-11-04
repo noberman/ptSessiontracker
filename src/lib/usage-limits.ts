@@ -39,7 +39,7 @@ export async function getOrganizationUsage(organizationId: string): Promise<Usag
   // Beta is active if betaAccess is true AND (no expiry OR expiry is in the future)
   const effectiveTier = (org.betaAccess && (!org.betaExpiresAt || org.betaExpiresAt > new Date()))
     ? 'SCALE'  // Beta users get SCALE tier access
-    : org.subscriptionTier
+    : (org.subscriptionTier || 'FREE')
     
   const tier = SUBSCRIPTION_TIERS[effectiveTier]
   const limits = tier.limits

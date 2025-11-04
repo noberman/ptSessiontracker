@@ -70,7 +70,7 @@ export async function hasSubscriptionTier(
 ): Promise<boolean> {
   try {
     const org = await getCurrentOrganization()
-    return requiredTiers.includes(org.subscriptionTier)
+    return requiredTiers.includes(org.subscriptionTier || 'FREE')
   } catch {
     return false
   }
