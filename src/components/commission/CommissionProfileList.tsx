@@ -200,7 +200,7 @@ export function CommissionProfileList({ userRole }: CommissionProfileListProps) 
                     {profile.name}
                   </h3>
                   {profile.isDefault && (
-                    <Badge variant="primary" size="sm">Default</Badge>
+                    <Badge variant="default" size="sm">Default</Badge>
                   )}
                   <Badge 
                     variant={getMethodBadgeVariant(profile.calculationMethod)} 
