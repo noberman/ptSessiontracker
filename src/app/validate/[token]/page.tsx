@@ -113,9 +113,9 @@ export default function ValidateSessionPage() {
   }
 
   const formatDate = (dateString: string) => {
-    // Date string is in local time without 'Z', so we append 'Z' to treat it as UTC
-    // This prevents JavaScript from converting it again
-    const date = new Date(dateString + (dateString.endsWith('Z') ? '' : 'Z'))
+    // The date string from the database is already in local time
+    // Do NOT add 'Z' or any timezone conversion
+    const date = new Date(dateString)
     
     // Format the date and time properly
     const dateFormatted = date.toLocaleDateString('en-US', {
