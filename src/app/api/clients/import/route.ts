@@ -813,7 +813,7 @@ export async function GET() {
   let csv = 'Name,Email,Phone,Location,Trainer Email,Package Name,Remaining Sessions,Expiry Date\n'
 
   // Generate sample data rows using actual package types if available
-  let samplePackages = []
+  let samplePackages: Array<{ name: string; sessions: number; value: number }> = []
   
   if (packageTypes.length > 0) {
     // Use actual package types from the organization
