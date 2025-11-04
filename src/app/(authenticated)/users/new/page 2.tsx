@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { getUserAccessibleLocations } from '@/lib/user-locations'
 import { UserForm } from '@/components/users/UserForm'
 
 export default async function NewUserPage() {
@@ -18,16 +19,37 @@ export default async function NewUserPage() {
 
   // Get locations for the form
   let locations: Array<{ id: string; name: string }> = []
-  if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
-    // Club managers can only see their location
-    locations = await prisma.location.findMany({
-      where: { id: session.user.locationId },
-      select: {
-        id: true,
-        name: true,
-      },
-    })
-  } else if (session.user.role !== 'CLUB_MANAGER') {
+  if (session.user.role === 'CLUB_MANAGER') {
+    // Club managers can only see their accessible locations
+    const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+    if (accessibleLocations && accessibleLocations.length > 0) {
+      locations = await prisma.location.findMany({
+        where: { id: { in: accessibleLocations } },
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      })
+    }
+  } else if (session.user.role === 'PT_MANAGER') {
+    // PT managers can see their accessible locations
+    const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+    if (accessibleLocations && accessibleLocations.length > 0) {
+      locations = await prisma.location.findMany({
+        where: { id: { in: accessibleLocations } },
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      })
+    }
+  } else {
     // Admins and PT Managers can see all locations
     locations = await prisma.location.findMany({
       select: {
