@@ -18,6 +18,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     
+    // User must have an organization to fetch profiles
+    if (!session.user.organizationId) {
+      return NextResponse.json({ profiles: [] })
+    }
+    
     const profiles = await prisma.commissionProfile.findMany({
       where: {
         organizationId: session.user.organizationId,
@@ -75,6 +80,11 @@ export async function POST(req: NextRequest) {
     // Only admins can create commission profiles
     if (session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    
+    // Admin must have an organization to create profiles for
+    if (!session.user.organizationId) {
+      return NextResponse.json({ error: 'Admin must be associated with an organization' }, { status: 400 })
     }
     
     const body = await req.json()

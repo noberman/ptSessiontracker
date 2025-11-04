@@ -18,11 +18,9 @@ export async function GET(
     
     const { id } = await params
     
-    const profile = await prisma.commissionProfile.findFirst({
-      where: {
-        id,
-        organizationId: session.user.organizationId
-      },
+    // First get the profile to check its organization
+    const profile = await prisma.commissionProfile.findUnique({
+      where: { id },
       include: {
         tiers: {
           orderBy: { tierLevel: 'asc' }
@@ -35,6 +33,11 @@ export async function GET(
     
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+    
+    // Verify user has access to this profile's organization
+    if (profile.organizationId !== session.user.organizationId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
     
     return NextResponse.json(profile)
@@ -87,23 +90,25 @@ export async function PUT(
     const body = await req.json()
     const validatedData = updateProfileSchema.parse(body)
     
-    // Check profile exists and belongs to organization
-    const existingProfile = await prisma.commissionProfile.findFirst({
-      where: {
-        id,
-        organizationId: session.user.organizationId
-      }
+    // Check profile exists first
+    const existingProfile = await prisma.commissionProfile.findUnique({
+      where: { id }
     })
     
     if (!existingProfile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
     
+    // Verify user has access to this profile's organization
+    if (existingProfile.organizationId !== session.user.organizationId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+    
     // If setting as default, unset other defaults
     if (validatedData.isDefault === true) {
       await prisma.commissionProfile.updateMany({
         where: {
-          organizationId: session.user.organizationId,
+          organizationId: existingProfile.organizationId,
           isDefault: true,
           id: { not: id }
         },
@@ -197,11 +202,8 @@ export async function DELETE(
     const { id } = await params
     
     // Check if profile exists and has no assigned users
-    const profile = await prisma.commissionProfile.findFirst({
-      where: {
-        id,
-        organizationId: session.user.organizationId
-      },
+    const profile = await prisma.commissionProfile.findUnique({
+      where: { id },
       include: {
         _count: {
           select: { users: true }
@@ -211,6 +213,11 @@ export async function DELETE(
     
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+    
+    // Verify user has access to this profile's organization
+    if (profile.organizationId !== session.user.organizationId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
     
     if (profile._count.users > 0) {
