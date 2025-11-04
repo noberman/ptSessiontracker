@@ -223,7 +223,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log(`Organization ${org.id} subscription status: ${status}, tier: ${tier}`)
   
   // Handle downgrade if tier decreased
-  if (previousTier !== tier && tierLevel(tier) < tierLevel(previousTier)) {
+  if (previousTier && previousTier !== tier && tierLevel(tier) < tierLevel(previousTier)) {
     console.log(`Downgrade detected: ${previousTier} → ${tier}`)
     await handleSubscriptionDowngrade(org.id, previousTier, tier)
   }
