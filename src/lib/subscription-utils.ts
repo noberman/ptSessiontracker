@@ -5,9 +5,9 @@ import { SUBSCRIPTION_TIERS } from './stripe'
  * Database values: FREE, GROWTH, SCALE
  * Display names: Starter, Growth, Scale
  */
-export function getSubscriptionDisplayName(tier: keyof typeof SUBSCRIPTION_TIERS | string): string {
-  // Handle null/undefined
-  if (!tier) return 'Unknown'
+export function getSubscriptionDisplayName(tier: keyof typeof SUBSCRIPTION_TIERS | string | null | undefined): string {
+  // Handle null/undefined - treat as FREE tier
+  if (!tier) return 'Starter'
   
   // Ensure uppercase for lookup
   const upperTier = tier.toUpperCase()

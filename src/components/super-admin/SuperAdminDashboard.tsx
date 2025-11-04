@@ -26,7 +26,7 @@ interface Organization {
   id: string
   name: string
   email: string
-  subscriptionTier: string
+  subscriptionTier: string | null
   createdAt: Date
   userCount: number
   sessionCount: number
@@ -213,11 +213,12 @@ export default function SuperAdminDashboard({ organizations }: SuperAdminDashboa
     }
   }
 
-  const getTierColor = (tier: string) => {
+  const getTierColor = (tier: string | null) => {
     switch (tier) {
       case 'FREE': return 'bg-gray-100 text-gray-700'
       case 'GROWTH': return 'bg-blue-100 text-blue-700'
       case 'SCALE': return 'bg-purple-100 text-purple-700'
+      case null: return 'bg-gray-100 text-gray-700'
       default: return 'bg-gray-100 text-gray-700'
     }
   }
