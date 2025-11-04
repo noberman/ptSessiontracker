@@ -55,7 +55,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
   }
 
   const organization = user.organization
-  const currentTier = organization.subscriptionTier
+  const currentTier = organization.subscriptionTier || 'FREE'
   const tierConfig = SUBSCRIPTION_TIERS[currentTier]
 
   // Get current usage stats for the organization
