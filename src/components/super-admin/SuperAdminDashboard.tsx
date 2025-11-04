@@ -34,7 +34,7 @@ interface Organization {
   lastActivity: Date
   isClone?: boolean
   clonedFrom?: string | null
-  betaAccess?: boolean
+  betaAccess?: boolean | null
   betaExpiresAt?: Date | null
 }
 
