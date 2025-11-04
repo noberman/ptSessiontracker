@@ -88,7 +88,7 @@ export async function POST(
     const { html, text } = await renderSessionValidationEmail({
       clientName: sessionData.client.name,
       trainerName: sessionData.trainer.name,
-      sessionDate: sessionData.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
+      sessionDate: sessionData.sessionDate,
       location: sessionData.location.name,
       sessionValue: sessionData.sessionValue,
       validationUrl,
