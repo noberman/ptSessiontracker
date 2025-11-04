@@ -12,10 +12,9 @@ interface ImportRow {
   location: string
   trainerEmail?: string
   packageName: string
-  totalSessions: number
   remainingSessions: number
-  totalValue: number
-  sessionValue?: number
+  totalSessions?: number  // Optional - will be pulled from PackageType
+  sessionValue?: number    // Deprecated - will be calculated
   expiryDate?: Date
 }
 
@@ -41,6 +40,8 @@ interface ValidationResult {
   packageType?: {
     id: string
     name: string
+    defaultSessions: number | null
+    defaultPrice: number | null
   }
 }
 
@@ -107,11 +108,11 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate column headers
+    // Validate column headers - updated to match new template format
     const requiredColumns = [
-      'Name', 'Email', 'Location', 'Package Name', 'Total Sessions', 'Remaining Sessions', 'Total Value'
+      'Name', 'Email', 'Location', 'Package Name', 'Remaining Sessions'
     ]
-    const optionalColumns = ['Phone', 'Trainer Email', 'Session Value', 'Expiry Date']
+    const optionalColumns = ['Phone', 'Trainer Email', 'Total Sessions', 'Expiry Date']
     
     const headers = Object.keys(records[0])
     const missingColumns = requiredColumns.filter(
@@ -153,15 +154,12 @@ export async function POST(request: Request) {
         else if (lowerKey === 'package name') normalized.packageName = value
         else if (lowerKey === 'total sessions') normalized.totalSessions = parseInt(value as string)
         else if (lowerKey === 'remaining sessions') normalized.remainingSessions = parseInt(value as string)
+        // totalValue is now ignored - will be pulled from PackageType
         else if (lowerKey === 'total value') {
-          // Handle currency formatting ($1,200 -> 1200)
-          const cleanValue = (value as string).replace(/[$,]/g, '').trim()
-          normalized.totalValue = parseFloat(cleanValue)
+          // Ignore - will use PackageType's defaultPrice
         }
         else if (lowerKey === 'session value') {
-          // Handle currency formatting
-          const cleanValue = value ? (value as string).replace(/[$,]/g, '').trim() : undefined
-          normalized.sessionValue = cleanValue ? parseFloat(cleanValue) : undefined
+          // Ignore - will be calculated from PackageType
         }
         else if (lowerKey === 'expiry date') {
           if (value) {
@@ -328,8 +326,7 @@ export async function POST(request: Request) {
       if (!row.email || row.email.trim() === '') errors.push('Email is required')
       if (!row.location || row.location.trim() === '') errors.push('Location is required')
       if (!row.packageName || row.packageName.trim() === '') errors.push('Package Name is required')
-      if (!row.totalSessions || isNaN(row.totalSessions)) errors.push('Total Sessions is required and must be a number')
-      if (!row.totalValue || isNaN(row.totalValue)) errors.push('Total Value is required and must be a number')
+      if (!row.remainingSessions || isNaN(row.remainingSessions)) errors.push('Remaining Sessions is required and must be a number')
       
       // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -370,8 +367,24 @@ export async function POST(request: Request) {
         matchedPackageType = packageTypeMap[row.packageName?.toLowerCase()]
       }
       
+      // REQUIRE PackageType for proper pricing
       if (!matchedPackageType && packageTypes.length > 0) {
-        warnings.push(`Package "${row.packageName}" doesn't match any defined package types. Will create as custom package. Available types: ${packageTypes.map(t => t.name).join(', ')}`)
+        errors.push(`Package "${row.packageName}" doesn't match any defined package types. Please select from: ${packageTypes.map(t => t.name).join(', ')}`)
+      } else if (matchedPackageType) {
+        // Use PackageType defaults
+        if (!row.totalSessions && matchedPackageType.defaultSessions) {
+          row.totalSessions = matchedPackageType.defaultSessions
+        }
+        
+        // Check that PackageType has required pricing info
+        if (!matchedPackageType.defaultPrice || !matchedPackageType.defaultSessions) {
+          errors.push(`Package Type "${matchedPackageType.name}" is missing price or session count configuration`)
+        }
+        
+        // Warn if sessionValue is provided (it will be ignored)
+        if (row.sessionValue !== undefined) {
+          warnings.push('Session value in CSV will be ignored - it will be calculated from Package Type settings')
+        }
       }
 
       // Trainer validation (REQUIRED)
@@ -398,21 +411,18 @@ export async function POST(request: Request) {
       }
 
       // Numeric validation
-      if (isNaN(row.totalSessions) || row.totalSessions < 0) {
+      if (row.totalSessions && (isNaN(row.totalSessions) || row.totalSessions < 0)) {
         errors.push('Total sessions must be a positive number')
+      } else if (!row.totalSessions && !matchedPackageType?.defaultSessions) {
+        errors.push('Total sessions is required (either in CSV or from Package Type)')
       }
+      
       if (isNaN(row.remainingSessions) || row.remainingSessions < 0) {
         errors.push('Remaining sessions must be a positive number')
       }
-      if (isNaN(row.totalValue) || row.totalValue < 0) {
-        errors.push('Total value must be a positive number')
-      }
-      if (row.sessionValue !== undefined && (isNaN(row.sessionValue) || row.sessionValue < 0)) {
-        errors.push('Session value must be a positive number')
-      }
 
       // Logical validation - remaining sessions cannot exceed total sessions
-      if (row.remainingSessions > row.totalSessions) {
+      if (row.totalSessions && row.remainingSessions > row.totalSessions) {
         errors.push(`Remaining sessions (${row.remainingSessions}) cannot exceed total sessions (${row.totalSessions})`)
       }
 
@@ -456,7 +466,7 @@ export async function POST(request: Request) {
         needsTrainer: validationResults.filter(r => r.valid && !r.trainer).length,
         totalPackageValue: validationResults
           .filter(r => r.valid)
-          .reduce((sum, r) => sum + r.row.totalValue, 0)
+          .reduce((sum, r) => sum + (r.packageType?.defaultPrice || 0), 0)
       }
 
       return NextResponse.json({
@@ -609,14 +619,24 @@ export async function POST(request: Request) {
               if (existingPackage) {
                 // Package with same name already exists for this client
                 if (duplicateHandling === 'overwrite') {
+                  // Get values from PackageType
+                  const totalSessions = result.row.totalSessions || result.packageType?.defaultSessions || 0
+                  const totalValue = result.packageType?.defaultPrice || 0
+                  
+                  // Calculate sessionValue from totalValue/totalSessions
+                  let sessionValue: number = 0
+                  if (totalSessions > 0) {
+                    sessionValue = totalValue / totalSessions
+                  }
+                  
                   // Overwrite the existing package with new values
                   const pkg = await tx.package.update({
                     where: { id: existingPackage.id },
                     data: {
-                      totalSessions: result.row.totalSessions,
+                      totalSessions: totalSessions,
                       remainingSessions: result.row.remainingSessions,
-                      totalValue: result.row.totalValue,
-                      sessionValue: result.row.sessionValue || (result.row.totalValue / result.row.totalSessions),
+                      totalValue: totalValue,
+                      sessionValue: sessionValue, // Always calculate, never use manual input
                       expiresAt: result.row.expiryDate || null,
                       updatedAt: new Date()
                     }
@@ -630,7 +650,15 @@ export async function POST(request: Request) {
                 }
               } else {
                 // Create new package
-                const sessionValue = result.row.sessionValue || (result.row.totalValue / result.row.totalSessions)
+                // Get values from PackageType
+                const totalSessions = result.row.totalSessions || result.packageType?.defaultSessions || 0
+                const totalValue = result.packageType?.defaultPrice || 0
+                
+                // Calculate sessionValue from totalValue/totalSessions
+                let sessionValue: number = 0
+                if (totalSessions > 0) {
+                  sessionValue = totalValue / totalSessions
+                }
                 
                 // If package name matches a PackageType, use it; otherwise default to Custom
                 const pkg = await tx.package.create({
@@ -639,10 +667,10 @@ export async function POST(request: Request) {
                     name: result.row.packageName,
                     packageType: result.packageType?.name || "Custom",
                     packageTypeId: result.packageType?.id || null,
-                    totalSessions: result.row.totalSessions,
+                    totalSessions: totalSessions,
                     remainingSessions: result.row.remainingSessions,
-                    totalValue: result.row.totalValue,
-                    sessionValue: sessionValue,
+                    totalValue: totalValue,
+                    sessionValue: sessionValue, // Always calculate, never use manual input
                     organizationId: session.user.organizationId!, // Add organizationId
                     active: true,
                     startDate: new Date(),
@@ -699,8 +727,12 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Import error:', error)
+    console.error('Stack trace:', error.stack)
     return NextResponse.json(
-      { error: error.message || 'Failed to process import' },
+      { 
+        error: error.message || 'Failed to process import',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 }
     )
   }
@@ -746,8 +778,8 @@ export async function GET() {
   const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emma', 'Robert', 'Lisa', 'James', 'Maria']
   const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez']
 
-  // Build CSV with header
-  let csv = 'Name,Email,Phone,Location,Trainer Email,Package Name,Total Sessions,Remaining Sessions,Total Value,Session Value,Expiry Date\n'
+  // Build CSV with header - removed Total Value and Session Value columns
+  let csv = 'Name,Email,Phone,Location,Trainer Email,Package Name,Remaining Sessions,Expiry Date\n'
 
   // Generate sample data rows using actual package types if available
   let samplePackages = []
@@ -780,10 +812,10 @@ export async function GET() {
     const location = locations[index % locations.length]?.name || 'Wood Square'
     const trainerEmail = index < 4 ? `trainer${(index % 3) + 1}@gym.com` : '' // Some without trainer
     const remainingSessions = Math.floor(Math.random() * pkg.sessions) + 1
-    const sessionValue = (pkg.value / pkg.sessions).toFixed(2)
     const expiryDate = index % 3 === 0 ? '' : new Date(Date.now() + (90 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0] // Some without expiry
     
-    csv += `${name},${email},${phone},${location},${trainerEmail},${pkg.name},${pkg.sessions},${remainingSessions},${pkg.value},${sessionValue},${expiryDate}\n`
+    // Updated to match new format - removed Total Sessions, Total Value, and Session Value
+    csv += `${name},${email},${phone},${location},${trainerEmail},${pkg.name},${remainingSessions},${expiryDate}\n`
   })
 
   return new Response(csv, {

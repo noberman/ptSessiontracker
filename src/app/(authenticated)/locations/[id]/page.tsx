@@ -83,12 +83,14 @@ export default async function LocationDetailsPage({
     redirect('/locations')
   }
 
-  // Fetch trainers separately through the UserLocation junction table
-  const trainersAtLocation = await prisma.userLocation.findMany({
+  // Fetch trainers and PT managers separately through the UserLocation junction table
+  const staffAtLocation = await prisma.userLocation.findMany({
     where: {
       locationId: id,
       user: {
-        role: 'TRAINER',
+        role: {
+          in: ['TRAINER', 'PT_MANAGER']
+        },
         active: true
       }
     },
@@ -98,6 +100,7 @@ export default async function LocationDetailsPage({
           id: true,
           name: true,
           email: true,
+          role: true,
           _count: {
             select: {
               sessions: {
@@ -119,9 +122,12 @@ export default async function LocationDetailsPage({
     }
   })
 
-  // Extract the user data and count
-  const trainers = trainersAtLocation.map(tl => tl.user)
+  // Extract the user data and separate by role
+  const allStaff = staffAtLocation.map(sl => sl.user)
+  const trainers = allStaff.filter(user => user.role === 'TRAINER')
+  const ptManagers = allStaff.filter(user => user.role === 'PT_MANAGER')
   const trainerCount = trainers.length
+  const ptManagerCount = ptManagers.length
 
   // Check permissions
   if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER') {
@@ -189,9 +195,12 @@ export default async function LocationDetailsPage({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-text-secondary">Active Trainers</p>
+                <p className="text-sm text-text-secondary">Trainers & PT Managers</p>
                 <p className="text-2xl font-bold text-text-primary">
-                  {trainerCount}
+                  {trainerCount + ptManagerCount}
+                </p>
+                <p className="text-xs text-text-secondary mt-1">
+                  {trainerCount} Trainers{ptManagerCount > 0 && `, ${ptManagerCount} PT Mgrs`}
                 </p>
               </div>
               <UserCheck className="h-8 w-8 text-primary-500" />
@@ -243,27 +252,61 @@ export default async function LocationDetailsPage({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Trainers List */}
+        {/* Staff List (Trainers and PT Managers) */}
         <Card>
           <CardHeader>
-            <CardTitle>Trainers at This Location</CardTitle>
+            <CardTitle>Staff at This Location</CardTitle>
           </CardHeader>
           <CardContent>
-            {trainers.length === 0 ? (
+            {allStaff.length === 0 ? (
               <p className="text-text-secondary text-center py-4">
-                No trainers assigned to this location
+                No staff assigned to this location
               </p>
             ) : (
               <div className="space-y-3">
+                {/* Show PT Managers first */}
+                {ptManagers.map((manager) => (
+                  <div key={manager.id} className="flex items-center justify-between p-3 rounded-lg bg-surface-secondary hover:bg-surface-hover transition-colors">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Link 
+                          href={`/users/${manager.id}`}
+                          className="font-medium text-text-primary hover:text-primary-600 transition-colors"
+                        >
+                          {manager.name}
+                        </Link>
+                        <Badge variant="secondary" className="text-xs">
+                          PT Manager
+                        </Badge>
+                      </div>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Mail className="h-3 w-3 text-text-secondary" />
+                        <p className="text-sm text-text-secondary">{manager.email}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-semibold text-text-primary">
+                        {manager._count.sessions}
+                      </p>
+                      <p className="text-xs text-text-secondary">sessions</p>
+                    </div>
+                  </div>
+                ))}
+                {/* Then show Trainers */}
                 {trainers.map((trainer) => (
                   <div key={trainer.id} className="flex items-center justify-between p-3 rounded-lg bg-surface-secondary hover:bg-surface-hover transition-colors">
                     <div>
-                      <Link 
-                        href={`/users/${trainer.id}`}
-                        className="font-medium text-text-primary hover:text-primary-600 transition-colors"
-                      >
-                        {trainer.name}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link 
+                          href={`/users/${trainer.id}`}
+                          className="font-medium text-text-primary hover:text-primary-600 transition-colors"
+                        >
+                          {trainer.name}
+                        </Link>
+                        <Badge variant="default" className="text-xs">
+                          Trainer
+                        </Badge>
+                      </div>
                       <div className="flex items-center space-x-2 mt-1">
                         <Mail className="h-3 w-3 text-text-secondary" />
                         <p className="text-sm text-text-secondary">{trainer.email}</p>

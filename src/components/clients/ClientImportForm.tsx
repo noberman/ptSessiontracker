@@ -31,9 +31,9 @@ interface ValidationResult {
     location: string
     trainerEmail?: string
     packageName: string
-    totalSessions: number
+    totalSessions?: number
     remainingSessions: number
-    totalValue: number
+    totalValue?: number
     sessionValue?: number
     expiryDate?: Date
   }
@@ -698,11 +698,13 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                               </select>
                             )}
                             <div className="text-xs text-text-secondary">
-                              {result.row.remainingSessions}/{result.row.totalSessions} sessions
+                              {result.row.remainingSessions}/{result.row.totalSessions || result.packageType?.defaultSessions || 'N/A'} sessions
                             </div>
-                            <div className="text-xs text-text-secondary">
-                              ${result.row.totalValue.toFixed(2)} (${(result.row.sessionValue || result.row.totalValue / result.row.totalSessions).toFixed(2)}/session)
-                            </div>
+                            {result.packageType?.defaultPrice && (
+                              <div className="text-xs text-text-secondary">
+                                ${result.packageType.defaultPrice.toFixed(2)} (${(result.packageType.defaultPrice / (result.packageType.defaultSessions || 1)).toFixed(2)}/session)
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="p-2">

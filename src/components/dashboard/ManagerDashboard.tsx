@@ -256,19 +256,54 @@ export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
   const handleFetchTrainerDetails = async (trainerId: string) => {
     try {
       let url = `/api/trainers/${trainerId}/sessions`
+      let startDate: Date
+      let endDate: Date = new Date()
+      
       if (period === 'custom' && customStartDate && customEndDate) {
         url += `?startDate=${customStartDate}&endDate=${customEndDate}`
       } else if (period === 'month') {
-        const start = new Date()
-        start.setDate(1)
-        start.setHours(0, 0, 0, 0)
-        url += `?startDate=${start.toISOString()}`
+        // Current month
+        startDate = new Date()
+        startDate.setDate(1)
+        startDate.setHours(0, 0, 0, 0)
+        
+        // End of current month
+        endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0)
+        endDate.setHours(23, 59, 59, 999)
+        
+        url += `?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
       } else if (period === 'week') {
-        const start = new Date()
-        start.setDate(start.getDate() - 7)
-        start.setHours(0, 0, 0, 0)
-        url += `?startDate=${start.toISOString()}`
+        // Last 7 days
+        startDate = new Date()
+        startDate.setDate(startDate.getDate() - 7)
+        startDate.setHours(0, 0, 0, 0)
+        
+        endDate.setHours(23, 59, 59, 999)
+        
+        url += `?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+      } else if (period === 'lastMonth' || period === 'last') {
+        // Last month - from first day to last day of previous month
+        startDate = new Date()
+        startDate.setMonth(startDate.getMonth() - 1)
+        startDate.setDate(1)
+        startDate.setHours(0, 0, 0, 0)
+        
+        endDate = new Date()
+        endDate.setDate(0) // Sets to last day of previous month
+        endDate.setHours(23, 59, 59, 999)
+        
+        url += `?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+      } else if (period === 'day') {
+        // Today only
+        startDate = new Date()
+        startDate.setHours(0, 0, 0, 0)
+        
+        endDate = new Date()
+        endDate.setHours(23, 59, 59, 999)
+        
+        url += `?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
       }
+      // If no period matches, fetch all sessions (no date filter)
       
       const response = await fetch(url)
       if (!response.ok) throw new Error('Failed to fetch trainer details')
