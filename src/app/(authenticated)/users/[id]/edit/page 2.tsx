@@ -106,7 +106,7 @@ export default async function EditUserPage({
   }
 
   // Get commission profiles for the organization
-  const commissionProfiles = await prisma.commissionProfile.findMany({
+  const commissionProfiles = session.user.organizationId ? await prisma.commissionProfile.findMany({
     where: {
       organizationId: session.user.organizationId,
       isActive: true,
@@ -119,7 +119,7 @@ export default async function EditUserPage({
     orderBy: {
       isDefault: 'desc',
     },
-  })
+  }) : []
 
   return (
     <div className="min-h-screen bg-background-secondary">
