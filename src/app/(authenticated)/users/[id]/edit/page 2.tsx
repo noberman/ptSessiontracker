@@ -136,6 +136,7 @@ export default async function EditUserPage({
             ...user,
             role: user.role as string,
             locationIds: user.locations.map(l => l.locationId),
+            commissionProfileId: user.commissionProfileId ?? undefined,
           }}
           locations={locations}
           currentUserRole={session.user.role}
