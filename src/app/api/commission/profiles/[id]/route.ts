@@ -4,14 +4,11 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
-
 // GET /api/commission/profiles/[id] - Get single profile
-export async function GET(req: NextRequest, { params }: RouteParams) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -19,9 +16,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
+    const { id } = await params
+    
     const profile = await prisma.commissionProfile.findFirst({
       where: {
-        id: params.id,
+        id,
         organizationId: session.user.organizationId
       },
       include: {
@@ -68,7 +67,10 @@ const updateProfileSchema = z.object({
   })).optional()
 })
 
-export async function PUT(req: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -81,13 +83,14 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     
+    const { id } = await params
     const body = await req.json()
     const validatedData = updateProfileSchema.parse(body)
     
     // Check profile exists and belongs to organization
     const existingProfile = await prisma.commissionProfile.findFirst({
       where: {
-        id: params.id,
+        id,
         organizationId: session.user.organizationId
       }
     })
@@ -102,7 +105,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         where: {
           organizationId: session.user.organizationId,
           isDefault: true,
-          id: { not: params.id }
+          id: { not: id }
         },
         data: {
           isDefault: false
@@ -112,7 +115,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     
     // Update profile
     const profile = await prisma.commissionProfile.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: validatedData.name,
         calculationMethod: validatedData.calculationMethod,
@@ -132,7 +135,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (validatedData.tiers) {
       // Delete all existing tiers
       await prisma.commissionTierV2.deleteMany({
-        where: { profileId: params.id }
+        where: { profileId: id }
       })
       
       // Create new tiers
@@ -140,13 +143,13 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         data: validatedData.tiers.map(tier => ({
           ...tier,
           id: undefined, // Let database generate new IDs
-          profileId: params.id
+          profileId: id
         }))
       })
       
       // Fetch updated profile with new tiers
       const updatedProfile = await prisma.commissionProfile.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           tiers: {
             orderBy: { tierLevel: 'asc' }
@@ -175,7 +178,10 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/commission/profiles/[id] - Delete profile
-export async function DELETE(req: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -188,10 +194,12 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     
+    const { id } = await params
+    
     // Check if profile exists and has no assigned users
     const profile = await prisma.commissionProfile.findFirst({
       where: {
-        id: params.id,
+        id,
         organizationId: session.user.organizationId
       },
       include: {
@@ -224,7 +232,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     
     // Soft delete by marking as inactive
     await prisma.commissionProfile.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         isActive: false,
         updatedAt: new Date()
@@ -237,7 +245,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
         userId: session.user.id,
         action: 'DELETE_COMMISSION_PROFILE',
         entityType: 'CommissionProfile',
-        entityId: params.id,
+        entityId: id,
         oldValue: {
           name: profile.name
         }
