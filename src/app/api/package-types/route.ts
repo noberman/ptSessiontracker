@@ -11,9 +11,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    console.log('📦 Package Types API - Fetching for org:', {
+      organizationId: session.user.organizationId,
+      userId: session.user.id,
+      userEmail: session.user.email
+    })
+
     const packageTypes = await prisma.packageType.findMany({
       where: { organizationId: session.user.organizationId },
       orderBy: { createdAt: 'desc' }
+    })
+
+    console.log('📦 Package Types API - Found:', {
+      count: packageTypes.length,
+      types: packageTypes.map(pt => ({ 
+        id: pt.id, 
+        name: pt.name,
+        orgId: pt.organizationId 
+      }))
     })
 
     return NextResponse.json(packageTypes)
