@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { TrainerCommissionView } from '@/components/commission/TrainerCommissionView'
-import { calculateTrainerCommission, getCommissionMethod } from '@/lib/commission/calculator'
+import { CommissionCalculatorV2 } from '@/lib/commission/v2/CommissionCalculatorV2'
 import { prisma } from '@/lib/prisma'
 
 export default async function MyCommissionPage({
@@ -10,7 +10,6 @@ export default async function MyCommissionPage({
 }: {
   searchParams: Promise<{ 
     month?: string
-    method?: 'PROGRESSIVE' | 'GRADUATED'
   }>
 }) {
   const params = await searchParams
@@ -29,37 +28,88 @@ export default async function MyCommissionPage({
   const currentDate = new Date()
   const monthParam = params.month || `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`
   const [year, month] = monthParam.split('-').map(Number)
-  const selectedMonth = new Date(year, month - 1)
   
-  // Get trainer's organization ID
+  // Get trainer with commission profile
   const trainer = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { organizationId: true }
+    include: {
+      commissionProfile: {
+        include: {
+          tiers: {
+            orderBy: { tierLevel: 'asc' }
+          }
+        }
+      }
+    }
   })
   
-  const organizationId = trainer?.organizationId || undefined
+  if (!trainer?.commissionProfile) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold text-text-primary mb-4">My Commission</h1>
+        <p className="text-text-secondary">No commission profile assigned. Please contact your manager.</p>
+      </div>
+    )
+  }
   
-  // Get commission method
-  const method = params.method || await getCommissionMethod()
+  const organizationId = trainer.organizationId
   
-  // Calculate trainer's commission with organization ID
-  const commission = await calculateTrainerCommission(
+  // Calculate date range for the selected month
+  const startOfMonth = new Date(year, month - 1, 1)
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
+  
+  // Calculate trainer's commission using v2
+  const calculator = new CommissionCalculatorV2()
+  const calculation = await calculator.calculateCommission(
     session.user.id,
-    selectedMonth,
-    method,
-    organizationId
+    { start: startOfMonth, end: endOfMonth },
+    { saveCalculation: false }
   )
   
-  // Get commission tiers for THIS organization only
-  const tiers = await prisma.commissionTier.findMany({
-    where: { organizationId },
-    orderBy: { minSessions: 'asc' }
+  // Get all sessions to calculate total value
+  const allSessions = await prisma.session.findMany({
+    where: {
+      trainerId: session.user.id,
+      sessionDate: {
+        gte: startOfMonth,
+        lte: endOfMonth
+      },
+      validated: true,
+      cancelled: false
+    },
+    select: { sessionValue: true }
   })
   
-  // Get recent validated sessions for this month
-  const startOfMonth = new Date(year, month - 1, 1)
-  const endOfMonth = new Date(year, month, 0, 23, 59, 59)
+  const totalValue = allSessions.reduce((sum, s) => sum + s.sessionValue, 0)
   
+  // Format commission data for the view component
+  const commission = {
+    trainerId: trainer.id,
+    trainerName: trainer.name,
+    totalSessions: calculation.totalSessions,
+    totalValue,
+    commissionAmount: calculation.totalCommission,
+    tierReached: calculation.tierReached || 1,
+    breakdown: {
+      sessionCommission: calculation.sessionCommission,
+      salesCommission: calculation.salesCommission || 0,
+      tierBonus: calculation.tierBonus || 0
+    },
+    profileName: trainer.commissionProfile.name,
+    calculationMethod: trainer.commissionProfile.calculationMethod
+  }
+  
+  // Use tiers from the trainer's profile
+  const tiers = trainer.commissionProfile.tiers.map(tier => ({
+    minSessions: tier.sessionThreshold || 0,
+    maxSessions: null,
+    percentage: tier.sessionCommissionPercent || 0,
+    flatFee: tier.sessionFlatFee,
+    tierBonus: tier.tierBonus,
+    tierLevel: tier.tierLevel
+  }))
+  
+  // Get recent validated sessions for this month
   const recentSessions = await prisma.session.findMany({
     where: {
       trainerId: session.user.id,
@@ -100,12 +150,8 @@ export default async function MyCommissionPage({
       <TrainerCommissionView
         commission={commission}
         month={monthParam}
-        method={method}
-        tiers={tiers.map(t => ({
-          minSessions: t.minSessions,
-          maxSessions: t.maxSessions,
-          percentage: t.percentage
-        }))}
+        method={commission.calculationMethod as string}
+        tiers={tiers}
         recentSessions={recentSessions.map(s => ({
           id: s.id,
           sessionDate: s.sessionDate.toISOString(),

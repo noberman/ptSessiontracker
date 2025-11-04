@@ -91,7 +91,7 @@ export async function GET(
         help: 'This session has already been validated. If you received this link in error, please contact support.',
         session: {
           id: session.id,
-          sessionDate: session.sessionDate,
+          sessionDate: session.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
           sessionValue: session.sessionValue,
           client: session.client,
           trainer: session.trainer,
@@ -108,7 +108,7 @@ export async function GET(
         expiredAt: session.validationExpiry,
         session: {
           id: session.id,
-          sessionDate: session.sessionDate,
+          sessionDate: session.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
           sessionValue: session.sessionValue,
           client: session.client,
           trainer: session.trainer,
@@ -123,7 +123,7 @@ export async function GET(
       status: 'pending',
       session: {
         id: session.id,
-        sessionDate: session.sessionDate,
+        sessionDate: session.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
         sessionValue: session.sessionValue,
         notes: session.notes,
         client: session.client,
@@ -237,7 +237,7 @@ export async function POST(
       message: 'Session validated successfully',
       session: {
         id: updatedSession.id,
-        sessionDate: updatedSession.sessionDate,
+        sessionDate: updatedSession.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
         validatedAt: updatedSession.validatedAt,
         client: updatedSession.client,
         trainer: updatedSession.trainer,

@@ -2,9 +2,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { CommissionDashboard } from '@/components/commission/CommissionDashboardSimple'
-import { calculateMonthlyCommissions } from '@/lib/commission/calculator'
+import { CommissionCalculatorV2 } from '@/lib/commission/v2/CommissionCalculatorV2'
 import { prisma } from '@/lib/prisma'
-import { ensureCommissionTiers } from '@/lib/commission/ensure-tiers'
 
 export default async function CommissionPage({
   searchParams
@@ -29,9 +28,8 @@ export default async function CommissionPage({
   // Get organization ID
   const organizationId = session.user.organizationId
   
-  // Ensure commission tiers exist (creates defaults if empty)
-  if (organizationId) {
-    await ensureCommissionTiers(organizationId)
+  if (!organizationId) {
+    return <div>Organization not found</div>
   }
   
   // Get current month or from params
@@ -40,16 +38,9 @@ export default async function CommissionPage({
   const [year, month] = monthParam.split('-').map(Number)
   const selectedMonth = new Date(year, month - 1)
   
-  // Get commission method from organization settings
-  let method: 'PROGRESSIVE' | 'GRADUATED' = 'PROGRESSIVE'
-  
-  if (organizationId) {
-    const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: { commissionMethod: true }
-    })
-    method = (organization?.commissionMethod || 'PROGRESSIVE') as 'PROGRESSIVE' | 'GRADUATED'
-  }
+  // Get date range for the selected month
+  const startOfMonth = new Date(year, month - 1, 1)
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
   
   // Get location filter for club managers
   let locationId = params.locationId
@@ -70,13 +61,85 @@ export default async function CommissionPage({
     }
   }
   
-  // Calculate commissions
-  const commissions = await calculateMonthlyCommissions(
-    selectedMonth,
-    locationId,
-    method,
-    organizationId ?? undefined // Convert null to undefined
-  )
+  // Get all trainers with commission profiles
+  const trainers = await prisma.user.findMany({
+    where: {
+      organizationId,
+      role: 'TRAINER',
+      active: true,
+      commissionProfileId: { not: null },
+      ...(locationId ? {
+        locations: {
+          some: { locationId }
+        }
+      } : {})
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      commissionProfile: {
+        include: {
+          tiers: {
+            orderBy: { tierLevel: 'asc' }
+          }
+        }
+      }
+    }
+  })
+  
+  // Calculate commissions using v2 calculator
+  const calculator = new CommissionCalculatorV2()
+  const commissionCalculations = []
+  
+  for (const trainer of trainers) {
+    try {
+      const calculation = await calculator.calculateCommission(
+        trainer.id,
+        { start: startOfMonth, end: endOfMonth },
+        { saveCalculation: false } // Don't save, just calculate for display
+      )
+      
+      // Get trainer's sessions for the period to show details
+      const sessions = await prisma.session.findMany({
+        where: {
+          trainerId: trainer.id,
+          sessionDate: {
+            gte: startOfMonth,
+            lte: endOfMonth
+          },
+          validated: true,
+          cancelled: false
+        },
+        select: {
+          sessionValue: true
+        }
+      })
+      
+      const totalValue = sessions.reduce((sum, s) => sum + s.sessionValue, 0)
+      
+      commissionCalculations.push({
+        trainerId: trainer.id,
+        trainerName: trainer.name,
+        trainerEmail: trainer.email,
+        totalSessions: calculation.totalSessions,
+        totalValue,
+        commissionAmount: calculation.totalCommission,
+        tierReached: calculation.tierReached || 1,
+        profileName: trainer.commissionProfile?.name || 'Default',
+        breakdown: {
+          sessionCommission: calculation.sessionCommission,
+          salesCommission: calculation.salesCommission || 0,
+          tierBonus: calculation.tierBonus || 0
+        }
+      })
+    } catch (error) {
+      console.error(`Failed to calculate commission for ${trainer.name}:`, error)
+    }
+  }
+  
+  // Sort by commission amount (highest first)
+  const commissions = commissionCalculations.sort((a, b) => b.commissionAmount - a.commissionAmount)
   
   // Get locations for filter (admins and PT managers only)
   let locations: Array<{ id: string; name: string }> = []

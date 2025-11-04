@@ -21,14 +21,19 @@ export const SessionValidationEmail: React.FC<SessionValidationEmailData> = ({
   validationUrl,
   expiryDays,
 }) => {
-  const formattedDate = new Date(sessionDate).toLocaleDateString('en-US', {
+  // Handle sessionDate as either a Date object or ISO string
+  const date = typeof sessionDate === 'string' 
+    ? new Date(sessionDate + (sessionDate.endsWith('Z') ? '' : 'Z'))
+    : sessionDate
+    
+  const formattedDate = date.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   })
 
-  const formattedTime = new Date(sessionDate).toLocaleTimeString('en-US', {
+  const formattedTime = date.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
   })

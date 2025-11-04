@@ -8,7 +8,7 @@ import { Plus, X, Users, Mail } from 'lucide-react'
 
 interface Invitation {
   email: string
-  role: 'TRAINER' | 'PT_MANAGER'
+  role: 'TRAINER' | 'PT_MANAGER' | 'CLUB_MANAGER'
 }
 
 interface TeamInviteStepProps {
@@ -20,7 +20,7 @@ interface TeamInviteStepProps {
 export function TeamInviteStep({ organizationName, onNext, onSkip }: TeamInviteStepProps) {
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [currentEmail, setCurrentEmail] = useState('')
-  const [currentRole, setCurrentRole] = useState<'TRAINER' | 'PT_MANAGER'>('TRAINER')
+  const [currentRole, setCurrentRole] = useState<'TRAINER' | 'PT_MANAGER' | 'CLUB_MANAGER'>('TRAINER')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [showSkip, setShowSkip] = useState(false)
@@ -149,11 +149,12 @@ export function TeamInviteStep({ organizationName, onNext, onSkip }: TeamInviteS
           />
           <select
             value={currentRole}
-            onChange={(e) => setCurrentRole(e.target.value as 'TRAINER' | 'PT_MANAGER')}
+            onChange={(e) => setCurrentRole(e.target.value as 'TRAINER' | 'PT_MANAGER' | 'CLUB_MANAGER')}
             className="px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="TRAINER">Trainer</option>
             <option value="PT_MANAGER">PT Manager</option>
+            <option value="CLUB_MANAGER">Club Manager</option>
           </select>
           <Button
             type="button"

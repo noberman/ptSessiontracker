@@ -63,6 +63,22 @@ export default async function NewUserPage() {
     },
   })
 
+  // Get commission profiles for the organization
+  const commissionProfiles = await prisma.commissionProfile.findMany({
+    where: {
+      organizationId: currentUser.organizationId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      isDefault: true,
+    },
+    orderBy: {
+      isDefault: 'desc',
+    },
+  })
+
   return (
     <div className="min-h-screen bg-background-secondary">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -86,6 +102,7 @@ export default async function NewUserPage() {
           <div className="p-6">
             <UserForm 
               locations={locations} 
+              commissionProfiles={commissionProfiles}
               currentUserRole={session.user.role}
             />
           </div>

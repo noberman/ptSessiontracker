@@ -23,7 +23,8 @@
     "deploy:production": "npm run pre-deploy && git push origin main",
     "test:session-limit": "npx tsx scripts/test-session-limit.ts",
     "audit:packages": "npx tsx scripts/audit-package-overflow.ts",
-    "audit:discrepancy": "npx tsx scripts/audit-package-discrepancy.ts"
+    "audit:discrepancy": "npx tsx scripts/audit-package-discrepancy.ts",
+    "migrate:commissions": "tsx scripts/migrateCommissions.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -33,6 +34,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@headlessui/react": "^2.2.9",
     "@prisma/client": "^6.14.0",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-tooltip": "^1.2.8",
@@ -56,7 +58,8 @@
     "recharts": "^3.1.2",
     "resend": "^6.0.1",
     "stripe": "^18.5.0",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

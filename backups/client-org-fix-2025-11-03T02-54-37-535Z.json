@@ -1,0 +1,142 @@
+{
+  "duplicatesToDelete": [
+    {
+      "id": "cmg6cuo92000zo43vbfu5y46b",
+      "name": "Arnizah Abas",
+      "email": "17122aabas@gmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfahe40h0004nn0faqwt9l34",
+      "locationId": "cmfadiif10001le0fwpajh25v",
+      "active": true
+    },
+    {
+      "id": "cmg6cuo9a0013o43vsqv01764",
+      "name": "Avettra Ramesh",
+      "email": "avettraramesh@gmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfahe40h0004nn0faqwt9l34",
+      "locationId": "cmfadiif10001le0fwpajh25v",
+      "active": true
+    },
+    {
+      "id": "cmg6cuo80000no43vxtuob47r",
+      "name": "Carissa Lee Xiu Yan",
+      "email": "carissalxy@gmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfahe40h0004nn0faqwt9l34",
+      "locationId": "cmfadiif10001le0fwpajh25v",
+      "active": true
+    },
+    {
+      "id": "cmg6cuo7n000jo43v6chbzvwx",
+      "name": "Farra Aslyn",
+      "email": "farraaslyn5@gmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfahe40h0004nn0faqwt9l34",
+      "locationId": "cmfadiif10001le0fwpajh25v",
+      "active": true
+    },
+    {
+      "id": "cmg6cuo7e000fo43vkim52tfm",
+      "name": "Geraldine Lai",
+      "email": "gerilai@hotmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfahe40h0004nn0faqwt9l34",
+      "locationId": "cmfadiif10001le0fwpajh25v",
+      "active": true
+    },
+    {
+      "id": "cmg6cuo8e000ro43vqopnyi56",
+      "name": "Kehua Liao",
+      "email": "dollylkh@gmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfahe40h0004nn0faqwt9l34",
+      "locationId": "cmfadiif10001le0fwpajh25v",
+      "active": true
+    },
+    {
+      "id": "cmg6cuo6y0009o43vfr55pdi8",
+      "name": "Nanthini Kunaratnam",
+      "email": "nanthini_kunaratnam@yahoo.co.uk",
+      "organizationId": null,
+      "primaryTrainerId": "cmfahe40h0004nn0faqwt9l34",
+      "locationId": "cmfadiif10001le0fwpajh25v",
+      "active": true
+    },
+    {
+      "id": "cmg6cuo6m0005o43v9hjb86ao",
+      "name": "Razena Bee Binte Shamsuddin",
+      "email": "razena_salma@hotmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfahe40h0004nn0faqwt9l34",
+      "locationId": "cmfadiif10001le0fwpajh25v",
+      "active": true
+    },
+    {
+      "id": "cmg6cuo8q000vo43vyev7j8am",
+      "name": "Soh Jun ru",
+      "email": "sohjunru@hotmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfahe40h0004nn0faqwt9l34",
+      "locationId": "cmfadiif10001le0fwpajh25v",
+      "active": true
+    }
+  ],
+  "clientsToUpdate": [
+    {
+      "id": "cmg0jmda3000op73vsk78gqul",
+      "name": "Allan Lhui",
+      "email": "allanlhui@gmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfddbr620007pj0fhvggoyab",
+      "locationId": "cmf9tjqk30009ob0fxsyq0p2j",
+      "active": true
+    },
+    {
+      "id": "cmg0jmdao000wp73v22tui114",
+      "name": "Alvin Lee Wei Jien",
+      "email": "leeweijien@gmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfddbr620007pj0fhvggoyab",
+      "locationId": "cmf9tjqk30009ob0fxsyq0p2j",
+      "active": true
+    },
+    {
+      "id": "cmg0jmd9s000kp73velwinpw0",
+      "name": "Angus Lhui",
+      "email": "anguslhui@gmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfddbr620007pj0fhvggoyab",
+      "locationId": "cmf9tjqk30009ob0fxsyq0p2j",
+      "active": true
+    },
+    {
+      "id": "cmg0jmdaf000sp73vu97wlpau",
+      "name": "Evie",
+      "email": "jemcalleja@yahoo.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfddbr620007pj0fhvggoyab",
+      "locationId": "cmf9tjqk30009ob0fxsyq0p2j",
+      "active": true
+    },
+    {
+      "id": "cmg0jmd9i000gp73vy84soq8c",
+      "name": "Samuel Raj Singka",
+      "email": "pravin7755@yahoo.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfddbr620007pj0fhvggoyab",
+      "locationId": "cmf9tjqk30009ob0fxsyq0p2j",
+      "active": true
+    },
+    {
+      "id": "cmg0jmd90000cp73vouej50zi",
+      "name": "Zena Cheong",
+      "email": "mscheongzena23@gmail.com",
+      "organizationId": null,
+      "primaryTrainerId": "cmfddbr620007pj0fhvggoyab",
+      "locationId": "cmf9tjqk30009ob0fxsyq0p2j",
+      "active": true
+    }
+  ],
+  "timestamp": "2025-11-03T02:54:37.535Z"
+}

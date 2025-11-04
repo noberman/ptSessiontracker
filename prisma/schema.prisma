@@ -8,53 +8,145 @@ datasource db {
 }
 
 model Organization {
-  id                   String             @id @default(cuid())
-  name                 String
-  email                String             @unique
-  phone                String?
-  subscriptionTier     SubscriptionTier   @default(FREE)
-  subscriptionStatus   SubscriptionStatus @default(ACTIVE)
-  stripeCustomerId     String?            @unique
-  stripeSubscriptionId String?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  onboardingCompletedAt DateTime?         // When first admin completed onboarding
-  commissionMethod     String             @default("PROGRESSIVE")
-  adminNotes           String?            @db.Text
-  lastIssue            String?
-  lastIssueDate        DateTime?
-  isClone              Boolean            @default(false)
-  clonedFrom           String?
-  clonedAt             DateTime?
-  // Beta access fields for testing
-  betaAccess           Boolean            @default(false)
-  betaExpiresAt        DateTime?
-  betaPreviousTier     SubscriptionTier?  // Store tier to revert to after beta
-  commissionTiers      CommissionTier[]
-  locations            Location[]
-  packageTypes         PackageType[]
-  users                User[]
-  invitations          Invitation[]
-  clients              Client[]
-  packages             Package[]
-  sessions             Session[]
+  id                    String             @id @default(cuid())
+  name                  String
+  email                 String             @unique
+  phone                 String?
+  subscriptionStatus    SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId      String?            @unique
+  stripeSubscriptionId  String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  commissionMethod      String             @default("PROGRESSIVE")
+  adminNotes            String?
+  clonedAt              DateTime?
+  clonedFrom            String?
+  isClone               Boolean            @default(false)
+  lastIssue             String?
+  lastIssueDate         DateTime?
+  onboardingCompletedAt DateTime?
+  subscriptionTier      SubscriptionTier?
+  betaAccess            Boolean?           @default(false)
+  betaExpiresAt         DateTime?          @db.Timestamptz(6)
+  betaPreviousTier      SubscriptionTier?
+  clients               Client[]
+  // Commission v1 (to be removed after migration)
+  commissionTiers       CommissionTier[]
+  // Commission v2
+  commissionProfiles    CommissionProfile[]
+  commissionCalculations CommissionCalculation[]
+  invitations           Invitation[]
+  locations             Location[]
+  packageTypes          PackageType[]
+  packages              Package[]
+  sessions              Session[]
+  users                 User[]
 
+  @@index([betaAccess, betaExpiresAt], map: "idx_organizations_beta")
   @@map("organizations")
 }
 
+model CommissionProfile {
+  id                String   @id @default(cuid())
+  organizationId    String
+  name              String
+  isDefault         Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  calculationMethod CalculationMethod @default(PROGRESSIVE)
+  triggerType       TriggerType @default(SESSION_COUNT)
+  
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  tiers            CommissionTierV2[]
+  users            User[]        @relation("UserCommissionProfile")
+  calculations     CommissionCalculation[]
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("commission_profiles")
+}
+
+model CommissionTierV2 {
+  id                    String   @id @default(cuid())
+  profileId             String
+  tierLevel             Int
+  
+  // Thresholds (which ones apply depends on profile's triggerType)
+  sessionThreshold      Int?
+  salesThreshold        Float?
+  
+  // Rewards (all optional - use what you need)
+  sessionCommissionPercent Float?   // % of session value
+  sessionFlatFee           Float?   // Fixed $ per session
+  salesCommissionPercent   Float?   // % of package sales  
+  salesFlatFee            Float?   // Fixed $ per package sold
+  tierBonus               Float?   // One-time bonus for reaching tier
+  
+  profile               CommissionProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  @@unique([profileId, tierLevel])
+  @@index([profileId])
+  @@map("commission_tiers_v2")
+}
+
+model CommissionCalculation {
+  id                String   @id @default(cuid())
+  organizationId    String
+  userId            String
+  profileId         String?
+  periodStart       DateTime
+  periodEnd         DateTime
+  
+  // Calculation method used
+  calculationMethod CalculationMethod
+  
+  // Summary data
+  totalSessions     Int
+  totalPackagesSold Int?
+  
+  // Commission breakdown
+  sessionCommission Float
+  salesCommission   Float?
+  tierBonus        Float?
+  totalCommission  Float
+  
+  // Tier information
+  tierReached      Int?
+  
+  // Snapshot of calculation details
+  calculationSnapshot Json?
+  
+  // Metadata
+  calculatedAt     DateTime @default(now())
+  
+  // Relations
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  user            User @relation(fields: [userId], references: [id])
+  profile         CommissionProfile? @relation(fields: [profileId], references: [id])
+  
+  @@index([userId, periodEnd])
+  @@index([organizationId, periodEnd])
+  @@map("commission_calculations")
+}
+
 model Location {
-  id             String        @id @default(cuid())
-  name           String        @unique
-  active         Boolean       @default(true)
-  archivedAt     DateTime?     // When the location was archived
-  archivedBy     String?       // User ID who archived it
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id             String         @id @default(cuid())
+  name           String         @unique
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   organizationId String?
+  archivedAt     DateTime?
+  archivedBy     String?
   clients        Client[]
-  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organization   Organization?  @relation(fields: [organizationId], references: [id])
   sessions       Session[]
-  userAccess     UserLocation[]  // Users with access to this location
+  userAccess     UserLocation[]
 
   @@index([active])
   @@index([archivedAt])
@@ -62,24 +154,28 @@ model Location {
 }
 
 model User {
-  id              String        @id @default(cuid())
-  email           String
-  password        String
-  name            String
-  role            Role          @default(TRAINER)
-  active          Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  organizationId  String?
-  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
-  assignedClients Client[]      @relation("ClientPrimaryTrainer")
-  sessions        Session[]
-  sentInvitations Invitation[]  @relation("UserInvitations")
-  adminAuditLogs  AdminAuditLog[] @relation("AdminAuditLogs")
-  createdTokens   TempAuthToken[] @relation("TokenAdmin")
-  usedTokens      TempAuthToken[] @relation("TokenUser")
-  organization    Organization? @relation(fields: [organizationId], references: [id])
-  locations       UserLocation[]  // Many-to-many via junction table
+  id                    String          @id @default(cuid())
+  email                 String
+  password              String
+  name                  String
+  role                  Role            @default(TRAINER)
+  active                Boolean         @default(true)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  organizationId        String?
+  onboardingCompletedAt DateTime?       @map("onboarding_completed_at")
+  // Commission v2 fields
+  commissionProfileId   String?
+  commissionProfile     CommissionProfile? @relation("UserCommissionProfile", fields: [commissionProfileId], references: [id])
+  commissionCalculations CommissionCalculation[]
+  adminAuditLogs        AdminAuditLog[] @relation("AdminAuditLogs")
+  assignedClients       Client[]        @relation("ClientPrimaryTrainer")
+  sentInvitations       Invitation[]    @relation("UserInvitations")
+  sessions              Session[]
+  createdTokens         TempAuthToken[] @relation("TokenAdmin")
+  usedTokens            TempAuthToken[] @relation("TokenUser")
+  locations             UserLocation[]
+  organization          Organization?   @relation(fields: [organizationId], references: [id])
 
   @@unique([email, organizationId])
   @@map("users")
@@ -95,11 +191,11 @@ model Client {
   active           Boolean       @default(true)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-  organizationId   String?       // Nullable initially for migration
-  isDemo           Boolean       @default(false) // Flag for demo/test data
+  organizationId   String?
+  isDemo           Boolean       @default(false)
   location         Location      @relation(fields: [locationId], references: [id])
-  primaryTrainer   User?         @relation("ClientPrimaryTrainer", fields: [primaryTrainerId], references: [id])
   organization     Organization? @relation(fields: [organizationId], references: [id])
+  primaryTrainer   User?         @relation("ClientPrimaryTrainer", fields: [primaryTrainerId], references: [id])
   packages         Package[]
   sessions         Session[]
 
@@ -123,11 +219,11 @@ model Package {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   packageTypeId     String?
-  organizationId    String?       // Nullable initially for migration
-  isDemo            Boolean       @default(false) // Flag for demo/test data
+  organizationId    String?
+  isDemo            Boolean       @default(false)
   client            Client        @relation(fields: [clientId], references: [id])
-  packageTypeModel  PackageType?  @relation(fields: [packageTypeId], references: [id])
   organization      Organization? @relation(fields: [organizationId], references: [id])
+  packageTypeModel  PackageType?  @relation(fields: [packageTypeId], references: [id])
   sessions          Session[]
 
   @@index([organizationId])
@@ -135,29 +231,29 @@ model Package {
 }
 
 model Session {
-  id               String    @id @default(cuid())
+  id               String        @id @default(cuid())
   trainerId        String
   clientId         String
   packageId        String?
   locationId       String
   sessionDate      DateTime
   sessionValue     Float
-  validated        Boolean   @default(false)
+  validated        Boolean       @default(false)
   validatedAt      DateTime?
-  validationToken  String?   @unique
+  validationToken  String?       @unique
   validationExpiry DateTime?
   notes            String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   cancelled        Boolean       @default(false)
   cancelledAt      DateTime?
-  organizationId   String?       // Nullable initially for migration
-  isDemo           Boolean       @default(false) // Flag for demo/test data
+  organizationId   String?
+  isDemo           Boolean       @default(false)
   client           Client        @relation(fields: [clientId], references: [id])
   location         Location      @relation(fields: [locationId], references: [id])
+  organization     Organization? @relation(fields: [organizationId], references: [id])
   package          Package?      @relation(fields: [packageId], references: [id])
   trainer          User          @relation(fields: [trainerId], references: [id])
-  organization     Organization? @relation(fields: [organizationId], references: [id])
 
   @@index([trainerId, sessionDate])
   @@index([validationToken])
@@ -244,17 +340,61 @@ model Invitation {
   token          String           @unique @default(cuid())
   expiresAt      DateTime
   acceptedAt     DateTime?
-  locationIds    String[]         @default([]) // Stores location IDs for the invited user
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  invitedBy      User        @relation("UserInvitations", fields: [invitedById], references: [id])
-  
+  locationIds    String[]         @default([])
+  invitedBy      User             @relation("UserInvitations", fields: [invitedById], references: [id])
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+
   @@unique([email, organizationId])
   @@index([token])
   @@index([status])
   @@map("invitations")
+}
+
+model AdminAuditLog {
+  id           String   @id @default(cuid())
+  adminId      String
+  action       String
+  targetUserId String?
+  targetOrgId  String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  admin        User     @relation("AdminAuditLogs", fields: [adminId], references: [id])
+
+  @@map("admin_audit_logs")
+}
+
+model TempAuthToken {
+  id        String    @id @default(cuid())
+  token     String    @unique @default(cuid())
+  userId    String
+  adminId   String
+  expiresAt DateTime
+  usedAt    DateTime?
+  revokedAt DateTime?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+  admin     User      @relation("TokenAdmin", fields: [adminId], references: [id])
+  user      User      @relation("TokenUser", fields: [userId], references: [id])
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("temp_auth_tokens")
+}
+
+model UserLocation {
+  id         String   @id @default(cuid())
+  userId     String
+  locationId String
+  createdAt  DateTime @default(now())
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, locationId])
+  @@index([userId])
+  @@index([locationId])
+  @@map("user_locations")
 }
 
 enum SubscriptionTier {
@@ -284,50 +424,16 @@ enum InvitationStatus {
   CANCELLED
 }
 
-model AdminAuditLog {
-  id            String    @id @default(cuid())
-  adminId       String
-  action        String    // LOGIN_AS_START, LOGIN_AS_END, EXPORT_DATA, etc.
-  targetUserId  String?
-  targetOrgId   String?
-  metadata      Json?
-  createdAt     DateTime  @default(now())
-  
-  admin         User      @relation("AdminAuditLogs", fields: [adminId], references: [id])
-  
-  @@map("admin_audit_logs")
+enum CalculationMethod {
+  PROGRESSIVE
+  GRADUATED
+  FLAT
 }
 
-model TempAuthToken {
-  id            String    @id @default(cuid())
-  token         String    @unique @default(cuid())
-  userId        String    // User being impersonated
-  adminId       String    // Super admin who created it
-  expiresAt     DateTime  // Auto-expire after 1 hour
-  usedAt        DateTime? // When first used
-  revokedAt     DateTime? // When tab closed or manually revoked
-  metadata      Json?     // Store org info, reason, etc.
-  createdAt     DateTime  @default(now())
-  
-  user          User      @relation("TokenUser", fields: [userId], references: [id])
-  admin         User      @relation("TokenAdmin", fields: [adminId], references: [id])
-  
-  @@index([token])
-  @@index([expiresAt])
-  @@map("temp_auth_tokens")
-}
-
-model UserLocation {
-  id          String   @id @default(cuid())
-  userId      String
-  locationId  String
-  createdAt   DateTime @default(now())
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, locationId])
-  @@index([userId])
-  @@index([locationId])
-  @@map("user_locations")
+enum TriggerType {
+  NONE
+  SESSION_COUNT
+  SALES_VOLUME
+  EITHER_OR
+  BOTH_AND
 }

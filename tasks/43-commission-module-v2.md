@@ -880,3 +880,386 @@ Historical calculations will be preserved.
 - **Color Contrast**: WCAG AA compliant contrast ratios
 - **Error Messages**: Clear, actionable error text
 - **Focus States**: Visible focus indicators
+
+---
+
+## Phase 8: Onboarding Wizard Update (Day 11)
+
+### Context
+The onboarding wizard (`/onboarding`) currently creates v1 commission tiers during Step 5. We need to update it to create commission profiles instead while maintaining backward compatibility during transition.
+
+### Current Implementation
+- **Location**: `/src/components/onboarding/steps/CommissionSetupStep.tsx`
+- **API Endpoint**: `/api/organization/commission`
+- **Methods**: FLAT (single percentage) or PROGRESSIVE (multiple tiers)
+- **Data Storage**: Creates `commissionTiers` directly on organization
+
+### Step 1: Update CommissionSetupStep Component
+```typescript
+// src/components/onboarding/steps/CommissionSetupStep.tsx
+
+export function CommissionSetupStep({ onNext }: CommissionSetupStepProps) {
+  const [setupType, setSetupType] = useState<'simple' | 'advanced'>('simple')
+  const [method, setMethod] = useState<'FLAT' | 'PROGRESSIVE' | 'PER_SESSION'>('PER_SESSION')
+  const [flatAmount, setFlatAmount] = useState(50) // Default $50 per session
+  const [flatPercentage, setFlatPercentage] = useState(50) // Default 50%
+  const [tiers, setTiers] = useState([
+    { 
+      min: 1, 
+      max: 10, 
+      type: 'percentage', // or 'flat'
+      percentage: 40,
+      flatFee: 50 
+    }
+  ])
+
+  return (
+    <Card>
+      <h2>How do you want to pay your trainers?</h2>
+      
+      {/* Simple Setup (Most Common) */}
+      <div className="space-y-4">
+        <RadioGroup value={method} onChange={setMethod}>
+          {/* New option for flat fee per session */}
+          <RadioOption value="PER_SESSION">
+            <div className="font-medium">💵 Flat fee per session</div>
+            <div className="text-sm text-gray-600">
+              Pay a fixed amount for each completed session
+            </div>
+            {method === 'PER_SESSION' && (
+              <div className="mt-2 flex items-center gap-2">
+                <span>$</span>
+                <Input
+                  type="number"
+                  value={flatAmount}
+                  onChange={(e) => setFlatAmount(Number(e.target.value))}
+                  className="w-24"
+                />
+                <span>per session</span>
+              </div>
+            )}
+          </RadioOption>
+
+          {/* Existing percentage option */}
+          <RadioOption value="FLAT">
+            <div className="font-medium">📊 Percentage of session value</div>
+            <div className="text-sm text-gray-600">
+              Pay a percentage of what clients pay
+            </div>
+            {method === 'FLAT' && (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={flatPercentage}
+                  onChange={(e) => setFlatPercentage(Number(e.target.value))}
+                  className="w-20"
+                />
+                <span>% of session value</span>
+              </div>
+            )}
+          </RadioOption>
+
+          {/* Progressive tiers */}
+          <RadioOption value="PROGRESSIVE">
+            <div className="font-medium">📈 Performance-based tiers</div>
+            <div className="text-sm text-gray-600">
+              Higher rates for more sessions (Recommended for motivation)
+            </div>
+            {method === 'PROGRESSIVE' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSetupType('advanced')}
+              >
+                Configure Tiers
+              </Button>
+            )}
+          </RadioOption>
+        </RadioGroup>
+
+        {/* Advanced tier configuration (if selected) */}
+        {method === 'PROGRESSIVE' && setupType === 'advanced' && (
+          <TierConfiguration
+            tiers={tiers}
+            onChange={setTiers}
+            supportsFlatFees={true} // v2 supports flat fees
+          />
+        )}
+      </div>
+
+      <div className="mt-6 flex justify-between">
+        <Button variant="ghost" onClick={onBack}>
+          ← Back
+        </Button>
+        <Button onClick={() => handleSave()}>
+          Continue →
+        </Button>
+      </div>
+    </Card>
+  )
+}
+```
+
+### Step 2: Update Commission API for V2
+```typescript
+// src/app/api/organization/commission/route.ts
+
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  const { method, flatAmount, flatPercentage, tiers } = await request.json()
+
+  // Check if organization has v2 commission profiles
+  const hasV2 = await prisma.commissionProfile.findFirst({
+    where: { organizationId: session.user.organizationId }
+  })
+
+  if (hasV2) {
+    // Update existing default profile
+    await updateDefaultProfile({
+      organizationId: session.user.organizationId,
+      method,
+      flatAmount,
+      flatPercentage,
+      tiers
+    })
+  } else {
+    // Create new v2 profile from onboarding data
+    await createDefaultProfileFromOnboarding({
+      organizationId: session.user.organizationId,
+      method,
+      flatAmount,
+      flatPercentage,
+      tiers
+    })
+    
+    // Also create v1 for backward compatibility (temporary)
+    await createV1CommissionTiers({
+      organizationId: session.user.organizationId,
+      method,
+      flatPercentage,
+      tiers
+    })
+  }
+
+  return NextResponse.json({ success: true })
+}
+
+async function createDefaultProfileFromOnboarding(data: any) {
+  const { organizationId, method, flatAmount, flatPercentage, tiers } = data
+
+  // Create the default profile
+  const profile = await prisma.commissionProfile.create({
+    data: {
+      organizationId,
+      name: 'Standard Commission',
+      description: 'Default commission structure from onboarding',
+      isDefault: true,
+      isActive: true,
+      calculationMethod: method === 'PER_SESSION' ? 'FLAT' : method,
+      tiers: {
+        create: method === 'PER_SESSION' 
+          ? [
+              {
+                tierLevel: 1,
+                name: 'Standard Rate',
+                triggerType: 'NONE',
+                sessionFlatFee: flatAmount,
+                sessionThreshold: 1
+              }
+            ]
+          : method === 'FLAT'
+          ? [
+              {
+                tierLevel: 1,
+                name: 'Standard Rate',
+                triggerType: 'NONE',
+                sessionCommissionPercent: flatPercentage,
+                sessionThreshold: 1
+              }
+            ]
+          : tiers.map((tier, index) => ({
+              tierLevel: index + 1,
+              name: `Tier ${index + 1}`,
+              triggerType: 'SESSION_COUNT',
+              sessionThreshold: tier.min,
+              sessionCommissionPercent: tier.type === 'percentage' ? tier.percentage : null,
+              sessionFlatFee: tier.type === 'flat' ? tier.flatFee : null
+            }))
+      }
+    }
+  })
+
+  // Assign all existing trainers to this profile
+  await prisma.user.updateMany({
+    where: {
+      organizationId,
+      role: 'TRAINER'
+    },
+    data: {
+      commissionProfileId: profile.id
+    }
+  })
+
+  return profile
+}
+```
+
+### Step 3: Add Profile Selection for Advanced Users
+```typescript
+// src/components/onboarding/steps/CommissionSetupAdvanced.tsx
+
+export function CommissionSetupAdvanced({ onNext }: Props) {
+  const [profiles, setProfiles] = useState<CommissionProfile[]>([
+    {
+      name: 'New Trainer',
+      description: 'For trainers in their first 3 months',
+      method: 'FLAT',
+      tiers: [{ sessionFlatFee: 40 }]
+    },
+    {
+      name: 'Standard Trainer',
+      description: 'For regular trainers',
+      method: 'PROGRESSIVE',
+      tiers: [
+        { min: 1, max: 10, sessionFlatFee: 50 },
+        { min: 11, max: 20, sessionFlatFee: 55 },
+        { min: 21, sessionFlatFee: 60 }
+      ]
+    },
+    {
+      name: 'Elite Trainer',
+      description: 'For top performers',
+      method: 'PROGRESSIVE',
+      tiers: [
+        { min: 1, max: 10, sessionCommissionPercent: 50 },
+        { min: 11, max: 30, sessionCommissionPercent: 55 },
+        { min: 31, sessionCommissionPercent: 60, tierBonus: 500 }
+      ]
+    }
+  ])
+
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
+  return (
+    <div>
+      <h3>Commission Profiles (Optional)</h3>
+      <p className="text-sm text-gray-600 mb-4">
+        Create different commission structures for different trainer types
+      </p>
+
+      {profiles.map((profile, index) => (
+        <ProfileCard
+          key={index}
+          profile={profile}
+          onEdit={(updated) => updateProfile(index, updated)}
+          onDelete={() => deleteProfile(index)}
+        />
+      ))}
+
+      <Button
+        variant="outline"
+        onClick={() => setShowAdvanced(true)}
+      >
+        + Add Profile
+      </Button>
+
+      <div className="mt-6 text-center">
+        <Button variant="ghost" onClick={() => onNext({ skipProfiles: true })}>
+          Skip this step - I'll set up profiles later
+        </Button>
+      </div>
+    </div>
+  )
+}
+```
+
+### Step 4: Update Onboarding Flow
+```typescript
+// src/app/onboarding/page.tsx
+
+// Add new step for advanced commission setup (optional)
+{currentStep === 5 && (
+  <CommissionSetupStep 
+    onNext={(data) => {
+      // Save basic commission data
+      handleNext(data)
+      
+      // Skip to step 7 if user chose simple setup
+      if (data.setupType !== 'advanced') {
+        setCurrentStep(7) // Skip advanced commission step
+      }
+    }}
+  />
+)}
+
+{currentStep === 6 && (
+  <CommissionSetupAdvanced
+    onNext={handleNext}
+    onSkip={() => setCurrentStep(7)}
+  />
+)}
+```
+
+### Step 5: Migration Considerations
+
+#### For New Organizations (Onboarding)
+1. Create v2 commission profile as default
+2. Optionally create v1 tiers for backward compatibility
+3. Assign all new trainers to default profile
+
+#### For Existing Organizations (Already Onboarded)
+1. Keep existing v1 system working
+2. Provide migration tool in settings
+3. Allow gradual transition to v2
+
+### Step 6: Testing Checklist
+- [ ] New org with flat fee ($50/session) creates correct profile
+- [ ] New org with percentage creates correct profile  
+- [ ] New org with progressive tiers creates correct profile
+- [ ] Trainers created after onboarding get assigned default profile
+- [ ] Advanced profiles setup works (if user chooses)
+- [ ] Skip options work correctly
+- [ ] Existing orgs are not affected
+
+### UI/UX Improvements
+
+#### Simplify Initial Choice
+```
+How would you like to pay trainers?
+
+┌─────────────────────────────────────────┐
+│ 💵 $50 per session                      │
+│    Simple flat rate                   ✓ │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│ 📊 50% of session value                 │
+│    Percentage-based                     │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│ 📈 Performance tiers                    │
+│    Reward high performers               │
+└─────────────────────────────────────────┘
+
+[Advanced Options ↓]
+```
+
+#### Progressive Disclosure
+- Start with simplest option (flat fee)
+- Hide complexity until needed
+- Provide sensible defaults
+- Allow skipping advanced features
+
+### Implementation Order
+1. Update `CommissionSetupStep.tsx` to support flat fees
+2. Create backend API to handle v2 profile creation
+3. Test with new organizations
+4. Add optional advanced profiles step
+5. Ensure backward compatibility
+
+### Success Metrics
+- New users can set up flat fee commission in < 30 seconds
+- 90% of users use simple setup (not advanced)
+- No existing organizations affected
+- All new trainers automatically assigned to profiles

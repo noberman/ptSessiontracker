@@ -6,7 +6,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
-import { TrainerCommission } from '@/lib/commission/calculator'
+import React from 'react'
+
+// Updated interface to match v2 data structure
+interface TrainerCommission {
+  trainerId: string
+  trainerName: string
+  totalSessions: number
+  totalValue: number
+  commissionAmount: number
+  tierReached?: number
+  profileName?: string
+  breakdown?: {
+    sessionCommission: number
+    salesCommission: number
+    tierBonus: number
+  }
+  trainerEmail?: string
+  commissionRate?: number
+  tiersApplied?: any[]
+}
 
 interface CommissionDashboardProps {
   commissions: TrainerCommission[]
@@ -179,7 +198,7 @@ export function CommissionDashboard({
                 <tr className="text-left text-sm text-text-secondary">
                   <th className="pb-3 font-medium">Trainer</th>
                   <th className="pb-3 font-medium text-center">Sessions</th>
-                  <th className="pb-3 font-medium text-right">Rate</th>
+                  <th className="pb-3 font-medium text-center">Tier</th>
                   <th className="pb-3 font-medium text-right">Session Value</th>
                   <th className="pb-3 font-medium text-right">Commission</th>
                 </tr>
@@ -207,8 +226,8 @@ export function CommissionDashboard({
                         <td className="py-4 text-center">
                           <Badge>{commission.totalSessions}</Badge>
                         </td>
-                        <td className="py-4 text-right text-text-primary">
-                          {commission.commissionRate}%
+                        <td className="py-4 text-center">
+                          <Badge variant="secondary">Tier {commission.tierReached || 1}</Badge>
                         </td>
                         <td className="py-4 text-right text-text-primary">
                           {formatCurrency(commission.totalValue)}
@@ -219,23 +238,55 @@ export function CommissionDashboard({
                       </tr>
                       
                       {/* Expanded Details */}
-                      {expandedTrainer === commission.trainerId && commission.tiersApplied && (
+                      {expandedTrainer === commission.trainerId && commission.breakdown && (
                         <tr>
                           <td colSpan={5} className="p-4 bg-background-secondary">
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               <div className="text-sm font-medium text-text-primary mb-2">
-                                Tier Breakdown:
+                                Commission Breakdown:
                               </div>
-                              {commission.tiersApplied.map((tier, idx) => (
-                                <div key={idx} className="flex justify-between text-sm text-text-secondary">
-                                  <span>
-                                    {tier.sessions} sessions @ {tier.tier.percentage}%
-                                  </span>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <p className="text-xs text-text-secondary mb-1">Profile</p>
+                                  <p className="font-medium">{commission.profileName || 'Default'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-text-secondary mb-1">Tier Reached</p>
+                                  <p className="font-medium">Tier {commission.tierReached || 1}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="border-t pt-3 space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-text-secondary">Session Commission:</span>
                                   <span className="font-medium text-text-primary">
-                                    {formatCurrency(tier.commission)}
+                                    {formatCurrency(commission.breakdown.sessionCommission)}
                                   </span>
                                 </div>
-                              ))}
+                                {commission.breakdown.salesCommission > 0 && (
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-text-secondary">Sales Commission:</span>
+                                    <span className="font-medium text-text-primary">
+                                      {formatCurrency(commission.breakdown.salesCommission)}
+                                    </span>
+                                  </div>
+                                )}
+                                {commission.breakdown.tierBonus > 0 && (
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-text-secondary">Tier Bonus:</span>
+                                    <span className="font-medium text-success-600">
+                                      {formatCurrency(commission.breakdown.tierBonus)}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between text-sm pt-2 border-t">
+                                  <span className="font-medium text-text-primary">Total Commission:</span>
+                                  <span className="font-bold text-text-primary">
+                                    {formatCurrency(commission.commissionAmount)}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -252,5 +303,3 @@ export function CommissionDashboard({
   )
 }
 
-// Add React import for Fragment
-import React from 'react'

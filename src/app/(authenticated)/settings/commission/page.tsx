@@ -1,8 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { CommissionSettings } from '@/components/settings/CommissionSettings'
-import { ensureCommissionTiers } from '@/lib/commission/ensure-tiers'
+import { CommissionProfileList } from '@/components/commission/CommissionProfileList'
 
 export default async function CommissionSettingsPage() {
   const session = await getServerSession(authOptions)
@@ -11,27 +10,22 @@ export default async function CommissionSettingsPage() {
     redirect('/login')
   }
   
-  // Only allow ADMIN, PT_MANAGER, and CLUB_MANAGER roles
+  // Only allow ADMIN and PT_MANAGER roles for v2
   const userRole = session.user.role?.toUpperCase()
-  if (userRole !== 'ADMIN' && userRole !== 'PT_MANAGER' && userRole !== 'CLUB_MANAGER') {
+  if (userRole !== 'ADMIN' && userRole !== 'PT_MANAGER') {
     redirect('/dashboard')
-  }
-  
-  // Ensure default commission tiers exist for this organization
-  if (session.user.organizationId) {
-    await ensureCommissionTiers(session.user.organizationId)
   }
   
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">Commission Configuration</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Commission Profiles</h1>
         <p className="text-sm text-text-secondary mt-1">
-          Configure calculation method and commission tiers
+          Manage commission structures for different trainer levels and specializations
         </p>
       </div>
       
-      <CommissionSettings />
+      <CommissionProfileList userRole={userRole} />
     </div>
   )
 }

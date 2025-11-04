@@ -328,7 +328,7 @@ export function PackageForm({
                 min="0"
                 step="0.01"
                 value={formData.totalValue}
-                onChange={(e) => setFormData({ ...formData, totalValue: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, totalValue: e.target.value })}
                 placeholder="0.00"
               />
             </div>
@@ -343,7 +343,7 @@ export function PackageForm({
                 required
                 min="1"
                 value={formData.totalSessions}
-                onChange={(e) => setFormData({ ...formData, totalSessions: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, totalSessions: e.target.value })}
                 placeholder="0"
               />
             </div>
@@ -367,7 +367,7 @@ export function PackageForm({
                 type="number"
                 min="0"
                 value={formData.remainingSessions}
-                onChange={(e) => setFormData({ ...formData, remainingSessions: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, remainingSessions: e.target.value })}
               />
               <p className="text-xs text-text-secondary mt-1">
                 Admin only: Manually adjust remaining sessions

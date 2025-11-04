@@ -15,16 +15,22 @@ interface UserFormProps {
     role: string
     locationId?: string
     locationIds?: string[]  // For multi-location support
+    commissionProfileId?: string
     active: boolean
   }
   locations?: Array<{
     id: string
     name: string
   }>
+  commissionProfiles?: Array<{
+    id: string
+    name: string
+    isDefault: boolean
+  }>
   currentUserRole: string
 }
 
-export function UserForm({ user, locations = [], currentUserRole }: UserFormProps) {
+export function UserForm({ user, locations = [], commissionProfiles = [], currentUserRole }: UserFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -43,6 +49,7 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
     confirmPassword: '',
     role: user?.role || 'TRAINER',
     locationIds: user?.locationIds || [],  // User locations from UserLocation table
+    commissionProfileId: user?.commissionProfileId || commissionProfiles.find(p => p.isDefault)?.id || '',
     active: user?.active !== false,
   })
 
@@ -305,6 +312,27 @@ export function UserForm({ user, locations = [], currentUserRole }: UserFormProp
               ))}
             </select>
           </div>
+
+          {formData.role === 'TRAINER' && commissionProfiles.length > 0 && (
+            <div>
+              <label htmlFor="commissionProfile" className="block text-sm font-medium text-text-primary mb-1">
+                Commission Profile
+              </label>
+              <select
+                id="commissionProfile"
+                value={formData.commissionProfileId}
+                onChange={(e) => setFormData({ ...formData, commissionProfileId: e.target.value })}
+                className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              >
+                <option value="">Select a profile</option>
+                {commissionProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name} {profile.isDefault ? '(Default)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {locations.length > 0 && (
             <div className="relative" ref={dropdownRef}>

@@ -16,7 +16,7 @@ export default async function EditUserPage({
     redirect('/login')
   }
 
-  // Get the user to edit
+  // Get the user to edit with their locations and commission profile
   const user = await prisma.user.findUnique({
     where: { id },
     select: {
@@ -28,9 +28,9 @@ export default async function EditUserPage({
       commissionProfileId: true,
       locations: {
         select: {
-          locationId: true,
-        },
-      },
+          locationId: true
+        }
+      }
     },
   })
 
@@ -43,16 +43,32 @@ export default async function EditUserPage({
     redirect('/dashboard')
   }
 
+  // Get manager's locations if club manager
+  let managerLocationIds: string[] = []
+  
   if (session.user.role === 'CLUB_MANAGER') {
     // Club managers can only edit users in their location or themselves
-    const currentUserLocations = await prisma.userLocation.findMany({
-      where: { userId: session.user.id },
-      select: { locationId: true },
+    const userWithLocation = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { 
+        locations: {
+          select: { locationId: true }
+        }
+      },
     })
-    const currentUserLocationIds = currentUserLocations.map(l => l.locationId)
-    const userLocationIds = user.locations.map(l => l.locationId)
     
-    const hasSharedLocation = userLocationIds.some(id => currentUserLocationIds.includes(id))
+    const managerWithLocations = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        locations: {
+          select: { locationId: true }
+        }
+      }
+    })
+    
+    const userLocationIds = userWithLocation?.locations.map(l => l.locationId) || []
+    managerLocationIds = managerWithLocations?.locations.map(l => l.locationId) || []
+    const hasSharedLocation = userLocationIds.some(loc => managerLocationIds.includes(loc))
     
     if (!hasSharedLocation && user.id !== session.user.id) {
       redirect('/dashboard')
@@ -62,17 +78,20 @@ export default async function EditUserPage({
   // Get locations for the form
   let locations: Array<{ id: string; name: string }> = []
   if (session.user.role === 'CLUB_MANAGER') {
-    const userLocations = await prisma.userLocation.findMany({
-      where: { userId: session.user.id },
-      include: { location: true },
-    })
-    locations = userLocations.map(ul => ({
-      id: ul.location.id,
-      name: ul.location.name,
-    }))
-  } else if (session.user.role !== 'TRAINER') {
+    // Get club manager's accessible locations
     locations = await prisma.location.findMany({
       where: { 
+        id: { in: managerLocationIds },
+        active: true
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    })
+  } else if (session.user.role !== 'TRAINER') {
+    locations = await prisma.location.findMany({
+      where: {
         organizationId: session.user.organizationId,
         active: true,
       },
@@ -85,8 +104,8 @@ export default async function EditUserPage({
       },
     })
   }
-  
-  // Get commission profiles for the form
+
+  // Get commission profiles for the organization
   const commissionProfiles = await prisma.commissionProfile.findMany({
     where: {
       organizationId: session.user.organizationId,
@@ -117,10 +136,8 @@ export default async function EditUserPage({
             ...user,
             role: user.role as string,
             locationIds: user.locations.map(l => l.locationId),
-            commissionProfileId: user.commissionProfileId || undefined,
           }}
           locations={locations}
-          commissionProfiles={commissionProfiles}
           currentUserRole={session.user.role}
         />
       </div>
