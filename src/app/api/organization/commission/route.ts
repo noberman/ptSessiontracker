@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
     if (profile) {
       // Return v2 profile data
       let method: string
-      let responseData: any = {}
+      const responseData: any = {}
       
       if (profile.calculationMethod === 'FLAT' && profile.tiers.length === 1) {
         const tier = profile.tiers[0]

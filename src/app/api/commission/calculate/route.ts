@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const validatedData = calculateSchema.parse(body)
     
     // Determine user ID
-    let userId = validatedData.userId || session.user.id
+    const userId = validatedData.userId || session.user.id
     
     // Only admins/managers can calculate for other users
     if (validatedData.userId && validatedData.userId !== session.user.id) {
