@@ -264,7 +264,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   })
   
   // Handle downgrade to FREE
-  if (previousTier !== 'FREE') {
+  if (previousTier && previousTier !== 'FREE') {
     console.log(`Downgrade on deletion: ${previousTier} → FREE`)
     await handleSubscriptionDowngrade(org.id, previousTier, 'FREE')
   }
