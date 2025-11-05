@@ -313,7 +313,7 @@ export function UserForm({ user, locations = [], commissionProfiles = [], curren
             </select>
           </div>
 
-          {formData.role === 'TRAINER' && commissionProfiles.length > 0 && (
+          {(formData.role === 'TRAINER' || formData.role === 'PT_MANAGER') && commissionProfiles.length > 0 && (
             <div>
               <label htmlFor="commissionProfile" className="block text-sm font-medium text-text-primary mb-1">
                 Commission Profile
