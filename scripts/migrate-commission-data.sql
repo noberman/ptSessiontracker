@@ -80,7 +80,7 @@ WHERE NOT EXISTS (
     WHERE ct2."profileId" = pm.profile_id
 );
 
--- Step 3: Update users to use the commission profile for their organization
+-- Step 3: Update trainers and PT managers to use the commission profile for their organization
 -- Only update users who don't already have a profile assigned
 UPDATE users u
 SET "commissionProfileId" = (
@@ -139,4 +139,5 @@ COMMIT;
 -- SELECT u.name, u.role, cp.name as profile_name
 -- FROM users u
 -- LEFT JOIN commission_profiles cp ON u."commissionProfileId" = cp.id
--- WHERE u.role IN ('TRAINER', 'PT_MANAGER');
+-- WHERE u.role IN ('TRAINER', 'PT_MANAGER')
+-- ORDER BY u.role, u.name;
