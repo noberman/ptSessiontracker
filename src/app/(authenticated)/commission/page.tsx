@@ -61,11 +61,13 @@ export default async function CommissionPage({
     }
   }
   
-  // Get all trainers with commission profiles
+  // Get all trainers and PT managers with commission profiles
   const trainers = await prisma.user.findMany({
     where: {
       organizationId,
-      role: 'TRAINER',
+      role: {
+        in: ['TRAINER', 'PT_MANAGER']
+      },
       active: true,
       commissionProfileId: { not: null },
       ...(locationId ? {
