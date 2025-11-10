@@ -16,10 +16,14 @@ interface PackageFiltersProps {
     id: string
     name: string
   }>
+  packageTypes?: Array<{
+    id: string
+    name: string
+  }>
   currentUserRole: string
 }
 
-export function PackageFilters({ clients, locations, currentUserRole }: PackageFiltersProps) {
+export function PackageFilters({ clients, locations, packageTypes, currentUserRole }: PackageFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -47,6 +51,7 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
   const currentFilters = {
     clientIds: getFilterValue('clientIds', true) as string[],
     locationIds: getFilterValue('locationIds', true) as string[],
+    packageTypes: getFilterValue('packageTypes', true) as string[],
     activeStatuses: getFilterValue('activeStatuses', true) as string[],
     expirationStatus: getFilterValue('expirationStatus') as string,
     startDate: getFilterValue('startDate') as string,
@@ -64,6 +69,9 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
     }
     if (currentFilters.locationIds.length > 0) {
       params.set('locationIds', currentFilters.locationIds.join(','))
+    }
+    if (currentFilters.packageTypes.length > 0) {
+      params.set('packageTypes', currentFilters.packageTypes.join(','))
     }
     if (currentFilters.activeStatuses.length > 0) {
       params.set('activeStatuses', currentFilters.activeStatuses.join(','))
@@ -93,6 +101,7 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
   const activeFilterCount = 
     currentFilters.clientIds.length + 
     currentFilters.locationIds.length + 
+    currentFilters.packageTypes.length +
     currentFilters.activeStatuses.length + 
     (currentFilters.expirationStatus ? 1 : 0) +
     (currentFilters.startDate ? 1 : 0) + 
@@ -199,6 +208,24 @@ export function PackageFilters({ clients, locations, currentUserRole }: PackageF
               </div>
             )}
 
+            {/* Package Type Filter - Searchable Multi-select */}
+            {packageTypes && packageTypes.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Package Types
+                </label>
+                <SearchableMultiSelect
+                  options={packageTypes.map(type => ({
+                    value: type.name,  // Using name as value since we filter by packageType string
+                    label: type.name
+                  }))}
+                  value={currentFilters.packageTypes}
+                  onChange={(types) => setLocalChanges(prev => ({ ...prev, packageTypes: types }))}
+                  placeholder="All Package Types"
+                  searchPlaceholder="Search package types..."
+                />
+              </div>
+            )}
 
             {/* Active Status Filter - Multi-select Dropdown */}
             <div className="relative">

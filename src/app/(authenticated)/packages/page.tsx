@@ -13,6 +13,7 @@ export default async function PackagesPage({
     limit?: string
     clientIds?: string  // comma-separated IDs
     locationIds?: string  // comma-separated IDs
+    packageTypes?: string  // comma-separated package types
     activeStatuses?: string  // comma-separated values
     expirationStatus?: string
     startDate?: string
@@ -54,6 +55,13 @@ export default async function PackagesPage({
     }
   }
 
+  // Filter by package types (multi-select)
+  if (params.packageTypes) {
+    const packageTypes = params.packageTypes.split(',').filter(Boolean)
+    if (packageTypes.length > 0) {
+      where.packageType = { in: packageTypes }
+    }
+  }
 
   // Filter by active status (multi-select)
   if (params.activeStatuses) {
@@ -149,6 +157,20 @@ export default async function PackagesPage({
   // Get available clients for filter based on accessible locations
   let availableClients: any[] = []
   let availableLocations: any[] = []
+  let availablePackageTypes: any[] = []
+  
+  // Get available package types for filter
+  availablePackageTypes = await prisma.packageType.findMany({
+    where: {
+      organizationId: session.user.organizationId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+    orderBy: { sortOrder: 'asc' },
+  })
   
   // Get user's accessible locations for filtering
   const user = await prisma.user.findUnique({
@@ -268,6 +290,7 @@ export default async function PackagesPage({
       pagination={pagination}
       availableClients={availableClients}
       availableLocations={availableLocations}
+      availablePackageTypes={availablePackageTypes}
       currentUserRole={session.user.role}
       canCreate={canCreate}
       canEdit={canEdit}

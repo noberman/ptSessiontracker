@@ -11,6 +11,7 @@ interface PackagesPageClientProps {
   pagination: any
   availableClients: any[]
   availableLocations: any[]
+  availablePackageTypes: any[]
   currentUserRole: string
   canCreate: boolean
   canEdit: boolean
@@ -24,6 +25,7 @@ export function PackagesPageClient({
   pagination,
   availableClients,
   availableLocations,
+  availablePackageTypes,
   currentUserRole,
   canCreate,
   canEdit,
@@ -62,6 +64,7 @@ export function PackagesPageClient({
         <PackageFilters
           clients={availableClients}
           locations={availableLocations}
+          packageTypes={availablePackageTypes}
           currentUserRole={currentUserRole}
         />
         
