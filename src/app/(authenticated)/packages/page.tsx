@@ -160,17 +160,19 @@ export default async function PackagesPage({
   let availablePackageTypes: any[] = []
   
   // Get available package types for filter
-  availablePackageTypes = await prisma.packageType.findMany({
-    where: {
-      organizationId: session.user.organizationId,
-      isActive: true,
-    },
-    select: {
-      id: true,
-      name: true,
-    },
-    orderBy: { sortOrder: 'asc' },
-  })
+  if (session.user.organizationId) {
+    availablePackageTypes = await prisma.packageType.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { sortOrder: 'asc' },
+    })
+  }
   
   // Get user's accessible locations for filtering
   const user = await prisma.user.findUnique({
