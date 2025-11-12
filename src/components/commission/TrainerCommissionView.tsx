@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
+import { toZonedTime } from 'date-fns-tz'
 
 // Updated interface to match v2 commission structure
 interface CommissionData {
@@ -44,6 +45,7 @@ interface TrainerCommissionViewProps {
     sessionValue: number
     validated: boolean
   }>
+  orgTimezone?: string
 }
 
 export function TrainerCommissionView({
@@ -51,7 +53,8 @@ export function TrainerCommissionView({
   month,
   method,
   tiers,
-  recentSessions
+  recentSessions,
+  orgTimezone = 'Asia/Singapore'
 }: TrainerCommissionViewProps) {
   const router = useRouter()
   const [showDetails, setShowDetails] = useState(false)
@@ -199,7 +202,11 @@ export function TrainerCommissionView({
                   <div>
                     <div className="font-medium">{session.clientName}</div>
                     <div className="text-sm text-text-secondary">
-                      {format(new Date(session.sessionDate), 'MMM d, yyyy')} • {session.packageName}
+                      {(() => {
+                        const sessionDate = parseISO(session.sessionDate)
+                        const zonedDate = toZonedTime(sessionDate, orgTimezone)
+                        return format(zonedDate, 'MMM d, yyyy')
+                      })()} • {session.packageName}
                     </div>
                   </div>
                   <div className="text-right">

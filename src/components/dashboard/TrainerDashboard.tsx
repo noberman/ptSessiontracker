@@ -14,10 +14,13 @@ import {
   RefreshCw,
   Mail
 } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { toZonedTime } from 'date-fns-tz'
 
 interface TrainerDashboardProps {
   userId: string
   userName: string
+  orgTimezone?: string
 }
 
 interface DashboardData {
@@ -66,7 +69,7 @@ interface DashboardData {
   }>
 }
 
-export function TrainerDashboard({ userName }: TrainerDashboardProps) {
+export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: TrainerDashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resendingIds, setResendingIds] = useState<Set<string>>(new Set())
@@ -266,10 +269,14 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
                     <div>
                       <p className="font-medium text-text-primary">{session.client.name}</p>
                       <p className="text-sm text-text-secondary">
-                        {new Date(session.createdAt || session.sessionDate).toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        {(() => {
+                          const dateToUse = session.createdAt || session.sessionDate
+                          const sessionDate = typeof dateToUse === 'string' 
+                            ? parseISO(dateToUse)
+                            : dateToUse
+                          const zonedDate = toZonedTime(sessionDate, orgTimezone)
+                          return format(zonedDate, 'hh:mm a')
+                        })()}
                         {session.package && ` - ${session.package.name}`}
                       </p>
                     </div>
@@ -308,7 +315,13 @@ export function TrainerDashboard({ userName }: TrainerDashboardProps) {
                           {session.client.name}
                         </p>
                         <p className="text-xs text-text-secondary">
-                          {new Date(session.sessionDate).toLocaleDateString()}
+                          {(() => {
+                            const sessionDate = typeof session.sessionDate === 'string' 
+                              ? parseISO(session.sessionDate)
+                              : session.sessionDate
+                            const zonedDate = toZonedTime(sessionDate, orgTimezone)
+                            return format(zonedDate, 'MMM d, yyyy')
+                          })()}
                         </p>
                       </div>
                       <Button

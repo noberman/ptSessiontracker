@@ -9,10 +9,12 @@ import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
 import { Mail, RefreshCw } from 'lucide-react'
 import { ActionsDropdown } from '@/components/ui/ActionsDropdown'
+import { displaySessionTime } from '@/utils/timezone'
 
 interface Session {
   id: string
   sessionDate: string | Date
+  createdAt: string | Date
   sessionValue: number
   validated: boolean
   validatedAt: string | Date | null
@@ -49,6 +51,7 @@ interface SessionTableProps {
   canEdit?: boolean
   userRole?: string
   currentUserId?: string
+  orgTimezone?: string
 }
 
 export function SessionTable({ 
@@ -56,7 +59,8 @@ export function SessionTable({
   pagination: initialPagination,
   canEdit = false,
   userRole,
-  currentUserId
+  currentUserId,
+  orgTimezone = 'Asia/Singapore'
 }: SessionTableProps) {
   const [sessions, setSessions] = useState(initialSessions)
   const [pagination, setPagination] = useState(initialPagination)
@@ -130,8 +134,15 @@ export function SessionTable({
     }
   }
 
-  const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString('en-GB', {
+  const formatDate = (session: Session) => {
+    // Use timezone-aware display
+    const displayDate = displaySessionTime(
+      session.sessionDate, 
+      session.createdAt, 
+      orgTimezone
+    )
+    
+    return displayDate.toLocaleDateString('en-GB', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
@@ -209,7 +220,7 @@ export function SessionTable({
             {sessions.map((session) => (
               <tr key={session.id} className="hover:bg-surface-hover transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                  {formatDate(session.sessionDate)}
+                  {formatDate(session)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-text-primary">

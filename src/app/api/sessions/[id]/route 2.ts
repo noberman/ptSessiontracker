@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { userHasLocationAccess } from '@/lib/user-locations'
-import { getOrganizationId } from '@/lib/organization-context'
-import { orgTimeToUtc, TIMEZONE_FIX_DEPLOYMENT_DATE } from '@/utils/timezone'
 
 export async function GET(
   request: Request,
@@ -17,23 +14,9 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Get organization context
-  let orgId: string
-  try {
-    orgId = await getOrganizationId()
-  } catch (error) {
-    return NextResponse.json({ error: 'No organization context' }, { status: 400 })
-  }
-
   try {
     const trainingSession = await prisma.session.findUnique({
-      where: { 
-        id,
-        // Ensure session's trainer belongs to the organization
-        trainer: {
-          organizationId: orgId
-        }
-      },
+      where: { id },
       include: {
         client: {
           select: {
@@ -83,18 +66,11 @@ export async function GET(
       )
     }
 
-    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
-      const hasAccess = await userHasLocationAccess(
-        session.user.id,
-        session.user.role,
-        trainingSession.locationId
+    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId !== trainingSession.locationId) {
+      return NextResponse.json(
+        { error: 'You can only view sessions at your location' },
+        { status: 403 }
       )
-      if (!hasAccess) {
-        return NextResponse.json(
-          { error: 'You can only view sessions at your accessible locations' },
-          { status: 403 }
-        )
-      }
     }
 
     return NextResponse.json(trainingSession)
@@ -118,33 +94,17 @@ export async function PUT(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Get organization context
-  let orgId: string
-  try {
-    orgId = await getOrganizationId()
-  } catch (error) {
-    return NextResponse.json({ error: 'No organization context' }, { status: 400 })
-  }
-
   try {
     const body = await request.json()
     const {
       sessionDate,
       notes,
-      validated,
-      sessionValue,
-      cancelled
+      validated
     } = body
 
-    // Get the existing session and verify organization access
+    // Get the existing session
     const existingSession = await prisma.session.findUnique({
-      where: { 
-        id,
-        // Ensure session's trainer belongs to the organization
-        trainer: {
-          organizationId: orgId
-        }
-      }
+      where: { id }
     })
 
     if (!existingSession) {
@@ -171,31 +131,14 @@ export async function PUT(
       }
     }
 
-    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
-      const hasAccess = await userHasLocationAccess(
-        session.user.id,
-        session.user.role,
-        existingSession.locationId
-      )
-      if (!hasAccess) {
+    if (session.user.role === 'CLUB_MANAGER' && session.user.locationId) {
+      if (existingSession.locationId !== session.user.locationId) {
         return NextResponse.json(
-          { error: 'You can only edit sessions at your accessible locations' },
+          { error: 'You can only edit sessions at your location' },
           { status: 403 }
         )
       }
     }
-
-    // Get organization timezone for proper UTC conversion
-    const organizationId = session.user.organizationId
-    if (!organizationId) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 400 })
-    }
-    
-    const org = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: { timezone: true }
-    })
-    const orgTimezone = org?.timezone || 'Asia/Singapore'
 
     // Build update data
     const updateData: any = {
@@ -203,13 +146,7 @@ export async function PUT(
     }
 
     if (sessionDate !== undefined) {
-      const localDateTime = new Date(sessionDate)
-      const isAfterDeployment = new Date() >= TIMEZONE_FIX_DEPLOYMENT_DATE
-      
-      // Convert to UTC for storage (only for sessions updated after the fix)
-      updateData.sessionDate = isAfterDeployment
-        ? orgTimeToUtc(localDateTime, orgTimezone)
-        : localDateTime // Keep old behavior for now
+      updateData.sessionDate = new Date(sessionDate)
     }
     if (notes !== undefined) {
       updateData.notes = notes
@@ -219,25 +156,6 @@ export async function PUT(
       updateData.validated = validated
       if (validated) {
         updateData.validatedAt = new Date()
-      }
-    }
-    
-    // Only managers and above can change session value
-    if (sessionValue !== undefined) {
-      if (session.user.role === 'TRAINER') {
-        return NextResponse.json(
-          { error: 'Only managers can change session values' },
-          { status: 403 }
-        )
-      }
-      updateData.sessionValue = sessionValue
-    }
-    
-    // Track cancellations (no-shows)
-    if (cancelled !== undefined) {
-      updateData.cancelled = cancelled
-      if (cancelled) {
-        updateData.cancelledAt = new Date()
       }
     }
 
@@ -303,14 +221,6 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Get organization context
-  let orgId: string
-  try {
-    orgId = await getOrganizationId()
-  } catch (error) {
-    return NextResponse.json({ error: 'No organization context' }, { status: 400 })
-  }
-
   // Only admins and PT managers can delete sessions
   if (session.user.role !== 'ADMIN' && session.user.role !== 'PT_MANAGER') {
     return NextResponse.json(
@@ -322,13 +232,7 @@ export async function DELETE(
   try {
     // Get the session to check if it exists and get package info
     const existingSession = await prisma.session.findUnique({
-      where: { 
-        id,
-        // Ensure session's trainer belongs to the organization
-        trainer: {
-          organizationId: orgId
-        }
-      },
+      where: { id },
       include: {
         package: true
       }

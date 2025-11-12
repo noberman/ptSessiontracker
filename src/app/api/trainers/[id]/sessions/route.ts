@@ -90,7 +90,8 @@ export async function GET(
       acc[value].sessions.push({
         id: session.id,
         clientName: session.client.name,
-        sessionDate: session.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to prevent UTC conversion on frontend
+        sessionDate: session.sessionDate.toISOString(), // Keep full ISO string for proper timezone handling
+        createdAt: session.createdAt.toISOString(),
         validated: session.validated,
         packageName: session.package?.name
       })

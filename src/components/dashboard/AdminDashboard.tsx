@@ -6,9 +6,10 @@ import { SetupChecklist } from './SetupChecklist'
 interface AdminDashboardProps {
   userId: string
   userName: string
+  orgTimezone?: string
 }
 
-export function AdminDashboard({ userId, userName }: AdminDashboardProps) {
+export function AdminDashboard({ userId, userName, orgTimezone = 'Asia/Singapore' }: AdminDashboardProps) {
   return (
     <div className="space-y-6">
         {/* Admin Header */}
@@ -26,6 +27,7 @@ export function AdminDashboard({ userId, userName }: AdminDashboardProps) {
           userName={userName}
           userRole="ADMIN"
           locationIds={[]}  // Empty array for admin means "all locations"
+          orgTimezone={orgTimezone}
         />
     </div>
   )

@@ -18,7 +18,7 @@ export default async function EditSessionPage({
     redirect('/login')
   }
 
-  // Fetch session data
+  // Fetch session data - include createdAt for timezone handling
   const trainingSession = await prisma.session.findUnique({
     where: { id },
     include: {
@@ -55,6 +55,18 @@ export default async function EditSessionPage({
   if (!trainingSession) {
     redirect('/sessions')
   }
+
+  // Get organization timezone
+  const organizationId = session.user.organizationId
+  if (!organizationId) {
+    redirect('/sessions')
+  }
+  
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { timezone: true }
+  })
+  const orgTimezone = organization?.timezone || 'Asia/Singapore'
 
   // Check permissions
   // For club managers, check if they have access to the session's location
@@ -104,6 +116,7 @@ export default async function EditSessionPage({
         currentUserRole={session.user.role}
         canEditDate={canEditDate}
         canEditValidation={canEditValidation}
+        orgTimezone={orgTimezone}
       />
     </div>
   )

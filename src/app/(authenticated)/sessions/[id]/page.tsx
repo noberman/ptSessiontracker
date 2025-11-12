@@ -81,6 +81,18 @@ export default async function SessionDetailsPage({
     }
   }
 
+  // Get organization timezone
+  const organizationId = session.user.organizationId
+  if (!organizationId) {
+    redirect('/sessions')
+  }
+  
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { timezone: true }
+  })
+  const orgTimezone = organization?.timezone || 'Asia/Singapore'
+
   // Determine if user can edit
   const canEdit = 
     (session.user.role === 'ADMIN') ||
@@ -95,6 +107,7 @@ export default async function SessionDetailsPage({
       session={trainingSession}
       canEdit={canEdit}
       canDelete={canDelete}
+      orgTimezone={orgTimezone}
     />
   )
 }

@@ -31,6 +31,22 @@ export default async function SessionsPage({
     redirect('/login')
   }
   
+  // Fetch organization timezone
+  const organizationId = session.user.organizationId
+  if (!organizationId) {
+    return (
+      <div className="p-6">
+        <p className="text-text-secondary">No organization found</p>
+      </div>
+    )
+  }
+  
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { timezone: true }
+  })
+  const orgTimezone = organization?.timezone || 'Asia/Singapore'
+  
   const page = parseInt(params.page || '1')
   const limit = parseInt(params.limit || '10')
   const skip = (page - 1) * limit
@@ -329,6 +345,7 @@ export default async function SessionsPage({
           canEdit={canSeeActions}
           userRole={session.user.role}
           currentUserId={session.user.id}
+          orgTimezone={orgTimezone}
         />
     </div>
   )

@@ -6,6 +6,7 @@ import { EmailService } from '@/lib/email/sender'
 import { renderSessionValidationEmail } from '@/lib/email/render'
 import { getOrganizationId } from '@/lib/organization-context'
 import { canCreateSession, canTrainerLogSessions, canUseLocation } from '@/lib/usage-limits'
+import { orgTimeToUtc, TIMEZONE_FIX_DEPLOYMENT_DATE } from '@/utils/timezone'
 import crypto from 'crypto'
 
 export async function GET(request: Request) {
@@ -413,10 +414,28 @@ export async function POST(request: Request) {
       return expiry
     })()
 
-    // Combine date and time if provided (handle timezone correctly)
-    const sessionDateTime = sessionTime 
-      ? new Date(`${sessionDate}T${sessionTime}:00`) // ISO format preserves local timezone
-      : new Date(`${sessionDate}T00:00:00`) // Default to midnight local time
+    // Get organization timezone for proper UTC conversion
+    const org = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { timezone: true }
+    })
+    const orgTimezone = org?.timezone || 'Asia/Singapore'
+
+    // Combine date and time for session
+    // Important: The input is assumed to be in the organization's timezone
+    // Create a string that represents the local time (no timezone suffix)
+    const localDateTimeStr = sessionTime 
+      ? `${sessionDate} ${sessionTime}`  // Space instead of T, no seconds
+      : `${sessionDate} 00:00`
+    
+    // Convert to UTC for storage (only for new sessions created after the fix)
+    const isAfterDeployment = new Date() >= TIMEZONE_FIX_DEPLOYMENT_DATE
+    
+    // Use the library function directly with the string
+    // orgTimeToUtc will treat this string as being in orgTimezone
+    const sessionDateTime = isAfterDeployment
+      ? orgTimeToUtc(localDateTimeStr, orgTimezone)
+      : new Date(localDateTimeStr) // Keep old behavior for now (store as local)
 
     // Create the session in a transaction
     const newSession = await prisma.$transaction(async (tx) => {

@@ -49,6 +49,11 @@ export async function GET(
             name: true,
             packageType: true,
           }
+        },
+        organization: {
+          select: {
+            timezone: true
+          }
         }
       }
     })
@@ -92,11 +97,13 @@ export async function GET(
         session: {
           id: session.id,
           sessionDate: session.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
+          createdAt: session.createdAt.toISOString(),
           sessionValue: session.sessionValue,
           client: session.client,
           trainer: session.trainer,
           location: session.location,
           package: session.package,
+          organization: session.organization
         }
       })
     }
@@ -109,11 +116,13 @@ export async function GET(
         session: {
           id: session.id,
           sessionDate: session.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
+          createdAt: session.createdAt.toISOString(),
           sessionValue: session.sessionValue,
           client: session.client,
           trainer: session.trainer,
           location: session.location,
           package: session.package,
+          organization: session.organization
         }
       })
     }
@@ -124,12 +133,14 @@ export async function GET(
       session: {
         id: session.id,
         sessionDate: session.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
+        createdAt: session.createdAt.toISOString(),
         sessionValue: session.sessionValue,
         notes: session.notes,
         client: session.client,
         trainer: session.trainer,
         location: session.location,
         package: session.package,
+        organization: session.organization
       }
     })
   } catch (error: any) {

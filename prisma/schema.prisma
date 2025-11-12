@@ -29,6 +29,7 @@ model Organization {
   betaAccess            Boolean?           @default(false)
   betaExpiresAt         DateTime?          @db.Timestamptz(6)
   betaPreviousTier      SubscriptionTier?
+  timezone              String             @default("Asia/Singapore")
   clients               Client[]
   // Commission v1 (to be removed after migration)
   commissionTiers       CommissionTier[]

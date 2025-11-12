@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { displaySessionTime } from '@/utils/timezone'
 
 interface SessionData {
   id: string
   sessionDate: string
+  createdAt: string
   sessionValue: number
   notes?: string
   client: {
@@ -23,6 +25,9 @@ interface SessionData {
   package?: {
     name: string
     packageType: string
+  }
+  organization?: {
+    timezone: string
   }
 }
 
@@ -112,14 +117,30 @@ export default function ValidateSessionPage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    // The date string from the database is already in local time
-    // Remove 'Z' if present to ensure JavaScript treats it as local time
-    // This prevents JavaScript from doing UTC->local conversion
-    const cleanDateString = dateString.replace('Z', '').replace(/\.\d{3}Z$/, '')
+  const formatDate = (session: SessionData) => {
+    const orgTimezone = session.organization?.timezone || 'Asia/Singapore'
+    
+    // Use timezone-aware display if we have createdAt
+    if (session.createdAt) {
+      const displayDate = displaySessionTime(session.sessionDate, session.createdAt, orgTimezone)
+      const dateFormatted = displayDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+      const timeFormatted = displayDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      })
+      return `${dateFormatted} at ${timeFormatted}`
+    }
+    
+    // Fallback for old sessions
+    const cleanDateString = session.sessionDate.replace('Z', '').replace(/\.\d{3}Z$/, '')
     const date = new Date(cleanDateString)
     
-    // Format the date and time properly
     const dateFormatted = date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -177,7 +198,7 @@ export default function ValidateSessionPage() {
                   <div className="flex justify-between">
                     <span className="text-sm text-text-secondary">Date & Time:</span>
                     <span className="text-sm font-medium text-text-primary">
-                      {formatDate(state.session.sessionDate)}
+                      {formatDate(state.session)}
                     </span>
                   </div>
                   <div className="flex justify-between">

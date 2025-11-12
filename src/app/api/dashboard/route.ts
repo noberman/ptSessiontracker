@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getOrganizationId } from '@/lib/organization-context'
+import { fromZonedTime } from 'date-fns-tz'
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions)
@@ -19,50 +20,69 @@ export async function GET(request: Request) {
   const filterLocationId = searchParams.get('locationId')
 
   try {
-    // Calculate date range based on period
+    // Get organization context and timezone
+    const organizationId = await getOrganizationId()
+    
+    // Get organization timezone
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { timezone: true }
+    })
+    const orgTimezone = org?.timezone || 'Asia/Singapore'
+    
+    // Calculate date range based on period IN THE ORGANIZATION'S TIMEZONE
     let dateFrom: Date
-    let dateTo: Date = new Date()
+    let dateTo: Date
     
     if (period === 'custom' && startDate && endDate) {
+      // Custom dates are already in the right timezone from the frontend
       dateFrom = new Date(startDate)
       dateTo = new Date(endDate)
     } else if (period === 'day') {
-      dateFrom = new Date()
-      dateFrom.setHours(0, 0, 0, 0)
+      // Today in org's timezone
+      const now = new Date()
+      dateFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
+      dateTo = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
       
-      // Set dateTo to end of today
-      dateTo = new Date()
-      dateTo.setHours(23, 59, 59, 999)
+      // Convert from org timezone to UTC for database query
+      dateFrom = fromZonedTime(dateFrom, orgTimezone)
+      dateTo = fromZonedTime(dateTo, orgTimezone)
     } else if (period === 'week') {
-      dateFrom = new Date()
-      dateFrom.setDate(dateFrom.getDate() - 7)
-      dateFrom.setHours(0, 0, 0, 0)
+      // Last 7 days in org's timezone
+      const now = new Date()
+      const weekAgo = new Date(now)
+      weekAgo.setDate(weekAgo.getDate() - 7)
       
-      // Set dateTo to end of today
-      dateTo = new Date()
-      dateTo.setHours(23, 59, 59, 999)
+      dateFrom = new Date(weekAgo.getFullYear(), weekAgo.getMonth(), weekAgo.getDate(), 0, 0, 0)
+      dateTo = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+      
+      // Convert from org timezone to UTC for database query
+      dateFrom = fromZonedTime(dateFrom, orgTimezone)
+      dateTo = fromZonedTime(dateTo, orgTimezone)
     } else if (period === 'lastMonth') {
-      // Last month - from first day to last day of previous month
-      dateFrom = new Date()
-      dateFrom.setMonth(dateFrom.getMonth() - 1)
-      dateFrom.setDate(1)
-      dateFrom.setHours(0, 0, 0, 0)
+      // Last month boundaries in org's timezone
+      const now = new Date()
+      const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1
+      const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
       
-      dateTo = new Date()
-      dateTo.setDate(0) // Sets to last day of previous month
-      dateTo.setHours(23, 59, 59, 999)
+      dateFrom = new Date(year, lastMonth, 1, 0, 0, 0)
+      const lastDay = new Date(year, lastMonth + 1, 0).getDate()
+      dateTo = new Date(year, lastMonth, lastDay, 23, 59, 59, 999)
+      
+      // Convert from org timezone to UTC for database query
+      dateFrom = fromZonedTime(dateFrom, orgTimezone)
+      dateTo = fromZonedTime(dateTo, orgTimezone)
     } else { // month (default - shows entire current month)
-      dateFrom = new Date()
-      dateFrom.setDate(1)
-      dateFrom.setHours(0, 0, 0, 0)
+      // Current month boundaries in org's timezone
+      const now = new Date()
+      dateFrom = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0)
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+      dateTo = new Date(now.getFullYear(), now.getMonth(), lastDay, 23, 59, 59, 999)
       
-      // Set dateTo to the last day of current month at 23:59:59
-      dateTo = new Date(dateFrom.getFullYear(), dateFrom.getMonth() + 1, 0)
-      dateTo.setHours(23, 59, 59, 999)
+      // Convert from org timezone to UTC for database query
+      dateFrom = fromZonedTime(dateFrom, orgTimezone)
+      dateTo = fromZonedTime(dateTo, orgTimezone)
     }
-
-    // Get organization context
-    const organizationId = await getOrganizationId()
     
     // Build where clause based on user role
     // eslint-disable-next-line prefer-const
@@ -153,13 +173,13 @@ export async function GET(request: Request) {
           orderBy: { name: 'asc' }
         }),
         
-        // Today's sessions
+        // Today's sessions in org timezone
         prisma.session.findMany({
           where: {
             trainerId: session.user.id,
             sessionDate: {
-              gte: new Date(new Date().setHours(0, 0, 0, 0)),
-              lte: new Date(new Date().setHours(23, 59, 59, 999))
+              gte: fromZonedTime(new Date(new Date().setHours(0, 0, 0, 0)), orgTimezone),
+              lte: fromZonedTime(new Date(new Date().setHours(23, 59, 59, 999)), orgTimezone)
             }
           },
           select: {

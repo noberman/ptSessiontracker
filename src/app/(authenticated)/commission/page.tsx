@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { CommissionDashboard } from '@/components/commission/CommissionDashboardSimple'
 import { CommissionCalculatorV2 } from '@/lib/commission/v2/CommissionCalculatorV2'
 import { prisma } from '@/lib/prisma'
+import { getMonthBoundariesInUtc } from '@/utils/timezone'
 
 export default async function CommissionPage({
   searchParams
@@ -32,15 +33,21 @@ export default async function CommissionPage({
     return <div>Organization not found</div>
   }
   
+  // Fetch organization timezone
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { timezone: true }
+  })
+  const orgTimezone = organization?.timezone || 'Asia/Singapore'
+  
   // Get current month or from params
   const currentDate = new Date()
   const monthParam = params.month || `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`
   const [year, month] = monthParam.split('-').map(Number)
   const selectedMonth = new Date(year, month - 1)
   
-  // Get date range for the selected month
-  const startOfMonth = new Date(year, month - 1, 1)
-  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
+  // Get date range for the selected month in UTC (for database queries)
+  const { start: startOfMonth, end: endOfMonth } = getMonthBoundariesInUtc(year, month, orgTimezone)
   
   // Get location filter for club managers
   let locationId = params.locationId

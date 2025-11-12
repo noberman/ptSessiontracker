@@ -101,6 +101,38 @@ export async function PUT(request: NextRequest, props: RouteParams) {
       )
     }
     
+    // Validate timezone if provided
+    if (body.timezone) {
+      // Basic validation - check if it's a valid IANA timezone format
+      if (!body.timezone.includes('/') || body.timezone.length < 5) {
+        return NextResponse.json(
+          { error: 'Invalid timezone format' },
+          { status: 400 }
+        )
+      }
+      
+      // List of valid IANA timezones (simplified for common ones)
+      const validTimezones = [
+        'Asia/Singapore', 'Asia/Kuala_Lumpur', 'Asia/Jakarta', 'Asia/Bangkok',
+        'Asia/Manila', 'Asia/Hong_Kong', 'Asia/Tokyo', 'Asia/Seoul', 
+        'Asia/Shanghai', 'Asia/Taipei', 'Asia/Dubai', 'Asia/Kolkata',
+        'Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Perth',
+        'Pacific/Auckland', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+        'Europe/Amsterdam', 'Europe/Madrid', 'Europe/Rome', 'Europe/Moscow',
+        'Europe/Athens', 'America/New_York', 'America/Chicago', 'America/Denver',
+        'America/Los_Angeles', 'America/Toronto', 'America/Vancouver',
+        'America/Sao_Paulo', 'America/Mexico_City', 'Africa/Cairo',
+        'Africa/Lagos', 'Africa/Johannesburg', 'Asia/Jerusalem'
+      ]
+      
+      if (!validTimezones.includes(body.timezone)) {
+        return NextResponse.json(
+          { error: 'Invalid timezone selection' },
+          { status: 400 }
+        )
+      }
+    }
+    
     // Validate subscription tier if provided
     if (body.subscriptionTier) {
       const validTiers = Object.values(SubscriptionTier)
@@ -146,6 +178,7 @@ export async function PUT(request: NextRequest, props: RouteParams) {
         ...(body.name && { name: body.name }),
         ...(body.email && { email: body.email }),
         ...(body.phone !== undefined && { phone: body.phone }),
+        ...(body.timezone && { timezone: body.timezone }),
         ...(body.subscriptionTier && { subscriptionTier: body.subscriptionTier }),
         ...(body.subscriptionStatus && { subscriptionStatus: body.subscriptionStatus }),
         ...(body.stripeCustomerId !== undefined && { stripeCustomerId: body.stripeCustomerId }),

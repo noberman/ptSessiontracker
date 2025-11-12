@@ -8,6 +8,7 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { AlertCircle } from 'lucide-react'
+import { displaySessionTime } from '@/utils/timezone'
 
 interface SessionEditFormProps {
   session: {
@@ -36,17 +37,20 @@ interface SessionEditFormProps {
       name: string
       packageType: string
     } | null
+    createdAt?: Date | string
   }
   currentUserRole: string
   canEditDate: boolean
   canEditValidation: boolean
+  orgTimezone?: string
 }
 
 export function SessionEditForm({ 
   session, 
   currentUserRole, 
   canEditDate, 
-  canEditValidation 
+  canEditValidation,
+  orgTimezone = 'Asia/Singapore'
 }: SessionEditFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -54,10 +58,21 @@ export function SessionEditForm({
   const [showReasonDialog, setShowReasonDialog] = useState(false)
   const [editReason, setEditReason] = useState('')
   
-  // Format date and time from the session
-  const sessionDateTime = new Date(session.sessionDate)
-  const formattedDate = sessionDateTime.toISOString().split('T')[0]
-  const formattedTime = sessionDateTime.toTimeString().slice(0, 5)
+  // Convert session date from stored format to local time for display
+  const localSessionDate = session.createdAt 
+    ? displaySessionTime(session.sessionDate, session.createdAt, orgTimezone)
+    : new Date(session.sessionDate)
+  
+  // Format date and time for form inputs
+  // Important: Use local date formatting to avoid timezone mismatch
+  const year = localSessionDate.getFullYear()
+  const month = String(localSessionDate.getMonth() + 1).padStart(2, '0')
+  const day = String(localSessionDate.getDate()).padStart(2, '0')
+  const formattedDate = `${year}-${month}-${day}`
+  
+  const hours = String(localSessionDate.getHours()).padStart(2, '0')
+  const minutes = String(localSessionDate.getMinutes()).padStart(2, '0')
+  const formattedTime = `${hours}:${minutes}`
   
   const [formData, setFormData] = useState({
     sessionDate: formattedDate,

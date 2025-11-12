@@ -23,14 +23,12 @@ import {
 } from 'recharts'
 import { TrainerPerformanceTable } from './TrainerPerformanceTable'
 import { SessionDetailsPanel } from './SessionDetailsPanel'
-import { fromZonedTime } from 'date-fns-tz'
 
 interface ManagerDashboardProps {
   userId: string
   userName: string
   userRole: string
   locationIds: string[]
-  orgTimezone?: string
 }
 
 interface DashboardData {
@@ -91,10 +89,7 @@ interface DashboardData {
   }>
 }
 
-export function ManagerDashboard({ userId, userName, userRole, locationIds, orgTimezone = 'Asia/Singapore' }: ManagerDashboardProps) {
-  console.log('🕐 ManagerDashboard - Received props:', { userId, userName, userRole, locationIds, orgTimezone })
-  console.log('🕐 ManagerDashboard - orgTimezone value:', orgTimezone)
-  
+export function ManagerDashboard({ userRole }: ManagerDashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
@@ -261,62 +256,19 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
   const handleFetchTrainerDetails = async (trainerId: string) => {
     try {
       let url = `/api/trainers/${trainerId}/sessions`
-      let startDate: Date
-      let endDate: Date = new Date()
-      
       if (period === 'custom' && customStartDate && customEndDate) {
         url += `?startDate=${customStartDate}&endDate=${customEndDate}`
       } else if (period === 'month') {
-        // Current month in org timezone
-        const now = new Date()
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
-        
-        // End of current month in org timezone
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
-        
-        // Convert from org timezone to UTC for API
-        const utcStartDate = fromZonedTime(startDate, orgTimezone)
-        const utcEndDate = fromZonedTime(endDate, orgTimezone)
-        
-        url += `?startDate=${utcStartDate.toISOString()}&endDate=${utcEndDate.toISOString()}`
+        const start = new Date()
+        start.setDate(1)
+        start.setHours(0, 0, 0, 0)
+        url += `?startDate=${start.toISOString()}`
       } else if (period === 'week') {
-        // Last 7 days in org timezone
-        const now = new Date()
-        const sevenDaysAgo = new Date(now)
-        sevenDaysAgo.setDate(now.getDate() - 7)
-        
-        startDate = new Date(sevenDaysAgo.getFullYear(), sevenDaysAgo.getMonth(), sevenDaysAgo.getDate(), 0, 0, 0, 0)
-        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-        
-        // Convert from org timezone to UTC for API
-        const utcStartDate = fromZonedTime(startDate, orgTimezone)
-        const utcEndDate = fromZonedTime(endDate, orgTimezone)
-        
-        url += `?startDate=${utcStartDate.toISOString()}&endDate=${utcEndDate.toISOString()}`
-      } else if (period === 'lastMonth' || period === 'last') {
-        // Last month in org timezone
-        const now = new Date()
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0)
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
-        
-        // Convert from org timezone to UTC for API
-        const utcStartDate = fromZonedTime(startDate, orgTimezone)
-        const utcEndDate = fromZonedTime(endDate, orgTimezone)
-        
-        url += `?startDate=${utcStartDate.toISOString()}&endDate=${utcEndDate.toISOString()}`
-      } else if (period === 'day') {
-        // Today only in org timezone
-        const now = new Date()
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
-        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-        
-        // Convert from org timezone to UTC for API
-        const utcStartDate = fromZonedTime(startDate, orgTimezone)
-        const utcEndDate = fromZonedTime(endDate, orgTimezone)
-        
-        url += `?startDate=${utcStartDate.toISOString()}&endDate=${utcEndDate.toISOString()}`
+        const start = new Date()
+        start.setDate(start.getDate() - 7)
+        start.setHours(0, 0, 0, 0)
+        url += `?startDate=${start.toISOString()}`
       }
-      // If no period matches, fetch all sessions (no date filter)
       
       const response = await fetch(url)
       if (!response.ok) throw new Error('Failed to fetch trainer details')
@@ -379,9 +331,8 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
       cumulativeTotal += Number(stat.count)
       cumulativeValidated += Number(stat.validated_count)
       
-      // Store totals for display but don't add to chart data
-      // dataPoint['Total Sessions'] = cumulativeTotal
-      // dataPoint['Validated'] = cumulativeValidated
+      dataPoint['Total Sessions'] = cumulativeTotal
+      dataPoint['Validated'] = cumulativeValidated
       
       // Add to cumulative trainer counts
       if (stat.trainerSessions) {
@@ -697,21 +648,6 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
           <CardTitle>Cumulative Sessions by Trainer</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Summary stats */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="text-sm">
-              <span className="text-text-secondary">Total Sessions: </span>
-              <span className="font-semibold text-text-primary">
-                {data.stats.totalSessions}
-              </span>
-            </div>
-            <div className="text-sm">
-              <span className="text-text-secondary">Validated Sessions: </span>
-              <span className="font-semibold text-success">
-                {data.stats.validatedSessions} ({data.stats.validationRate}%)
-              </span>
-            </div>
-          </div>
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -719,7 +655,21 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
               <YAxis fontSize={12} />
               <Tooltip />
               <Legend />
-              {/* Add lines for trainers/PT managers only */}
+              <Line 
+                type="monotone" 
+                dataKey="Total Sessions" 
+                stroke="#000000" 
+                strokeWidth={2}
+                strokeDasharray="5 5"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="Validated" 
+                stroke="#10b981" 
+                strokeWidth={2}
+                strokeDasharray="3 3"
+              />
+              {/* Add lines for top trainers */}
               {topTrainers.map((trainerName, index) => (
                 <Line 
                   key={trainerName}
@@ -790,7 +740,6 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
         trainerName={selectedTrainerName}
         sessionValue={selectedSessionValue}
         sessions={selectedSessions}
-        orgTimezone={orgTimezone}
       />
     </div>
   )

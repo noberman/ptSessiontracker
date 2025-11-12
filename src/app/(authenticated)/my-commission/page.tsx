@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { TrainerCommissionView } from '@/components/commission/TrainerCommissionView'
 import { CommissionCalculatorV2 } from '@/lib/commission/v2/CommissionCalculatorV2'
 import { prisma } from '@/lib/prisma'
+import { getMonthBoundariesInUtc } from '@/utils/timezone'
 
 export default async function MyCommissionPage({
   searchParams
@@ -29,7 +30,7 @@ export default async function MyCommissionPage({
   const monthParam = params.month || `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`
   const [year, month] = monthParam.split('-').map(Number)
   
-  // Get trainer with commission profile
+  // Get trainer with commission profile and organization
   const trainer = await prisma.user.findUnique({
     where: { id: session.user.id },
     include: {
@@ -39,6 +40,9 @@ export default async function MyCommissionPage({
             orderBy: { tierLevel: 'asc' }
           }
         }
+      },
+      organization: {
+        select: { timezone: true }
       }
     }
   })
@@ -53,10 +57,10 @@ export default async function MyCommissionPage({
   }
   
   const organizationId = trainer.organizationId
+  const orgTimezone = trainer.organization?.timezone || 'Asia/Singapore'
   
-  // Calculate date range for the selected month
-  const startOfMonth = new Date(year, month - 1, 1)
-  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
+  // Calculate date range for the selected month in UTC (for database queries)
+  const { start: startOfMonth, end: endOfMonth } = getMonthBoundariesInUtc(year, month, orgTimezone)
   
   // Calculate trainer's commission using v2
   const calculator = new CommissionCalculatorV2()
@@ -160,6 +164,7 @@ export default async function MyCommissionPage({
           sessionValue: s.sessionValue,
           validated: s.validated
         }))}
+        orgTimezone={orgTimezone}
       />
     </div>
   )

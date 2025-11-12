@@ -24,13 +24,18 @@ export default async function DashboardPage() {
           id: true,
           subscriptionTier: true,
           lastIssue: true,
-          lastIssueDate: true
+          lastIssueDate: true,
+          timezone: true
         }
       }
     }
   })
   
   const locationIds = user?.locations.map(l => l.locationId) || []
+  
+  const orgTimezone = user?.organization?.timezone || 'Asia/Singapore'
+  console.log('🕐 Dashboard Page - Organization timezone from DB:', user?.organization?.timezone)
+  console.log('🕐 Dashboard Page - Using timezone:', orgTimezone)
 
   // The middleware handles onboarding redirect, so if we're here, user can see dashboard
   
@@ -44,6 +49,7 @@ export default async function DashboardPage() {
       subscriptionTier={user?.organization?.subscriptionTier || 'FREE'}
       lastIssue={user?.organization?.lastIssue}
       lastIssueDate={user?.organization?.lastIssueDate}
+      orgTimezone={orgTimezone}
     />
   )
 }

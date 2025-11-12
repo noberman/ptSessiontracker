@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Eye, ChevronDown } from 'lucide-react'
 import { CompletionModal } from '@/components/onboarding/CompletionModal'
-import { LimitWarnings } from '@/components/LimitWarnings'
+import { OverLimitBanner } from '@/components/OverLimitBanner'
 
 interface DashboardWrapperProps {
   userId: string
@@ -20,7 +20,6 @@ interface DashboardWrapperProps {
   subscriptionTier?: 'FREE' | 'GROWTH' | 'SCALE'
   lastIssue?: string | null
   lastIssueDate?: Date | null
-  orgTimezone?: string
 }
 
 export function DashboardWrapper({ 
@@ -31,11 +30,8 @@ export function DashboardWrapper({
   organizationId,
   subscriptionTier,
   lastIssue,
-  lastIssueDate,
-  orgTimezone = 'Asia/Singapore'
+  lastIssueDate
 }: DashboardWrapperProps) {
-  console.log('🕐 DashboardWrapper - Received orgTimezone:', orgTimezone)
-  
   // For development, allow switching between views
   const [viewRole, setViewRole] = useState(actualRole)
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false)
@@ -69,7 +65,7 @@ export function DashboardWrapper({
   const renderDashboard = () => {
     switch (viewRole) {
       case 'TRAINER':
-        return <TrainerDashboard userId={userId} userName={userName} orgTimezone={orgTimezone} />
+        return <TrainerDashboard userId={userId} userName={userName} />
       
       case 'CLUB_MANAGER':
         return (
@@ -78,7 +74,6 @@ export function DashboardWrapper({
             userName={userName}
             userRole="CLUB_MANAGER"
             locationIds={locationIds}
-            orgTimezone={orgTimezone}
           />
         )
       
@@ -89,7 +84,6 @@ export function DashboardWrapper({
             userName={userName}
             userRole="PT_MANAGER"
             locationIds={locationIds}
-            orgTimezone={orgTimezone}
           />
         )
       
@@ -98,20 +92,19 @@ export function DashboardWrapper({
           <AdminDashboard 
             userId={userId} 
             userName={userName}
-            orgTimezone={orgTimezone}
           />
         )
       
       default:
-        return <TrainerDashboard userId={userId} userName={userName} orgTimezone={orgTimezone} />
+        return <TrainerDashboard userId={userId} userName={userName} />
     }
   }
 
   return (
     <div>
-      {/* Limit Warnings - Show for managers and admins */}
+      {/* Over Limit Banner - Show for managers and admins */}
       {organizationId && subscriptionTier && ['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(actualRole) && (
-        <LimitWarnings 
+        <OverLimitBanner 
           organizationId={organizationId}
           subscriptionTier={subscriptionTier}
           lastIssue={lastIssue}

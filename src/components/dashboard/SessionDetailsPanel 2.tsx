@@ -3,14 +3,11 @@
 import { X, Calendar, User, Package, CheckCircle, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { displaySessionTime } from '@/utils/timezone'
-import { format } from 'date-fns-tz'
 
 interface Session {
   id: string
   clientName: string
   sessionDate: string
-  createdAt?: string // Made optional for backward compatibility
   validated: boolean
   packageName?: string
 }
@@ -21,7 +18,6 @@ interface SessionDetailsPanelProps {
   trainerName: string
   sessionValue: number
   sessions: Session[]
-  orgTimezone?: string // Optional for now, will default to Asia/Singapore
 }
 
 export function SessionDetailsPanel({
@@ -29,38 +25,19 @@ export function SessionDetailsPanel({
   onClose,
   trainerName,
   sessionValue,
-  sessions,
-  orgTimezone = 'Asia/Singapore'
+  sessions
 }: SessionDetailsPanelProps) {
-  console.log('🕐 SessionDetailsPanel - orgTimezone:', orgTimezone)
-  console.log('🕐 SessionDetailsPanel - sample sessions:', sessions?.slice(0, 2))
-  
   if (!isOpen) return null
 
-  const formatDate = (dateString: string, createdAt?: string) => {
-    console.log('🕐 formatDate input:', { dateString, createdAt, orgTimezone })
-    
-    // If we have createdAt, use our new timezone handling
-    if (createdAt) {
-      const displayDate = displaySessionTime(dateString, createdAt, orgTimezone)
-      console.log('🕐 displayDate result:', displayDate)
-      
-      // Format the already-converted date (no timeZone option needed)
-      const formatted = format(displayDate, 'MMM d, yyyy, hh:mm a')
-      
-      console.log('🕐 formatted result:', formatted)
-      return formatted
-    }
-    
-    // Fallback for old sessions without createdAt
-    console.log('🕐 Using fallback path for session without createdAt')
-    const cleanDateString = dateString.replace('Z', '').replace(/\.\d{3}Z$/, '')
-    const date = new Date(cleanDateString)
-    
-    // For consistency, use format from date-fns-tz
-    const formatted = format(date, 'MMM d, yyyy, hh:mm a')
-    console.log('🕐 Fallback formatted:', formatted)
-    return formatted
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   const formatCurrency = (amount: number) => {
@@ -72,21 +49,8 @@ export function SessionDetailsPanel({
 
   // Group sessions by month for better organization
   const sessionsByMonth = sessions.reduce((acc, session) => {
-    console.log('🕐 Grouping session:', { 
-      sessionDate: session.sessionDate, 
-      createdAt: session.createdAt,
-      orgTimezone 
-    })
-    
-    // Use timezone-aware date for grouping
-    const date = session.createdAt 
-      ? displaySessionTime(session.sessionDate, session.createdAt, orgTimezone)
-      : new Date(session.sessionDate)
-    
-    console.log('🕐 Converted date for grouping:', date)
-    
-    const monthKey = format(date, 'MMMM yyyy')
-    console.log('🕐 Month key:', monthKey)
+    const date = new Date(session.sessionDate)
+    const monthKey = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     
     if (!acc[monthKey]) {
       acc[monthKey] = []
@@ -181,7 +145,7 @@ export function SessionDetailsPanel({
                               <div className="flex items-center space-x-3">
                                 <Calendar className="w-4 h-4 text-text-secondary" />
                                 <span className="text-sm text-text-secondary">
-                                  {formatDate(session.sessionDate, session.createdAt)}
+                                  {formatDate(session.sessionDate)}
                                 </span>
                               </div>
                               

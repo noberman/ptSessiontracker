@@ -2,14 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Clock, User, MapPin, Package, DollarSign, AlertCircle, CheckCircle, Trash2 } from 'lucide-react'
+import { Clock, User, MapPin, Package, DollarSign, AlertCircle, CheckCircle, Trash2, XCircle } from 'lucide-react'
 import { DeleteSessionDialog } from '@/components/sessions/DeleteSessionDialog'
-import { format, parseISO } from 'date-fns'
-import { toZonedTime } from 'date-fns-tz'
 import { displaySessionTime } from '@/utils/timezone'
+import { format, toZonedTime } from 'date-fns-tz'
 
 interface SessionDetailsClientProps {
   session: {
@@ -21,6 +21,8 @@ interface SessionDetailsClientProps {
     validatedAt: Date | null
     validationToken: string | null
     validationExpiry: Date | null
+    cancelled?: boolean
+    cancelledAt?: Date | null
     createdAt: Date
     updatedAt: Date
     client: {
@@ -53,42 +55,60 @@ interface SessionDetailsClientProps {
   }
   canEdit: boolean
   canDelete: boolean
-  orgTimezone: string
+  orgTimezone?: string
 }
 
-export function SessionDetailsClient({ session, canEdit, canDelete, orgTimezone }: SessionDetailsClientProps) {
-  console.log('🕐 SessionDetailsClient - Received props:', { 
-    sessionId: session.id,
-    orgTimezone,
-    sessionDate: session.sessionDate,
-    createdAt: session.createdAt,
-    updatedAt: session.updatedAt,
-    validatedAt: session.validatedAt,
-    validationExpiry: session.validationExpiry
-  })
+export function SessionDetailsClient({ session, canEdit, canDelete, orgTimezone = 'Asia/Singapore' }: SessionDetailsClientProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [markingNoShow, setMarkingNoShow] = useState(false)
+  const router = useRouter()
 
   // Check if this is a substitute session
   const isSubstitute = session.client.primaryTrainer?.id !== session.trainerId
 
+  const handleMarkNoShow = async () => {
+    if (!confirm('Mark this session as a no-show? This cannot be undone.')) {
+      return
+    }
+    
+    setMarkingNoShow(true)
+    
+    try {
+      const response = await fetch(`/api/sessions/${session.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cancelled: true,
+          notes: session.notes ? `${session.notes}\n\nMarked as no-show` : 'Marked as no-show'
+        })
+      })
+      
+      if (response.ok) {
+        alert('Session marked as no-show')
+        router.refresh()
+      } else {
+        const data = await response.json()
+        alert(`Error: ${data.error}`)
+      }
+    } catch (error) {
+      alert('Failed to mark session as no-show')
+    } finally {
+      setMarkingNoShow(false)
+    }
+  }
+
   // Determine validation status
   const getValidationStatus = () => {
+    if (session.cancelled) {
+      return { label: 'No-Show', variant: 'error' as const, icon: XCircle }
+    }
     if (session.validated) {
       return { label: 'Validated', variant: 'success' as const, icon: CheckCircle }
     }
-    if (session.validationExpiry) {
-      const expiryDate = typeof session.validationExpiry === 'string' 
-        ? parseISO(session.validationExpiry)
-        : session.validationExpiry
-      const now = new Date()
-      console.log('🕐 Validation expiry check:', { 
-        expiry: expiryDate, 
-        now, 
-        isExpired: expiryDate < now 
-      })
-      if (expiryDate < now) {
-        return { label: 'Expired', variant: 'warning' as const, icon: AlertCircle }
-      }
+    if (session.validationExpiry && new Date(session.validationExpiry) < new Date()) {
+      return { label: 'Expired', variant: 'warning' as const, icon: AlertCircle }
     }
     return { label: 'Pending', variant: 'warning' as const, icon: Clock }
   }
@@ -103,15 +123,12 @@ export function SessionDetailsClient({ session, canEdit, canDelete, orgTimezone 
             <h1 className="text-2xl font-bold text-text-primary">Session Details</h1>
             <p className="text-sm text-text-secondary mt-1">
               {(() => {
-                console.log('🕐 Session Date Header - Input:', session.sessionDate)
-                const sessionDate = typeof session.sessionDate === 'string' 
-                  ? parseISO(session.sessionDate)
-                  : session.sessionDate
-                const zonedDate = toZonedTime(sessionDate, orgTimezone)
-                console.log('🕐 Session Date Header - After toZonedTime:', zonedDate)
-                const formatted = format(zonedDate, 'EEEE, MMMM d, yyyy')
-                console.log('🕐 Session Date Header - Formatted:', formatted)
-                return formatted
+                const displayDate = displaySessionTime(
+                  session.sessionDate, 
+                  session.createdAt, 
+                  orgTimezone
+                )
+                return format(displayDate, 'EEEE, MMMM d, yyyy')
               })()}
             </p>
           </div>
@@ -119,7 +136,7 @@ export function SessionDetailsClient({ session, canEdit, canDelete, orgTimezone 
             <Link href="/sessions">
               <Button variant="outline">Back to Sessions</Button>
             </Link>
-            {canEdit && (
+            {canEdit && !session.cancelled && (
               <Link href={`/sessions/${session.id}/edit`}>
                 <Button>Edit Session</Button>
               </Link>
@@ -164,20 +181,12 @@ export function SessionDetailsClient({ session, canEdit, canDelete, orgTimezone 
                   <p className="text-sm text-text-secondary">Time</p>
                   <p className="text-xl font-semibold text-text-primary">
                     {(() => {
-                      console.log('🕐 Session Time Card - Input:', {
-                        sessionDate: session.sessionDate,
-                        createdAt: session.createdAt,
-                        orgTimezone
-                      })
                       const displayDate = displaySessionTime(
                         session.sessionDate, 
                         session.createdAt, 
                         orgTimezone
                       )
-                      console.log('🕐 Session Time Card - After displaySessionTime:', displayDate)
-                      const formatted = format(displayDate, 'hh:mm a')
-                      console.log('🕐 Session Time Card - Formatted:', formatted)
-                      return formatted
+                      return format(displayDate, 'hh:mm a')
                     })()}
                   </p>
                 </div>
@@ -285,15 +294,11 @@ export function SessionDetailsClient({ session, canEdit, canDelete, orgTimezone 
                   <p className="text-sm font-medium text-text-secondary mb-2">Validation</p>
                   <p className="text-sm text-text-primary">
                     Validated on {(() => {
-                      console.log('🕐 Validated At - Input:', session.validatedAt)
-                      const validatedDate = typeof session.validatedAt === 'string' 
-                        ? parseISO(session.validatedAt)
+                      const validatedDate = typeof session.validatedAt === 'string'
+                        ? new Date(session.validatedAt)
                         : session.validatedAt
                       const zonedDate = toZonedTime(validatedDate, orgTimezone)
-                      console.log('🕐 Validated At - After toZonedTime:', zonedDate)
-                      const formatted = format(zonedDate, 'EEEE, MMMM d, yyyy, hh:mm a')
-                      console.log('🕐 Validated At - Formatted:', formatted)
-                      return formatted
+                      return format(zonedDate, 'EEEE, MMMM d, yyyy \'at\' hh:mm a')
                     })()}
                   </p>
                 </div>
@@ -311,15 +316,12 @@ export function SessionDetailsClient({ session, canEdit, canDelete, orgTimezone 
                 <p className="text-sm text-text-secondary">Created</p>
                 <p className="text-sm text-text-primary">
                   {(() => {
-                    console.log('🕐 Created At - Input:', session.createdAt)
+                    // createdAt is stored in UTC, convert to org timezone for display
                     const createdDate = typeof session.createdAt === 'string' 
-                      ? parseISO(session.createdAt)
+                      ? new Date(session.createdAt) 
                       : session.createdAt
                     const zonedDate = toZonedTime(createdDate, orgTimezone)
-                    console.log('🕐 Created At - After toZonedTime:', zonedDate)
-                    const formatted = format(zonedDate, 'MMMM d, yyyy, hh:mm a')
-                    console.log('🕐 Created At - Formatted:', formatted)
-                    return formatted
+                    return format(zonedDate, 'MMMM d, yyyy \'at\' hh:mm a')
                   })()}
                 </p>
               </div>
@@ -327,15 +329,12 @@ export function SessionDetailsClient({ session, canEdit, canDelete, orgTimezone 
                 <p className="text-sm text-text-secondary">Last Updated</p>
                 <p className="text-sm text-text-primary">
                   {(() => {
-                    console.log('🕐 Updated At - Input:', session.updatedAt)
+                    // updatedAt is stored in UTC, convert to org timezone for display
                     const updatedDate = typeof session.updatedAt === 'string' 
-                      ? parseISO(session.updatedAt)
+                      ? new Date(session.updatedAt) 
                       : session.updatedAt
                     const zonedDate = toZonedTime(updatedDate, orgTimezone)
-                    console.log('🕐 Updated At - After toZonedTime:', zonedDate)
-                    const formatted = format(zonedDate, 'MMMM d, yyyy, hh:mm a')
-                    console.log('🕐 Updated At - Formatted:', formatted)
-                    return formatted
+                    return format(zonedDate, 'MMMM d, yyyy \'at\' hh:mm a')
                   })()}
                 </p>
               </div>
@@ -344,15 +343,11 @@ export function SessionDetailsClient({ session, canEdit, canDelete, orgTimezone 
                   <p className="text-sm text-text-secondary">Validation Expires</p>
                   <p className="text-sm text-text-primary">
                     {session.validationExpiry ? (() => {
-                      console.log('🕐 Validation Expiry - Input:', session.validationExpiry)
                       const expiryDate = typeof session.validationExpiry === 'string' 
-                        ? parseISO(session.validationExpiry)
+                        ? new Date(session.validationExpiry) 
                         : session.validationExpiry
                       const zonedDate = toZonedTime(expiryDate, orgTimezone)
-                      console.log('🕐 Validation Expiry - After toZonedTime:', zonedDate)
-                      const formatted = format(zonedDate, 'MMMM d, yyyy')
-                      console.log('🕐 Validation Expiry - Formatted:', formatted)
-                      return formatted
+                      return format(zonedDate, 'dd/MM/yyyy')
                     })() : 'No expiry'}
                   </p>
                 </div>
