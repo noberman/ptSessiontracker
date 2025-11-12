@@ -125,35 +125,18 @@ export default function ValidateSessionPage() {
     // Use timezone-aware display if we have createdAt
     if (session.createdAt) {
       const displayDate = displaySessionTime(session.sessionDate, session.createdAt, orgTimezone)
-      const dateFormatted = displayDate.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-      const timeFormatted = displayDate.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      })
+      const dateFormatted = format(displayDate, 'EEEE, MMMM d, yyyy')
+      const timeFormatted = format(displayDate, 'h:mm a')
       return `${dateFormatted} at ${timeFormatted}`
     }
     
-    // Fallback for old sessions
-    const cleanDateString = session.sessionDate.replace('Z', '').replace(/\.\d{3}Z$/, '')
-    const date = new Date(cleanDateString)
+    // Fallback for old sessions (treat as local time)
+    const sessionDate = typeof session.sessionDate === 'string' 
+      ? parseISO(session.sessionDate.replace('Z', '').replace(/\.\d{3}Z$/, ''))
+      : session.sessionDate
     
-    const dateFormatted = date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-    const timeFormatted = date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
+    const dateFormatted = format(sessionDate, 'EEEE, MMMM d, yyyy')
+    const timeFormatted = format(sessionDate, 'h:mm a')
     return `${dateFormatted} at ${timeFormatted}`
   }
 

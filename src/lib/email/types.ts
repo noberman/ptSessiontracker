@@ -27,10 +27,12 @@ export interface SessionValidationEmailData {
   clientName: string
   trainerName: string
   sessionDate: Date
+  createdAt: Date
   location: string
   sessionValue: number
   validationUrl: string
   expiryDays: number
+  orgTimezone: string
 }
 
 export interface ReminderEmailData {

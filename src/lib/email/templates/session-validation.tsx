@@ -11,32 +11,26 @@ import {
 import { BaseEmailTemplate } from './base'
 import type { SessionValidationEmailData } from '../types'
 import type { CSSProperties } from 'react'
+import { format } from 'date-fns'
+import { toZonedTime } from 'date-fns-tz'
+import { displaySessionTime } from '@/utils/timezone'
 
 export const SessionValidationEmail: React.FC<SessionValidationEmailData> = ({
   clientName,
   trainerName,
   sessionDate,
+  createdAt,
   location,
   sessionValue,
   validationUrl,
   expiryDays,
+  orgTimezone,
 }) => {
-  // Handle sessionDate as either a Date object or ISO string
-  const date = typeof sessionDate === 'string' 
-    ? new Date(sessionDate + ((sessionDate as string).endsWith('Z') ? '' : 'Z'))
-    : sessionDate
+  // Use our timezone utility to get the correct display time
+  const displayDate = displaySessionTime(sessionDate, createdAt, orgTimezone)
     
-  const formattedDate = date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-
-  const formattedTime = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const formattedDate = format(displayDate, 'EEEE, MMMM d, yyyy')
+  const formattedTime = format(displayDate, 'h:mm a')
 
   return (
     <BaseEmailTemplate

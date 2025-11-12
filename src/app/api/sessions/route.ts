@@ -512,10 +512,12 @@ export async function POST(request: Request) {
           clientName: newSession.client.name,
           trainerName: newSession.trainer.name,
           sessionDate: newSession.sessionDate,
+          createdAt: newSession.createdAt,
           location: newSession.location.name,
           sessionValue: newSession.sessionValue,
           validationUrl,
           expiryDays: parseInt(process.env.SESSION_VALIDATION_EXPIRY_DAYS || '30'),
+          orgTimezone,
         })
 
         await EmailService.sendWithRetry({

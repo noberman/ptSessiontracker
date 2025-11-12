@@ -82,6 +82,16 @@ export async function POST(
       }
     })
 
+    // Get organization timezone for proper email display
+    let orgTimezone = 'Asia/Singapore'
+    if (sessionData.location.organizationId) {
+      const org = await prisma.organization.findUnique({
+        where: { id: sessionData.location.organizationId },
+        select: { timezone: true }
+      })
+      orgTimezone = org?.timezone || 'Asia/Singapore'
+    }
+
     // Send new validation email
     const validationUrl = `${process.env.APP_URL || 'https://www.fitsync.io'}/validate/${newValidationToken}`
     
@@ -89,10 +99,12 @@ export async function POST(
       clientName: sessionData.client.name,
       trainerName: sessionData.trainer.name,
       sessionDate: sessionData.sessionDate,
+      createdAt: sessionData.createdAt,
       location: sessionData.location.name,
       sessionValue: sessionData.sessionValue,
       validationUrl,
       expiryDays: 30,
+      orgTimezone,
     })
 
     const emailResult = await EmailService.sendWithRetry({
