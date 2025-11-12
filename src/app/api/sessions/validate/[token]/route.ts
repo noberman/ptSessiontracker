@@ -215,16 +215,36 @@ export async function POST(
       include: {
         client: {
           select: {
+            id: true,
             name: true,
             email: true,
           }
         },
         trainer: {
           select: {
+            id: true,
             name: true,
             email: true,
           }
         },
+        location: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        package: {
+          select: {
+            id: true,
+            name: true,
+            packageType: true,
+          }
+        },
+        organization: {
+          select: {
+            timezone: true
+          }
+        }
       }
     })
 
@@ -249,9 +269,15 @@ export async function POST(
       session: {
         id: updatedSession.id,
         sessionDate: updatedSession.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
+        createdAt: updatedSession.createdAt.toISOString(),
+        sessionValue: updatedSession.sessionValue,
+        notes: updatedSession.notes,
         validatedAt: updatedSession.validatedAt,
         client: updatedSession.client,
         trainer: updatedSession.trainer,
+        location: updatedSession.location,
+        package: updatedSession.package,
+        organization: updatedSession.organization
       }
     })
   } catch (error: any) {

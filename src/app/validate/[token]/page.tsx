@@ -98,7 +98,7 @@ export default function ValidateSessionPage() {
       if (response.ok) {
         setState({
           status: 'success',
-          session: state.session,
+          session: data.session, // Use the updated session data from the response
           validatedAt: data.session.validatedAt,
         })
       } else {
