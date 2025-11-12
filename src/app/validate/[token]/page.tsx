@@ -252,7 +252,12 @@ export default function ValidateSessionPage() {
                 {state.status === 'already_validated' && state.validatedAt && (
                   <div className="text-center">
                     <p className="text-sm text-success-600 mb-2">
-                      This session was validated on {formatDate(state.validatedAt)}
+                      This session was validated on {(() => {
+                        const date = parseISO(state.validatedAt)
+                        const orgTimezone = state.session?.organization?.timezone || 'Asia/Singapore'
+                        const zonedDate = toZonedTime(date, orgTimezone)
+                        return format(zonedDate, 'MMM d, yyyy \"at\" h:mm a')
+                      })()}
                     </p>
                     <p className="text-sm text-text-secondary">
                       No further action is required.
