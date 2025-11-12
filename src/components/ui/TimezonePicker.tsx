@@ -87,7 +87,7 @@ export function TimezonePicker({
   const filteredTimezones = useMemo(() => {
     if (!searchTerm) return TIMEZONES
     
-    const filtered: typeof TIMEZONES = {}
+    const filtered: Partial<typeof TIMEZONES> = {}
     for (const [region, zones] of Object.entries(TIMEZONES)) {
       const matchingZones = zones.filter(
         tz => 
@@ -95,10 +95,10 @@ export function TimezonePicker({
           tz.value.toLowerCase().includes(searchTerm.toLowerCase())
       )
       if (matchingZones.length > 0) {
-        filtered[region] = matchingZones
+        filtered[region as keyof typeof TIMEZONES] = matchingZones
       }
     }
-    return filtered
+    return filtered as typeof TIMEZONES
   }, [searchTerm])
 
   // Close dropdown when clicking outside
