@@ -15,18 +15,7 @@ export default async function OrganizationSettingsPage() {
   // Fetch organization details with timezone
   const organization = await prisma.organization.findUnique({
     where: { id: session.user.organizationId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      timezone: true,
-      subscriptionTier: true,
-      subscriptionStatus: true,
-      stripeCustomerId: true,
-      stripeSubscriptionId: true,
-      createdAt: true,
-      updatedAt: true,
+    include: {
       _count: {
         select: {
           users: true,
