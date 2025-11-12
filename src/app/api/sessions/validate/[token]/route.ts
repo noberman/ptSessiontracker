@@ -96,7 +96,7 @@ export async function GET(
         help: 'This session has already been validated. If you received this link in error, please contact support.',
         session: {
           id: session.id,
-          sessionDate: session.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
+          sessionDate: session.sessionDate.toISOString(), // Keep the Z for proper UTC handling
           createdAt: session.createdAt.toISOString(),
           sessionValue: session.sessionValue,
           client: session.client,
@@ -115,7 +115,7 @@ export async function GET(
         expiredAt: session.validationExpiry,
         session: {
           id: session.id,
-          sessionDate: session.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
+          sessionDate: session.sessionDate.toISOString(), // Keep the Z for proper UTC handling
           createdAt: session.createdAt.toISOString(),
           sessionValue: session.sessionValue,
           client: session.client,
@@ -268,7 +268,7 @@ export async function POST(
       message: 'Session validated successfully',
       session: {
         id: updatedSession.id,
-        sessionDate: updatedSession.sessionDate.toISOString().slice(0, -1), // Remove 'Z' to treat as local time
+        sessionDate: updatedSession.sessionDate.toISOString(), // Keep the Z for proper UTC handling
         createdAt: updatedSession.createdAt.toISOString(),
         sessionValue: updatedSession.sessionValue,
         notes: updatedSession.notes,
