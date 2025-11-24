@@ -247,18 +247,12 @@ export async function POST(request: Request) {
             if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
               const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
               if (accessibleLocations && accessibleLocations.length > 0) {
-                baseWhere.OR = [
-                  // Check old system (locationId field)
-                  { locationId: { in: accessibleLocations } },
-                  // Check new system (junction table)
-                  {
-                    locations: {
-                      some: {
-                        locationId: { in: accessibleLocations }
-                      }
-                    }
+                // Only use junction table - User model no longer has locationId field
+                baseWhere.locations = {
+                  some: {
+                    locationId: { in: accessibleLocations }
                   }
-                ]
+                }
               } else {
                 baseWhere.id = 'no-access'  // No trainers if no accessible locations
               }
