@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
+import { useFilterPersistence } from '@/hooks/useFilterPersistence'
 
 interface SessionFiltersProps {
   clients: Array<{
@@ -24,6 +25,7 @@ interface SessionFiltersProps {
 export function SessionFilters({ clients, trainers, locations }: SessionFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { saveFilters, syncWithUrl } = useFilterPersistence('session-filters')
   
   // Parse comma-separated values for multi-select fields
   const getArrayFromParam = (param: string | null) => {
@@ -40,15 +42,57 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
     endDate: searchParams.get('endDate') || '',
   }
 
-  // Only use local state for temporary filter changes before applying
+  // Initialize state with stored or URL filters
   const [tempFilters, setTempFilters] = useState(currentFilters)
   const [isOpen, setIsOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [hasInitialized, setHasInitialized] = useState(false)
   
-  // Reset temp filters when URL changes
+  // On mount, sync with stored filters if no URL filters present
   useEffect(() => {
-    setTempFilters(currentFilters)
-  }, [searchParams])
+    if (!hasInitialized) {
+      const storedState = syncWithUrl(currentFilters)
+      if (storedState) {
+        setTempFilters(storedState.filters)
+        setIsOpen(storedState.isOpen)
+        
+        // If we restored filters from storage, apply them to URL
+        const hasStoredFilters = Object.values(storedState.filters).some(value => 
+          Array.isArray(value) ? value.length > 0 : !!value
+        )
+        if (hasStoredFilters) {
+          // Apply stored filters to URL
+          const params = new URLSearchParams()
+          const filters = storedState.filters
+          
+          if (filters.clientIds?.length > 0) {
+            params.set('clientIds', filters.clientIds.join(','))
+          }
+          if (filters.trainerIds?.length > 0) {
+            params.set('trainerIds', filters.trainerIds.join(','))
+          }
+          if (filters.locationIds?.length > 0) {
+            params.set('locationIds', filters.locationIds.join(','))
+          }
+          if (filters.validatedStatuses?.length > 0) {
+            params.set('validatedStatuses', filters.validatedStatuses.join(','))
+          }
+          if (filters.startDate) params.set('startDate', filters.startDate)
+          if (filters.endDate) params.set('endDate', filters.endDate)
+          
+          router.push(`/sessions?${params.toString()}`)
+        }
+      }
+      setHasInitialized(true)
+    }
+  }, [hasInitialized, currentFilters, syncWithUrl, router])
+  
+  // Save filters whenever they're applied or panel state changes
+  useEffect(() => {
+    if (hasInitialized) {
+      saveFilters(currentFilters, isOpen)
+    }
+  }, [currentFilters, isOpen, saveFilters, hasInitialized])
 
   const applyFilters = () => {
     
@@ -80,14 +124,17 @@ export function SessionFilters({ clients, trainers, locations }: SessionFiltersP
   }
 
   const clearFilters = () => {
-    setTempFilters({
+    const clearedFilters = {
       clientIds: [],
       trainerIds: [],
       locationIds: [],
       validatedStatuses: [],
       startDate: '',
       endDate: '',
-    })
+    }
+    setTempFilters(clearedFilters)
+    // Clear from storage as well
+    saveFilters(clearedFilters, isOpen)
     router.push('/sessions')
     router.refresh() // Force refresh to clear filters
   }
