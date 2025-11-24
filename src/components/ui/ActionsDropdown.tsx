@@ -40,34 +40,57 @@ export function ActionsDropdown({ actions }: ActionsDropdownProps) {
     }
   }, [])
 
+  // Close dropdown on scroll or resize
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleScrollOrResize = () => {
+      setIsOpen(false)
+    }
+
+    // Use capture phase (true) to catch all scroll events including on child elements
+    window.addEventListener('scroll', handleScrollOrResize, true)
+    window.addEventListener('resize', handleScrollOrResize)
+
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true)
+      window.removeEventListener('resize', handleScrollOrResize)
+    }
+  }, [isOpen])
+
   useEffect(() => {
     if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      const dropdownWidth = 192 // 192px = 48rem (w-48)
-      const dropdownHeight = 200 // Approximate max height
-      const padding = 8
-      
-      // Calculate position - since we're using position: fixed, we use viewport coordinates directly
-      let top = rect.bottom + padding
-      let left = rect.right - dropdownWidth
-      
-      // Check if dropdown would go off the bottom of the viewport
-      if (top + dropdownHeight > window.innerHeight) {
-        // Position above the button instead
-        top = rect.top - dropdownHeight - padding
-      }
-      
-      // Check if dropdown would go off the left edge
-      if (left < padding) {
-        left = padding
-      }
-      
-      // Check if dropdown would go off the right edge
-      if (left + dropdownWidth > window.innerWidth) {
-        left = window.innerWidth - dropdownWidth - padding
-      }
-      
-      setDropdownPosition({ top, left })
+      // Small timeout to ensure DOM has updated after any layout changes (e.g., page size change)
+      setTimeout(() => {
+        if (!buttonRef.current) return
+        
+        const rect = buttonRef.current.getBoundingClientRect()
+        const dropdownWidth = 192 // 192px = 48rem (w-48)
+        const dropdownHeight = 200 // Approximate max height
+        const padding = 8
+        
+        // Calculate position - since we're using position: fixed, we use viewport coordinates directly
+        let top = rect.bottom + padding
+        let left = rect.right - dropdownWidth
+        
+        // Check if dropdown would go off the bottom of the viewport
+        if (top + dropdownHeight > window.innerHeight) {
+          // Position above the button instead
+          top = rect.top - dropdownHeight - padding
+        }
+        
+        // Check if dropdown would go off the left edge
+        if (left < padding) {
+          left = padding
+        }
+        
+        // Check if dropdown would go off the right edge
+        if (left + dropdownWidth > window.innerWidth) {
+          left = window.innerWidth - dropdownWidth - padding
+        }
+        
+        setDropdownPosition({ top, left })
+      }, 0)
     }
   }, [isOpen])
 
