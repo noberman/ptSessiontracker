@@ -19,6 +19,8 @@ interface SessionDetailsClientProps {
     notes: string | null
     validated: boolean
     validatedAt: Date | null
+    cancelled: boolean
+    cancelledAt: Date | null
     validationToken: string | null
     validationExpiry: Date | null
     createdAt: Date
@@ -73,6 +75,10 @@ export function SessionDetailsClient({ session, canEdit, canDelete, orgTimezone 
 
   // Determine validation status
   const getValidationStatus = () => {
+    // Check cancelled first
+    if (session.cancelled) {
+      return { label: 'Cancelled', variant: 'gray' as const, icon: AlertCircle }
+    }
     if (session.validated) {
       return { label: 'Validated', variant: 'success' as const, icon: CheckCircle }
     }
