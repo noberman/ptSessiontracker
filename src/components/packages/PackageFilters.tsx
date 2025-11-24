@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
+import { useFilterPersistence } from '@/hooks/useFilterPersistence'
 
 interface PackageFiltersProps {
   clients: Array<{
@@ -23,9 +24,20 @@ interface PackageFiltersProps {
   currentUserRole: string
 }
 
+interface FilterData {
+  clientIds: string[]
+  locationIds: string[]
+  packageTypes: string[]
+  activeStatuses: string[]
+  expirationStatus: string
+  startDate: string
+  endDate: string
+}
+
 export function PackageFilters({ clients, locations, packageTypes, currentUserRole }: PackageFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { saveFilters, syncWithUrl } = useFilterPersistence<FilterData>('package-filters')
   
   // Parse comma-separated values for multi-select fields
   const getArrayFromParam = (param: string | null) => {
@@ -36,6 +48,7 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
   const [isOpen, setIsOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [localChanges, setLocalChanges] = useState<Record<string, any>>({})
+  const [hasInitialized, setHasInitialized] = useState(false)
 
   // Get current filter values - either from local changes or URL
   const getFilterValue = (key: string, isArray = false) => {
@@ -48,6 +61,16 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
     return searchParams.get(key) || ''
   }
 
+  const urlFilters = {
+    clientIds: getArrayFromParam(searchParams.get('clientIds')),
+    locationIds: getArrayFromParam(searchParams.get('locationIds')),
+    packageTypes: getArrayFromParam(searchParams.get('packageTypes')),
+    activeStatuses: getArrayFromParam(searchParams.get('activeStatuses')),
+    expirationStatus: searchParams.get('expirationStatus') || '',
+    startDate: searchParams.get('startDate') || '',
+    endDate: searchParams.get('endDate') || '',
+  }
+  
   const currentFilters = {
     clientIds: getFilterValue('clientIds', true) as string[],
     locationIds: getFilterValue('locationIds', true) as string[],
@@ -57,7 +80,51 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
     startDate: getFilterValue('startDate') as string,
     endDate: getFilterValue('endDate') as string,
   }
-
+  
+  // On mount, sync with stored filters
+  useEffect(() => {
+    if (!hasInitialized) {
+      const storedState = syncWithUrl(urlFilters)
+      if (storedState) {
+        setIsOpen(storedState.isOpen)
+        
+        // Apply stored filters to URL if not present
+        const hasStoredFilters = Object.values(storedState.filters).some(value => 
+          Array.isArray(value) ? value.length > 0 : !!value
+        )
+        if (hasStoredFilters) {
+          const params = new URLSearchParams()
+          const filters = storedState.filters
+          
+          if (filters.clientIds?.length > 0) {
+            params.set('clientIds', filters.clientIds.join(','))
+          }
+          if (filters.locationIds?.length > 0) {
+            params.set('locationIds', filters.locationIds.join(','))
+          }
+          if (filters.packageTypes?.length > 0) {
+            params.set('packageTypes', filters.packageTypes.join(','))
+          }
+          if (filters.activeStatuses?.length > 0) {
+            params.set('activeStatuses', filters.activeStatuses.join(','))
+          }
+          if (filters.expirationStatus) params.set('expirationStatus', filters.expirationStatus)
+          if (filters.startDate) params.set('startDate', filters.startDate)
+          if (filters.endDate) params.set('endDate', filters.endDate)
+          
+          router.push(`/packages?${params.toString()}`)
+        }
+      }
+      setHasInitialized(true)
+    }
+  }, [hasInitialized, syncWithUrl, router])
+  
+  // Save filter state whenever applied
+  useEffect(() => {
+    if (hasInitialized) {
+      saveFilters(urlFilters, isOpen)
+    }
+  }, [urlFilters, isOpen, saveFilters, hasInitialized])
 
   const applyFilters = () => {
     
@@ -93,7 +160,18 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
   }
 
   const clearFilters = () => {
+    const clearedFilters: FilterData = {
+      clientIds: [],
+      locationIds: [],
+      packageTypes: [],
+      activeStatuses: [],
+      expirationStatus: '',
+      startDate: '',
+      endDate: ''
+    }
     setLocalChanges({})
+    // Clear from storage as well
+    saveFilters(clearedFilters, isOpen)
     router.push('/packages')
     router.refresh() // Force refresh to clear filters
   }

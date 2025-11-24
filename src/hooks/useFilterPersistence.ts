@@ -2,26 +2,17 @@
 
 import { useEffect, useCallback } from 'react'
 
-interface FilterData {
-  clientIds: string[]
-  trainerIds: string[]
-  locationIds: string[]
-  validatedStatuses: string[]
-  startDate: string
-  endDate: string
-}
-
-interface FilterState {
-  filters: FilterData
+interface FilterState<T = any> {
+  filters: T
   isOpen: boolean
 }
 
-export function useFilterPersistence(storageKey: string) {
+export function useFilterPersistence<T = any>(storageKey: string) {
   // Save filter state to sessionStorage
-  const saveFilters = useCallback((filters: FilterData, isOpen: boolean) => {
+  const saveFilters = useCallback((filters: T, isOpen: boolean) => {
     if (typeof window === 'undefined') return
     
-    const state: FilterState = {
+    const state: FilterState<T> = {
       filters,
       isOpen
     }
@@ -34,7 +25,7 @@ export function useFilterPersistence(storageKey: string) {
   }, [storageKey])
 
   // Load filter state from sessionStorage
-  const loadFilters = useCallback((): FilterState | null => {
+  const loadFilters = useCallback((): FilterState<T> | null => {
     if (typeof window === 'undefined') return null
     
     try {
@@ -61,11 +52,11 @@ export function useFilterPersistence(storageKey: string) {
   }, [storageKey])
 
   // Sync URL params with sessionStorage on mount
-  const syncWithUrl = useCallback((urlFilters: FilterData) => {
+  const syncWithUrl = useCallback((urlFilters: T) => {
     const stored = loadFilters()
     
     // If URL has filters, they take priority (user might have shared a link)
-    const hasUrlFilters = Object.values(urlFilters).some(value => 
+    const hasUrlFilters = Object.values(urlFilters as any).some(value => 
       Array.isArray(value) ? value.length > 0 : !!value
     )
     
