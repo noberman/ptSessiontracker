@@ -5,6 +5,13 @@ Complete redesign of the commission calculation system using a tier-based framew
 
 ## Core Requirements
 
+### Commission & Payroll Constraints
+- **CRITICAL**: Commission tiers reset monthly
+- Only validated sessions count toward commission calculations
+- No-show sessions must be excluded from commission calculations
+- Commission tier breakpoints must be configurable by admin
+- Payroll reports must be exportable in Excel/CSV format
+
 ### Business Needs
 1. Support multiple commission calculation methods across different organizations
 2. Enable tier-based commission rate adjustments based on performance metrics

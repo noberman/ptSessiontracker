@@ -162,6 +162,21 @@ DATABASE_URL="[URL]" npx prisma migrate resolve --applied "[migration_name]"
 
 ## 📝 Migration Best Practices
 
+### Schema Change Proposal Process
+**CRITICAL SCHEMA RULE**: When proposing ANY database schema changes (new models, new fields, field modifications):
+- MUST present in ALL CAPS the exact fields being added/modified
+- MUST explain the business purpose of EACH field
+- MUST justify why each field is necessary
+- Example format:
+  ```
+  PROPOSED SCHEMA CHANGES:
+  - NEW FIELD: Session.VALIDATED_AT (DateTime, nullable) - Timestamp when client validated
+  - NEW FIELD: Session.VALIDATION_TOKEN (String, unique) - Secure token for email validation
+  JUSTIFICATION: These fields are needed for tracking session validation status
+  ```
+- User MUST explicitly approve before implementing any schema changes
+- This prevents adding unnecessary fields that later require migrations to remove
+
 ### DO:
 - ✅ Test migrations locally first
 - ✅ Keep migrations small and focused
