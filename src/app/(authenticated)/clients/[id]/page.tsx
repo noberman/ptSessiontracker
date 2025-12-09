@@ -307,7 +307,7 @@ export default async function ClientDetailPage({
                 <div className="flex items-center justify-between">
                   <CardTitle>Package History</CardTitle>
                   {totalPackages > 0 && (
-                    <Link href={`/packages?clientId=${client.id}`}>
+                    <Link href={`/packages?clientIds=${client.id}`}>
                       <Button variant="ghost" size="sm">View All</Button>
                     </Link>
                   )}
