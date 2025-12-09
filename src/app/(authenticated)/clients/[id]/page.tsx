@@ -89,6 +89,36 @@ export default async function ClientDetailPage({
 
   const canManage = ['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(session.user.role)
 
+  // Helper function to determine package status
+  const getPackageStatus = (pkg: any): { label: string; variant: 'success' | 'error' | 'gray' | 'warning' } => {
+    const now = new Date()
+    const isExpired = pkg.expiresAt && new Date(pkg.expiresAt) < now
+
+    if (!pkg.active) {
+      return { label: 'Inactive', variant: 'gray' }
+    }
+    if (isExpired) {
+      return { label: 'Expired', variant: 'error' }
+    }
+    if (pkg.remainingSessions === 0) {
+      return { label: 'Completed', variant: 'gray' }
+    }
+    return { label: 'Active', variant: 'success' }
+  }
+
+  // Sort packages: Active first, then by createdAt desc
+  const sortedPackages = [...client.packages].sort((a: any, b: any) => {
+    const statusA = getPackageStatus(a)
+    const statusB = getPackageStatus(b)
+
+    // Active packages first
+    if (statusA.label === 'Active' && statusB.label !== 'Active') return -1
+    if (statusA.label !== 'Active' && statusB.label === 'Active') return 1
+
+    // Then by createdAt desc
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+
   return (
     <div className="min-h-screen bg-background-secondary">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
@@ -274,31 +304,48 @@ export default async function ClientDetailPage({
 
             <Card>
               <CardHeader>
-                <CardTitle>Active Packages</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Package History</CardTitle>
+                  {totalPackages > 0 && (
+                    <Link href={`/packages?clientId=${client.id}`}>
+                      <Button variant="ghost" size="sm">View All</Button>
+                    </Link>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                {client.packages.filter((p: any) => p.remainingSessions > 0).length > 0 ? (
-                  <div className="space-y-2">
-                    {client.packages
-                      .filter((p: any) => p.remainingSessions > 0)
-                      .map((pkg: any) => (
-                        <div key={pkg.id} className="p-2 border border-border rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-text-primary">
-                              {pkg.packageType}
-                            </p>
-                            <Badge variant="success" size="xs">
-                              {pkg.remainingSessions} left
-                            </Badge>
+                {sortedPackages.length > 0 ? (
+                  <div className="space-y-2 max-h-[320px] overflow-y-auto">
+                    {sortedPackages.map((pkg: any) => {
+                      const status = getPackageStatus(pkg)
+                      return (
+                        <Link key={pkg.id} href={`/packages/${pkg.id}`}>
+                          <div className="p-2 border border-border rounded-lg hover:bg-background-secondary transition-colors cursor-pointer">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-text-primary">
+                                {pkg.name}
+                              </p>
+                              <Badge variant={status.variant} size="xs">
+                                {status.label}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between mt-1">
+                              <p className="text-xs text-text-secondary">
+                                {pkg.remainingSessions}/{pkg.totalSessions} sessions
+                              </p>
+                              {pkg.expiresAt && (
+                                <p className="text-xs text-text-secondary">
+                                  Expires: {new Date(pkg.expiresAt).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-xs text-text-secondary mt-1">
-                            Expires: {new Date(pkg.expiresAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                      ))}
+                        </Link>
+                      )
+                    })}
                   </div>
                 ) : (
-                  <p className="text-sm text-text-secondary">No active packages</p>
+                  <p className="text-sm text-text-secondary">No packages yet</p>
                 )}
               </CardContent>
             </Card>
