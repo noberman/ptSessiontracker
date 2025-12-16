@@ -6,6 +6,7 @@
  * 2. Database connection exhaustion
  * 3. Unhandled promise rejections
  * 4. Event loop blocking / slow requests
+ * 5. Specific routes/features causing issues
  */
 
 // Only run monitoring in production
@@ -17,6 +18,66 @@ let monitoringInitialized = false
 // Memory usage history for trend detection
 const memoryHistory: { timestamp: Date; heapUsed: number; rss: number }[] = []
 const MAX_HISTORY = 60 // Keep last 60 samples
+
+// Recent requests buffer - to know what was happening when crash occurs
+interface RequestLog {
+  timestamp: string
+  method: string
+  path: string
+  userId?: string
+}
+const recentRequests: RequestLog[] = []
+const MAX_REQUESTS = 50 // Keep last 50 requests
+
+// Route frequency tracking - which routes are being hit most
+const routeFrequency: Map<string, number> = new Map()
+
+/**
+ * Track a request (called from middleware)
+ * This is exported so middleware can call it
+ */
+export function trackRequest(method: string, path: string, userId?: string) {
+  // Add to recent requests buffer
+  recentRequests.push({
+    timestamp: new Date().toISOString(),
+    method,
+    path,
+    userId: userId?.slice(-8), // Only last 8 chars for privacy
+  })
+
+  // Keep buffer size limited
+  if (recentRequests.length > MAX_REQUESTS) {
+    recentRequests.shift()
+  }
+
+  // Track route frequency
+  const routeKey = `${method} ${path}`
+  routeFrequency.set(routeKey, (routeFrequency.get(routeKey) || 0) + 1)
+}
+
+/**
+ * Get recent requests for crash dump
+ */
+function getRecentRequestsSummary(): string {
+  if (recentRequests.length === 0) return 'No requests tracked'
+
+  // Get last 20 requests
+  const recent = recentRequests.slice(-20)
+  return recent.map(r => `  ${r.timestamp} ${r.method} ${r.path}${r.userId ? ` (${r.userId})` : ''}`).join('\n')
+}
+
+/**
+ * Get most frequent routes
+ */
+function getTopRoutes(): string {
+  const sorted = [...routeFrequency.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+
+  if (sorted.length === 0) return 'No routes tracked'
+
+  return sorted.map(([route, count]) => `  ${count}x ${route}`).join('\n')
+}
 
 /**
  * Log memory usage with trend analysis
@@ -120,10 +181,32 @@ function setupErrorHandlers() {
 
   // Catch SIGTERM (what Railway sends before killing)
   process.on('SIGTERM', () => {
+    console.log('[MONITOR] ========================================')
     console.log('[MONITOR] 🛑 SIGTERM RECEIVED - Railway is killing the process')
-    console.log('[MONITOR] Final memory state:', JSON.stringify(process.memoryUsage()))
-    console.log('[MONITOR] Process uptime:', process.uptime(), 'seconds')
-    console.log('[MONITOR] Memory history (last 10):', JSON.stringify(memoryHistory.slice(-10)))
+    console.log('[MONITOR] ========================================')
+    console.log('[MONITOR] Process uptime:', Math.round(process.uptime()), 'seconds')
+
+    const mem = process.memoryUsage()
+    console.log('[MONITOR] Final memory:', {
+      heapUsed: Math.round(mem.heapUsed / 1024 / 1024) + 'MB',
+      heapTotal: Math.round(mem.heapTotal / 1024 / 1024) + 'MB',
+      rss: Math.round(mem.rss / 1024 / 1024) + 'MB',
+    })
+
+    console.log('[MONITOR] Memory trend (last 10 samples):')
+    memoryHistory.slice(-10).forEach(m => {
+      console.log(`  ${m.timestamp.toISOString()} - Heap: ${m.heapUsed}MB, RSS: ${m.rss}MB`)
+    })
+
+    console.log('[MONITOR] ----------------------------------------')
+    console.log('[MONITOR] RECENT REQUESTS (last 20):')
+    console.log(getRecentRequestsSummary())
+
+    console.log('[MONITOR] ----------------------------------------')
+    console.log('[MONITOR] TOP ROUTES (most frequent):')
+    console.log(getTopRoutes())
+
+    console.log('[MONITOR] ========================================')
 
     // Give time for logs to flush
     setTimeout(() => {

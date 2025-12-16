@@ -1,19 +1,28 @@
 import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
 
+// Request logging for crash diagnosis
+function logRequest(req: Request, path: string, userId?: string) {
+  // Only log in production and only API/page routes (not static assets)
+  if (process.env.NODE_ENV !== 'production') return
+  if (path.startsWith('/_next/') || path.includes('.')) return
+
+  const method = req.method
+  const isApi = path.startsWith('/api/')
+
+  // Log API requests and page navigations
+  if (isApi || !path.startsWith('/api/')) {
+    console.log(`[REQUEST] ${method} ${path}${userId ? ` (user: ${userId.slice(-8)})` : ''}`)
+  }
+}
+
 export default withAuth(
   function middleware(req) {
     const token = (req as any).nextauth.token
     const path = req.nextUrl.pathname
-    
-    // Commented out verbose logging - uncomment for debugging
-    // console.log('🔐 Middleware Check:', {
-    //   path,
-    //   role: token?.role,
-    //   hasOnboardingCompletedAt: !!token?.onboardingCompletedAt,
-    //   onboardingCompletedAt: token?.onboardingCompletedAt,
-    //   isImpersonating: token?.isImpersonating,
-    // })
+
+    // Log this request for crash diagnosis
+    logRequest(req, path, token?.sub)
 
     // Super admin routes
     if (token?.role === 'SUPER_ADMIN' && !token?.isImpersonating) {
