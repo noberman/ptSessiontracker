@@ -468,7 +468,7 @@ export async function GET(request: Request) {
       let allLocations = null
       if (session.user.role === 'PT_MANAGER' || session.user.role === 'ADMIN') {
         allLocations = await prisma.location.findMany({
-          where: { active: true },
+          where: { active: true, organizationId },
           select: {
             id: true,
             name: true
