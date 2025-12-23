@@ -108,7 +108,7 @@ export default async function CommissionPage({
         { start: startOfMonth, end: endOfMonth },
         { saveCalculation: false } // Don't save, just calculate for display
       )
-      
+
       // Get trainer's sessions for the period to show details
       const sessions = await prisma.session.findMany({
         where: {
@@ -124,9 +124,9 @@ export default async function CommissionPage({
           sessionValue: true
         }
       })
-      
+
       const totalValue = sessions.reduce((sum, s) => sum + s.sessionValue, 0)
-      
+
       commissionCalculations.push({
         trainerId: trainer.id,
         trainerName: trainer.name,
@@ -143,7 +143,49 @@ export default async function CommissionPage({
         }
       })
     } catch (error) {
-      console.error(`Failed to calculate commission for ${trainer.name}:`, error)
+      // Log detailed error for debugging
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`Failed to calculate commission for ${trainer.name} (${trainer.id}):`, errorMessage)
+      console.error('Profile info:', JSON.stringify({
+        profileId: trainer.commissionProfile?.id,
+        profileName: trainer.commissionProfile?.name,
+        tiersCount: trainer.commissionProfile?.tiers?.length || 0
+      }))
+
+      // Still include the trainer with error indication so they're visible
+      // Get their sessions count at least
+      const sessions = await prisma.session.findMany({
+        where: {
+          trainerId: trainer.id,
+          sessionDate: {
+            gte: startOfMonth,
+            lte: endOfMonth
+          },
+          validated: true,
+          cancelled: false
+        },
+        select: {
+          sessionValue: true
+        }
+      })
+
+      const totalValue = sessions.reduce((sum, s) => sum + s.sessionValue, 0)
+
+      commissionCalculations.push({
+        trainerId: trainer.id,
+        trainerName: trainer.name,
+        trainerEmail: trainer.email,
+        totalSessions: sessions.length,
+        totalValue,
+        commissionAmount: 0, // Can't calculate
+        tierReached: 0, // Indicates error
+        profileName: `${trainer.commissionProfile?.name || 'Unknown'} (Error: ${errorMessage})`,
+        breakdown: {
+          sessionCommission: 0,
+          salesCommission: 0,
+          tierBonus: 0
+        }
+      })
     }
   }
   
