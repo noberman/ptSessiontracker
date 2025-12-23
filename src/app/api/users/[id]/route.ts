@@ -86,7 +86,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { name, email, password, role, locationIds, active } = body
+    const { name, email, password, role, locationIds, active, commissionProfileId } = body
 
     // Get organization context
     const organizationId = await getOrganizationId()
@@ -281,7 +281,8 @@ export async function PUT(
     if (email !== undefined) updateData.email = email
     if (role !== undefined && session.user.role !== 'TRAINER') updateData.role = role
     if (active !== undefined && session.user.role === 'ADMIN') updateData.active = active
-    
+    if (commissionProfileId !== undefined) updateData.commissionProfileId = commissionProfileId || null
+
     // Hash password if provided
     if (password) {
       updateData.password = await bcrypt.hash(password, 10)
