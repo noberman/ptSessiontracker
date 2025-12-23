@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, email, password, role, locationId, locationIds } = body
+    const { name, email, password, role, locationId, locationIds, commissionProfileId } = body
 
     // Validate required fields
     if (!name || !email || !password || !role) {
@@ -261,6 +261,7 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           role,
           organizationId, // Set organization for new user
+          commissionProfileId: commissionProfileId || null,
         },
         select: {
           id: true,

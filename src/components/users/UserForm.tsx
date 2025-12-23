@@ -113,6 +113,7 @@ export function UserForm({ user, locations = [], commissionProfiles = [], curren
         role: formData.role,
         locationId: formData.locationIds[0] || null,  // First selected location becomes primary
         locationIds: formData.locationIds,  // All selected locations
+        commissionProfileId: formData.commissionProfileId || null,
       }
 
       if (!isEdit || formData.password) {
