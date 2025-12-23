@@ -402,9 +402,8 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
     })
   })()
 
-  // Get unique trainer names for the legend (top 5 by session count)
+  // Get unique trainer names for the legend (all trainers with sessions)
   const topTrainers = data.trainerStats
-    .slice(0, 5)
     .map(t => t.trainer?.name)
     .filter(Boolean)
 
