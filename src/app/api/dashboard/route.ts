@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getOrganizationId } from '@/lib/organization-context'
-import { fromZonedTime } from 'date-fns-tz'
+import { fromZonedTime, toZonedTime } from 'date-fns-tz'
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions)
@@ -434,14 +434,16 @@ export async function GET(request: Request) {
           return lowValidation
         }),
         
-        // Peak activity hours
+        // Peak activity hours (converted to org timezone)
         prisma.session.findMany({
           where: sessionsWhere,
           select: { sessionDate: true }
         }).then(sessions => {
           const hourCounts = new Array(24).fill(0)
           sessions.forEach(session => {
-            const hour = new Date(session.sessionDate).getHours()
+            // Convert UTC date to org timezone before extracting hour
+            const localDate = toZonedTime(new Date(session.sessionDate), orgTimezone)
+            const hour = localDate.getHours()
             hourCounts[hour]++
           })
           return hourCounts.map((count, hour) => ({ hour, count }))
