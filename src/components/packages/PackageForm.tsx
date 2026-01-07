@@ -53,7 +53,10 @@ export function PackageForm({
   const [loadingPackageTypes, setLoadingPackageTypes] = useState(true)
   
   const isEdit = !!packageData
-  
+  const isAdmin = currentUserRole === 'ADMIN'
+  // Non-admins can only edit certain fields in edit mode
+  const canEditFinancials = !isEdit || isAdmin
+
   const [formData, setFormData] = useState<{
     clientId: string
     packageTypeId: string
@@ -212,10 +215,9 @@ export function PackageForm({
 
       if (isEdit) {
         body.active = formData.active
-        if (currentUserRole === 'ADMIN') {
-          const remainingSessions = typeof formData.remainingSessions === 'string' ? parseInt(formData.remainingSessions) || 0 : formData.remainingSessions
-          body.remainingSessions = remainingSessions
-        }
+        // All non-trainers can update remaining sessions
+        const remainingSessions = typeof formData.remainingSessions === 'string' ? parseInt(formData.remainingSessions) || 0 : formData.remainingSessions
+        body.remainingSessions = remainingSessions
       }
 
       const response = await fetch(url, {
@@ -313,7 +315,14 @@ export function PackageForm({
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder={!formData.packageTypeId || formData.packageTypeId === 'custom' ? "Enter package name" : "Name set by package type"}
+              disabled={!canEditFinancials}
+              className={!canEditFinancials ? 'bg-gray-100 cursor-not-allowed' : ''}
             />
+            {isEdit && !canEditFinancials && (
+              <p className="text-xs text-text-secondary mt-1">
+                Contact an admin to modify package name
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -330,6 +339,8 @@ export function PackageForm({
                 value={formData.totalValue}
                 onChange={(e) => setFormData({ ...formData, totalValue: e.target.value })}
                 placeholder="0.00"
+                disabled={!canEditFinancials}
+                className={!canEditFinancials ? 'bg-gray-100 cursor-not-allowed' : ''}
               />
             </div>
 
@@ -345,19 +356,31 @@ export function PackageForm({
                 value={formData.totalSessions}
                 onChange={(e) => setFormData({ ...formData, totalSessions: e.target.value })}
                 placeholder="0"
+                disabled={!canEditFinancials}
+                className={!canEditFinancials ? 'bg-gray-100 cursor-not-allowed' : ''}
               />
             </div>
           </div>
+          {isEdit && !canEditFinancials && (
+            <p className="text-xs text-text-secondary">
+              Contact an admin to modify package value or session count
+            </p>
+          )}
 
           <div className="bg-background-secondary rounded-lg p-3">
             <p className="text-sm text-text-secondary">
               Session Value: <span className="font-semibold text-text-primary">
                 ${sessionValue.toFixed(2)} per session
               </span>
+              {isEdit && (
+                <span className="block text-xs mt-1">
+                  Set at package creation. Used for commission calculations.
+                </span>
+              )}
             </p>
           </div>
 
-          {isEdit && currentUserRole === 'ADMIN' && (
+          {isEdit && (
             <div>
               <label htmlFor="remainingSessions" className="block text-sm font-medium text-text-primary mb-1">
                 Remaining Sessions
@@ -370,7 +393,7 @@ export function PackageForm({
                 onChange={(e) => setFormData({ ...formData, remainingSessions: e.target.value })}
               />
               <p className="text-xs text-text-secondary mt-1">
-                Admin only: Manually adjust remaining sessions
+                Manually adjust remaining sessions
               </p>
             </div>
           )}

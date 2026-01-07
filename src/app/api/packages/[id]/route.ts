@@ -141,26 +141,30 @@ export async function PUT(
     }
 
     const updateData: any = {}
-    
-    if (name !== undefined) updateData.name = name
-    if (packageTypeId !== undefined) updateData.packageTypeId = packageTypeId || null
+    const isAdmin = session.user.role === 'ADMIN'
+
+    // Fields editable by all non-trainers (CLUB_MANAGER, PT_MANAGER, ADMIN)
     if (active !== undefined) updateData.active = active
     if (startDate !== undefined) updateData.startDate = new Date(startDate)
     if (expiresAt !== undefined) updateData.expiresAt = expiresAt ? new Date(expiresAt) : null
-    
-    // If total value or sessions change, recalculate session value
-    if (totalValue !== undefined || totalSessions !== undefined) {
-      const newTotalValue = totalValue !== undefined ? totalValue : currentPackage.totalValue
-      const newTotalSessions = totalSessions !== undefined ? totalSessions : currentPackage.totalSessions
-      
-      updateData.totalValue = newTotalValue
-      updateData.totalSessions = newTotalSessions
-      updateData.sessionValue = newTotalSessions > 0 ? newTotalValue / newTotalSessions : 0
-    }
-    
-    // Only admins can manually adjust remaining sessions
-    if (remainingSessions !== undefined && session.user.role === 'ADMIN') {
-      updateData.remainingSessions = remainingSessions
+    if (remainingSessions !== undefined) updateData.remainingSessions = remainingSessions
+
+    // Fields only editable by ADMIN (financial values that could affect commission)
+    if (isAdmin) {
+      if (name !== undefined) updateData.name = name
+      if (packageTypeId !== undefined) updateData.packageTypeId = packageTypeId || null
+      if (totalValue !== undefined) updateData.totalValue = totalValue
+      if (totalSessions !== undefined) updateData.totalSessions = totalSessions
+      // NOTE: sessionValue is NEVER updated after creation - it's immutable
+      // This ensures commission calculations remain stable
+    } else {
+      // Non-admins trying to change restricted fields
+      if (name !== undefined || totalValue !== undefined || totalSessions !== undefined) {
+        return NextResponse.json(
+          { error: 'Only admins can modify package name, value, or session count' },
+          { status: 403 }
+        )
+      }
     }
 
     // Update package
