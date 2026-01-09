@@ -202,22 +202,38 @@ export function PackageForm({
     try {
       const url = isEdit ? `/api/packages/${packageData.id}` : '/api/packages'
       const method = isEdit ? 'PUT' : 'POST'
-      
-      const body: any = {
-        clientId: formData.clientId,
-        packageTypeId: formData.packageTypeId || null,
-        name: formData.name,
-        totalValue: totalValue,
-        totalSessions: totalSessions,
-        startDate: formData.startDate,
-        expiresAt: formData.expiresAt || null,
-      }
+
+      let body: any = {}
 
       if (isEdit) {
-        body.active = formData.active
-        // All non-trainers can update remaining sessions
-        const remainingSessions = typeof formData.remainingSessions === 'string' ? parseInt(formData.remainingSessions) || 0 : formData.remainingSessions
-        body.remainingSessions = remainingSessions
+        // For edit mode, only send fields the user is allowed to change
+        body = {
+          startDate: formData.startDate,
+          expiresAt: formData.expiresAt || null,
+          active: formData.active,
+          remainingSessions: typeof formData.remainingSessions === 'string'
+            ? parseInt(formData.remainingSessions) || 0
+            : formData.remainingSessions,
+        }
+
+        // Only admins can send financial fields
+        if (isAdmin) {
+          body.name = formData.name
+          body.totalValue = totalValue
+          body.totalSessions = totalSessions
+          body.packageTypeId = formData.packageTypeId || null
+        }
+      } else {
+        // For create mode, send all fields
+        body = {
+          clientId: formData.clientId,
+          packageTypeId: formData.packageTypeId || null,
+          name: formData.name,
+          totalValue: totalValue,
+          totalSessions: totalSessions,
+          startDate: formData.startDate,
+          expiresAt: formData.expiresAt || null,
+        }
       }
 
       const response = await fetch(url, {
