@@ -4,6 +4,11 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getOrganizationId } from '@/lib/organization-context'
 import { fromZonedTime, toZonedTime } from 'date-fns-tz'
+import {
+  getActivePackageWhereClause,
+  getExpiringSoonPackageWhereClause,
+  CLIENT_METRICS_CONFIG
+} from '@/lib/package-status'
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions)
@@ -303,8 +308,14 @@ export async function GET(request: Request) {
         trainerStats,
         dailyStats,
         activeTrainers,
-        activeClients,
+        // Client metrics - snapshots
+        totalClients,
+        activeClientsWithPackages,
+        notStartedClients,
+        atRiskClients,
+        lostClients,
         unassignedClients,
+        // Other metrics
         lowValidationTrainers,
         peakActivityHours
       ] = await Promise.all([
@@ -387,19 +398,79 @@ export async function GET(request: Request) {
         }),
         
         // Active trainers (if filtering by specific trainers, count only those)
-        filterTrainerIds && filterTrainerIds.length > 0 
+        filterTrainerIds && filterTrainerIds.length > 0
           ? filterTrainerIds.length
           : prisma.user.count({ where: trainersWhere }),
-        
-        // Active clients
+
+        // =====================================================================
+        // CLIENT METRICS - SNAPSHOTS (Current State)
+        // =====================================================================
+
+        // Total clients (all client profiles)
         prisma.client.count({ where: clientsWhere }),
-        
-        // Unassigned clients
-        prisma.client.count({ 
-          where: { 
+
+        // Active clients (have at least one active package)
+        prisma.client.count({
+          where: {
             ...clientsWhere,
-            primaryTrainerId: null 
-          } 
+            packages: {
+              some: getActivePackageWhereClause()
+            }
+          }
+        }),
+
+        // Not Started clients (have active package but no sessions against any active package)
+        prisma.client.count({
+          where: {
+            ...clientsWhere,
+            // Has at least one active package
+            packages: {
+              some: getActivePackageWhereClause()
+            },
+            // But no sessions exist against any of their active packages
+            NOT: {
+              sessions: {
+                some: {
+                  package: getActivePackageWhereClause()
+                }
+              }
+            }
+          }
+        }),
+
+        // At-Risk clients (package expiring in next 14 days with sessions remaining)
+        prisma.client.count({
+          where: {
+            ...clientsWhere,
+            packages: {
+              some: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
+            }
+          }
+        }),
+
+        // Lost clients (had packages before but none are currently active)
+        prisma.client.count({
+          where: {
+            ...clientsWhere,
+            // Has had at least one package
+            packages: {
+              some: {}
+            },
+            // But none are currently active
+            NOT: {
+              packages: {
+                some: getActivePackageWhereClause()
+              }
+            }
+          }
+        }),
+
+        // Unassigned clients
+        prisma.client.count({
+          where: {
+            ...clientsWhere,
+            primaryTrainerId: null
+          }
         }),
         
         // Low validation trainers (< 70% validation rate)
@@ -497,15 +568,108 @@ export async function GET(request: Request) {
         }
       }).sort((a, b) => b.totalValue - a.totalValue)
 
-      const validationRate = totalSessions > 0 
+      const validationRate = totalSessions > 0
         ? Math.round((validatedSessions / totalSessions) * 100)
         : 0
-      
+
       // Calculate average sessions per day/week
       const daysDiff = Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24))
       const weeksDiff = Math.ceil(daysDiff / 7)
       const averagePerDay = daysDiff > 0 ? (totalSessions / daysDiff).toFixed(1) : '0'
       const averagePerWeek = weeksDiff > 0 ? (totalSessions / weeksDiff).toFixed(1) : '0'
+
+      // =====================================================================
+      // CLIENT METRICS - PERIOD BASED (Within Time Filter)
+      // =====================================================================
+
+      // Build location filter for package queries
+      const packageLocationFilter = clientsWhere.locationId
+        ? { client: { locationId: clientsWhere.locationId } }
+        : clientsWhere.locationId?.in
+        ? { client: { locationId: { in: clientsWhere.locationId.in } } }
+        : {}
+
+      // Get packages created in the period for new/resold calculations
+      const packagesInPeriod = await prisma.package.findMany({
+        where: {
+          organizationId,
+          createdAt: { gte: dateFrom, lte: dateTo },
+          ...packageLocationFilter
+        },
+        select: {
+          id: true,
+          clientId: true,
+          createdAt: true
+        }
+      })
+
+      // Calculate New Clients (purchased package in period with no prior sessions in 30 days)
+      const newClientIds = new Set<string>()
+      const resoldPackageCount = { count: 0 }
+
+      for (const pkg of packagesInPeriod) {
+        const lookbackDate = new Date(pkg.createdAt)
+        lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
+
+        // Check for prior sessions
+        const priorSession = await prisma.session.findFirst({
+          where: {
+            clientId: pkg.clientId,
+            sessionDate: {
+              gte: lookbackDate,
+              lt: pkg.createdAt
+            }
+          }
+        })
+
+        // Check for other active packages at time of purchase (for resold)
+        const hadActivePackageAtPurchase = await prisma.package.findFirst({
+          where: {
+            clientId: pkg.clientId,
+            id: { not: pkg.id },
+            remainingSessions: { gt: 0 },
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gt: pkg.createdAt } }
+            ]
+          }
+        })
+
+        if (!priorSession) {
+          // No prior sessions = new client
+          newClientIds.add(pkg.clientId)
+        }
+
+        if (hadActivePackageAtPurchase || priorSession) {
+          // Had active package or recent session = resold
+          resoldPackageCount.count++
+        }
+      }
+
+      // Calculate Newly Lost Clients (became lost during this period)
+      // Clients whose most recent package ended in this period and have no active package now
+      const newlyLostClients = await prisma.client.count({
+        where: {
+          ...clientsWhere,
+          // Has a package that ended in this period (completed or expired)
+          packages: {
+            some: {
+              OR: [
+                // Completed in period (remainingSessions went to 0)
+                { remainingSessions: 0, updatedAt: { gte: dateFrom, lte: dateTo } },
+                // Expired in period
+                { expiresAt: { gte: dateFrom, lte: dateTo } }
+              ]
+            }
+          },
+          // And has no active package now
+          NOT: {
+            packages: {
+              some: getActivePackageWhereClause()
+            }
+          }
+        }
+      })
 
       return NextResponse.json({
         stats: {
@@ -514,7 +678,20 @@ export async function GET(request: Request) {
           totalSessionValue: totalSessionValue._sum.sessionValue || 0,
           validationRate,
           activeTrainers,
-          activeClients,
+          // Client metrics - snapshots
+          clientMetrics: {
+            total: totalClients,
+            active: activeClientsWithPackages,
+            notStarted: notStartedClients,
+            atRisk: atRiskClients,
+            lost: lostClients
+          },
+          // Client metrics - period based
+          clientMetricsPeriod: {
+            newClients: newClientIds.size,
+            resoldPackages: resoldPackageCount.count,
+            newlyLost: newlyLostClients
+          },
           unassignedClients,
           averagePerDay,
           averagePerWeek,

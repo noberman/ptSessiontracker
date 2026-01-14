@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
 import { ActionsDropdown } from '@/components/ui/ActionsDropdown'
+import { type ClientState, getClientStateDisplay } from '@/lib/package-status'
 
 interface Client {
   id: string
@@ -15,6 +16,7 @@ interface Client {
   email: string
   phone: string | null
   active: boolean
+  clientState?: ClientState
   location?: {
     name: string
   } | null
@@ -179,9 +181,23 @@ export function ClientTable({
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <Badge variant={client.active ? 'success' : 'gray'} size="sm">
-                    {client.active ? 'Active' : 'Inactive'}
-                  </Badge>
+                  {client.clientState ? (
+                    (() => {
+                      const stateDisplay = getClientStateDisplay(client.clientState)
+                      return (
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${stateDisplay.bgColor} ${stateDisplay.color}`}
+                          title={stateDisplay.description}
+                        >
+                          {stateDisplay.label}
+                        </span>
+                      )
+                    })()
+                  ) : (
+                    <Badge variant={client.active ? 'success' : 'gray'} size="sm">
+                      {client.active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex justify-center">

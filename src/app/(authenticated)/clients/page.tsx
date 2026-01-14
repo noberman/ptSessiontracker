@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { ClientTable } from '@/components/clients/ClientTable'
 import { ClientSearch } from '@/components/clients/ClientSearch'
 import { Button } from '@/components/ui/Button'
+import { getClientState, type ClientState } from '@/lib/package-status'
 
 export default async function ClientsPage({
   searchParams,
@@ -152,7 +153,7 @@ export default async function ClientsPage({
   }
   // Only ADMIN role gets organization-wide access without location restrictions
 
-  const [clients, total, locations, trainers] = await Promise.all([
+  const [clientsRaw, total, locations, trainers] = await Promise.all([
     prisma.client.findMany({
       where,
       skip,
@@ -174,6 +175,19 @@ export default async function ClientsPage({
           select: {
             name: true,
             email: true,
+          },
+        },
+        // Include packages for state derivation
+        packages: {
+          select: {
+            id: true,
+            remainingSessions: true,
+            expiresAt: true,
+            _count: {
+              select: {
+                sessions: true,
+              },
+            },
           },
         },
         _count: {
@@ -230,6 +244,17 @@ export default async function ClientsPage({
       orderBy: { name: 'asc' },
     }),
   ])
+
+  // Calculate client state for each client
+  const clients = clientsRaw.map(client => {
+    const clientState = getClientState({ packages: client.packages })
+    // Remove packages array from response to keep it lean
+    const { packages, ...clientWithoutPackages } = client
+    return {
+      ...clientWithoutPackages,
+      clientState,
+    }
+  })
 
   const pagination = {
     page,

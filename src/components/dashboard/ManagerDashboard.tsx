@@ -40,7 +40,20 @@ interface DashboardData {
     totalSessionValue: number
     validationRate: number
     activeTrainers: number
-    activeClients: number
+    // Client metrics - snapshots (current state)
+    clientMetrics: {
+      total: number
+      active: number
+      notStarted: number
+      atRisk: number
+      lost: number
+    }
+    // Client metrics - period based (within time filter)
+    clientMetricsPeriod: {
+      newClients: number
+      resoldPackages: number
+      newlyLost: number
+    }
     unassignedClients?: number
     period: {
       from: string
@@ -647,7 +660,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
             <div>
               <p className="text-sm text-text-secondary">Active Clients</p>
               <p className="text-2xl font-bold text-text-primary mt-1">
-                {data.stats.activeClients}
+                {data.stats.clientMetrics?.active ?? 0}
               </p>
             </div>
           </CardContent>
@@ -658,7 +671,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
             <div>
               <p className="text-sm text-text-secondary">Avg/Day</p>
               <p className="text-2xl font-bold text-text-primary mt-1">
-                {chartData.length > 0 
+                {chartData.length > 0
                   ? Math.round(data.stats.totalSessions / chartData.length)
                   : 0}
               </p>
@@ -666,6 +679,81 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
           </CardContent>
         </Card>
       </div>
+
+      {/* Client Health Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Client Health</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+            {/* Snapshot Metrics */}
+            <div className="text-center p-3 bg-background rounded-lg">
+              <p className="text-xs text-text-secondary mb-1">Total Clients</p>
+              <p className="text-xl font-bold text-text-primary">
+                {data.stats.clientMetrics?.total ?? 0}
+              </p>
+            </div>
+
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <p className="text-xs text-green-700 mb-1">Active</p>
+              <p className="text-xl font-bold text-green-600">
+                {data.stats.clientMetrics?.active ?? 0}
+              </p>
+              <p className="text-xs text-green-600">with packages</p>
+            </div>
+
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-700 mb-1">Not Started</p>
+              <p className="text-xl font-bold text-blue-600">
+                {data.stats.clientMetrics?.notStarted ?? 0}
+              </p>
+              <p className="text-xs text-blue-600">need onboarding</p>
+            </div>
+
+            <div className="text-center p-3 bg-orange-50 rounded-lg">
+              <p className="text-xs text-orange-700 mb-1">At Risk</p>
+              <p className="text-xl font-bold text-orange-600">
+                {data.stats.clientMetrics?.atRisk ?? 0}
+              </p>
+              <p className="text-xs text-orange-600">expiring soon</p>
+            </div>
+
+            <div className="text-center p-3 bg-red-50 rounded-lg">
+              <p className="text-xs text-red-700 mb-1">Lost</p>
+              <p className="text-xl font-bold text-red-600">
+                {data.stats.clientMetrics?.lost ?? 0}
+              </p>
+              <p className="text-xs text-red-600">no active pkg</p>
+            </div>
+
+            {/* Period Metrics */}
+            <div className="text-center p-3 bg-emerald-50 rounded-lg border-l-2 border-emerald-300">
+              <p className="text-xs text-emerald-700 mb-1">New Clients</p>
+              <p className="text-xl font-bold text-emerald-600">
+                {data.stats.clientMetricsPeriod?.newClients ?? 0}
+              </p>
+              <p className="text-xs text-emerald-600">this period</p>
+            </div>
+
+            <div className="text-center p-3 bg-purple-50 rounded-lg border-l-2 border-purple-300">
+              <p className="text-xs text-purple-700 mb-1">Resold</p>
+              <p className="text-xl font-bold text-purple-600">
+                {data.stats.clientMetricsPeriod?.resoldPackages ?? 0}
+              </p>
+              <p className="text-xs text-purple-600">packages</p>
+            </div>
+
+            <div className="text-center p-3 bg-rose-50 rounded-lg border-l-2 border-rose-300">
+              <p className="text-xs text-rose-700 mb-1">Newly Lost</p>
+              <p className="text-xl font-bold text-rose-600">
+                {data.stats.clientMetricsPeriod?.newlyLost ?? 0}
+              </p>
+              <p className="text-xs text-rose-600">this period</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Alerts Section */}
       {data.stats.unassignedClients && data.stats.unassignedClients > 0 ? (

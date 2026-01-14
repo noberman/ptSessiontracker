@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { ClientActions } from '@/components/clients/ClientActions'
+import { getClientState, getClientStateDisplay } from '@/lib/package-status'
 
 export default async function ClientDetailPage({
   params,
@@ -34,6 +35,13 @@ export default async function ClientDetailPage({
       packages: {
         orderBy: {
           createdAt: 'desc',
+        },
+        include: {
+          _count: {
+            select: {
+              sessions: true,
+            },
+          },
         },
       },
       sessions: {
@@ -89,6 +97,10 @@ export default async function ClientDetailPage({
 
   const canManage = ['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(session.user.role)
 
+  // Calculate derived client state
+  const clientState = getClientState({ packages: client.packages })
+  const clientStateDisplay = getClientStateDisplay(clientState)
+
   // Helper function to determine package status
   const getPackageStatus = (pkg: any): { label: string; variant: 'success' | 'error' | 'gray' | 'warning' } => {
     const now = new Date()
@@ -126,9 +138,15 @@ export default async function ClientDetailPage({
           <div>
             <div className="flex items-center space-x-3">
               <h1 className="text-2xl font-bold text-text-primary">{client.name}</h1>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${clientStateDisplay.bgColor} ${clientStateDisplay.color}`}
+                title={clientStateDisplay.description}
+              >
+                {clientStateDisplay.label}
+              </span>
               {!client.active && (
                 <Badge variant="error" size="sm">
-                  Inactive
+                  Archived
                 </Badge>
               )}
             </div>
@@ -162,14 +180,21 @@ export default async function ClientDetailPage({
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-text-secondary">Status</p>
-                    <Badge 
-                      variant={client.active ? 'success' : 'gray'} 
-                      size="md"
-                      className="mt-1"
-                    >
-                      {client.active ? 'Active' : 'Inactive'}
-                    </Badge>
+                    <p className="text-sm text-text-secondary">Client Status</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${clientStateDisplay.bgColor} ${clientStateDisplay.color}`}
+                        title={clientStateDisplay.description}
+                      >
+                        {clientStateDisplay.label}
+                      </span>
+                      {!client.active && (
+                        <Badge variant="gray" size="sm">Archived</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-text-secondary mt-1">
+                      {clientStateDisplay.description}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-text-secondary">Phone</p>

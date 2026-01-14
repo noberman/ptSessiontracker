@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getUserAccessibleLocations } from '@/lib/user-locations'
+import { getClientState } from '@/lib/package-status'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
   // ADMIN sees all (no additional filter)
   
   try {
-    const [clients, total] = await Promise.all([
+    const [clientsRaw, total] = await Promise.all([
       prisma.client.findMany({
         where,
         skip,
@@ -81,6 +82,19 @@ export async function GET(request: NextRequest) {
               email: true,
             },
           },
+          // Include packages for state derivation
+          packages: {
+            select: {
+              id: true,
+              remainingSessions: true,
+              expiresAt: true,
+              _count: {
+                select: {
+                  sessions: true,
+                },
+              },
+            },
+          },
           _count: {
             select: {
               packages: true,
@@ -95,7 +109,18 @@ export async function GET(request: NextRequest) {
       }),
       prisma.client.count({ where }),
     ])
-    
+
+    // Calculate client state for each client
+    const clients = clientsRaw.map(client => {
+      const clientState = getClientState({ packages: client.packages })
+      // Remove packages array from response to keep it lean
+      const { packages, ...clientWithoutPackages } = client
+      return {
+        ...clientWithoutPackages,
+        clientState,
+      }
+    })
+
     return NextResponse.json({
       clients,
       pagination: {
