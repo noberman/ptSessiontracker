@@ -102,6 +102,17 @@ interface DashboardData {
     hour: number
     count: number
   }>
+  trainerClientHealth?: Array<{
+    trainerId: string
+    trainerName: string
+    trainerEmail: string
+    locationNames: string[]
+    total: number
+    active: number
+    notStarted: number
+    atRisk: number
+    lost: number
+  }>
 }
 
 export function ManagerDashboard({ userId, userName, userRole, locationIds, orgTimezone = 'Asia/Singapore' }: ManagerDashboardProps) {
@@ -658,17 +669,6 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
         <Card>
           <CardContent className="p-6">
             <div>
-              <p className="text-sm text-text-secondary">Active Clients</p>
-              <p className="text-2xl font-bold text-text-primary mt-1">
-                {data.stats.clientMetrics?.active ?? 0}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div>
               <p className="text-sm text-text-secondary">Avg/Day</p>
               <p className="text-2xl font-bold text-text-primary mt-1">
                 {chartData.length > 0
@@ -683,75 +683,125 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
       {/* Client Health Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Client Health</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-            {/* Snapshot Metrics */}
-            <div className="text-center p-3 bg-background rounded-lg">
-              <p className="text-xs text-text-secondary mb-1">Total Clients</p>
-              <p className="text-xl font-bold text-text-primary">
-                {data.stats.clientMetrics?.total ?? 0}
-              </p>
-            </div>
-
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <p className="text-xs text-green-700 mb-1">Active</p>
-              <p className="text-xl font-bold text-green-600">
-                {data.stats.clientMetrics?.active ?? 0}
-              </p>
-              <p className="text-xs text-green-600">with packages</p>
-            </div>
-
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-700 mb-1">Not Started</p>
-              <p className="text-xl font-bold text-blue-600">
-                {data.stats.clientMetrics?.notStarted ?? 0}
-              </p>
-              <p className="text-xs text-blue-600">need onboarding</p>
-            </div>
-
-            <div className="text-center p-3 bg-orange-50 rounded-lg">
-              <p className="text-xs text-orange-700 mb-1">At Risk</p>
-              <p className="text-xl font-bold text-orange-600">
-                {data.stats.clientMetrics?.atRisk ?? 0}
-              </p>
-              <p className="text-xs text-orange-600">expiring soon</p>
-            </div>
-
-            <div className="text-center p-3 bg-red-50 rounded-lg">
-              <p className="text-xs text-red-700 mb-1">Lost</p>
-              <p className="text-xl font-bold text-red-600">
-                {data.stats.clientMetrics?.lost ?? 0}
-              </p>
-              <p className="text-xs text-red-600">no active pkg</p>
-            </div>
-
-            {/* Period Metrics */}
-            <div className="text-center p-3 bg-emerald-50 rounded-lg border-l-2 border-emerald-300">
-              <p className="text-xs text-emerald-700 mb-1">New Clients</p>
-              <p className="text-xl font-bold text-emerald-600">
-                {data.stats.clientMetricsPeriod?.newClients ?? 0}
-              </p>
-              <p className="text-xs text-emerald-600">this period</p>
-            </div>
-
-            <div className="text-center p-3 bg-purple-50 rounded-lg border-l-2 border-purple-300">
-              <p className="text-xs text-purple-700 mb-1">Resold</p>
-              <p className="text-xl font-bold text-purple-600">
-                {data.stats.clientMetricsPeriod?.resoldPackages ?? 0}
-              </p>
-              <p className="text-xs text-purple-600">packages</p>
-            </div>
-
-            <div className="text-center p-3 bg-rose-50 rounded-lg border-l-2 border-rose-300">
-              <p className="text-xs text-rose-700 mb-1">Newly Lost</p>
-              <p className="text-xl font-bold text-rose-600">
-                {data.stats.clientMetricsPeriod?.newlyLost ?? 0}
-              </p>
-              <p className="text-xs text-rose-600">this period</p>
+          <div className="flex items-center justify-between">
+            <CardTitle>Client Health by Trainer</CardTitle>
+            {/* Period Summary - compact */}
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1">
+                <span className="text-text-secondary">This Period:</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-medium text-emerald-600">{data.stats.clientMetricsPeriod?.newClients ?? 0}</span>
+                <span className="text-text-secondary">new</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-medium text-purple-600">{data.stats.clientMetricsPeriod?.resoldPackages ?? 0}</span>
+                <span className="text-text-secondary">resold</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-medium text-red-600">{data.stats.clientMetricsPeriod?.newlyLost ?? 0}</span>
+                <span className="text-text-secondary">lost</span>
+              </div>
             </div>
           </div>
+        </CardHeader>
+        <CardContent>
+          {data.trainerClientHealth && data.trainerClientHealth.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-background-secondary">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                      Trainer
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
+                      Total
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
+                      Active
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
+                      Not Started
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
+                      At Risk
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
+                      Lost
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-surface divide-y divide-border">
+                  {data.trainerClientHealth.map((trainer) => (
+                    <tr key={trainer.trainerId} className="hover:bg-surface-hover">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div>
+                          <p className="text-sm font-medium text-text-primary">{trainer.trainerName}</p>
+                          <p className="text-xs text-text-secondary">{trainer.trainerEmail}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <p className="text-sm text-text-secondary">
+                          {trainer.locationNames.length > 0 ? trainer.locationNames.join(', ') : '-'}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="text-sm font-medium text-text-primary">{trainer.total}</span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-sm font-medium ${trainer.active > 0 ? 'text-green-600' : 'text-text-secondary'}`}>
+                          {trainer.active}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-sm font-medium ${trainer.notStarted > 0 ? 'text-amber-600' : 'text-text-secondary'}`}>
+                          {trainer.notStarted}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-sm font-medium ${trainer.atRisk > 0 ? 'text-orange-600' : 'text-text-secondary'}`}>
+                          {trainer.atRisk}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-sm font-medium ${trainer.lost > 0 ? 'text-red-600' : 'text-text-secondary'}`}>
+                          {trainer.lost}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Totals Row */}
+                  <tr className="bg-background-secondary font-medium">
+                    <td className="px-4 py-3 text-sm text-text-primary" colSpan={2}>
+                      Totals
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-text-primary">
+                      {data.stats.clientMetrics?.total ?? 0}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-green-600">
+                      {data.stats.clientMetrics?.active ?? 0}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-amber-600">
+                      {data.stats.clientMetrics?.notStarted ?? 0}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-orange-600">
+                      {data.stats.clientMetrics?.atRisk ?? 0}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-red-600">
+                      {data.stats.clientMetrics?.lost ?? 0}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-text-secondary text-center py-4">
+              No trainers with assigned clients
+            </p>
+          )}
         </CardContent>
       </Card>
 

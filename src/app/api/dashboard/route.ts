@@ -671,6 +671,90 @@ export async function GET(request: Request) {
         }
       })
 
+      // =====================================================================
+      // PER-TRAINER CLIENT HEALTH METRICS
+      // =====================================================================
+
+      // Calculate client health metrics for each trainer
+      const trainerClientHealth = await Promise.all(
+        allTrainers.map(async (trainer) => {
+          const trainerClientsWhere = {
+            ...clientsWhere,
+            primaryTrainerId: trainer.id
+          }
+
+          const [total, active, notStarted, atRisk, lost] = await Promise.all([
+            // Total clients assigned to this trainer
+            prisma.client.count({ where: trainerClientsWhere }),
+
+            // Active clients (have at least one active package)
+            prisma.client.count({
+              where: {
+                ...trainerClientsWhere,
+                packages: { some: getActivePackageWhereClause() }
+              }
+            }),
+
+            // Not Started (have active package but no sessions against it)
+            prisma.client.count({
+              where: {
+                ...trainerClientsWhere,
+                packages: { some: getActivePackageWhereClause() },
+                NOT: {
+                  sessions: {
+                    some: { package: getActivePackageWhereClause() }
+                  }
+                }
+              }
+            }),
+
+            // At Risk (package expiring soon)
+            prisma.client.count({
+              where: {
+                ...trainerClientsWhere,
+                packages: {
+                  some: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
+                }
+              }
+            }),
+
+            // Lost (had packages but none active)
+            prisma.client.count({
+              where: {
+                ...trainerClientsWhere,
+                packages: { some: {} },
+                NOT: { packages: { some: getActivePackageWhereClause() } }
+              }
+            })
+          ])
+
+          // Get trainer's location names for display
+          const trainerLocations = allLocations
+            ? trainer.locations
+                .map(l => allLocations.find(loc => loc.id === l.locationId))
+                .filter(Boolean)
+                .map(loc => loc!.name)
+            : []
+
+          return {
+            trainerId: trainer.id,
+            trainerName: trainer.name,
+            trainerEmail: trainer.email,
+            locationNames: trainerLocations,
+            total,
+            active,
+            notStarted,
+            atRisk,
+            lost
+          }
+        })
+      )
+
+      // Filter out trainers with no clients and sort by total clients descending
+      const trainerClientHealthFiltered = trainerClientHealth
+        .filter(t => t.total > 0)
+        .sort((a, b) => b.total - a.total)
+
       return NextResponse.json({
         stats: {
           totalSessions,
@@ -701,6 +785,7 @@ export async function GET(request: Request) {
           }
         },
         trainerStats: trainerStatsWithInfo,
+        trainerClientHealth: trainerClientHealthFiltered,
         allTrainers: allTrainers.map(t => ({
           ...t,
           locationIds: t.locations ? t.locations.map(l => l.locationId) : [],
