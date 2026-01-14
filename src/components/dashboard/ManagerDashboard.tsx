@@ -133,7 +133,9 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
   const [selectedTrainers, setSelectedTrainers] = useState<string[]>([])
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [openTooltip, setOpenTooltip] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
   
   // State for session details panel
   const [detailsPanelOpen, setDetailsPanelOpen] = useState(false)
@@ -141,11 +143,16 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
   const [selectedSessionValue, setSelectedSessionValue] = useState(0)
   const [selectedSessions, setSelectedSessions] = useState<any[]>([])
 
-  // Close dropdown when clicking outside
+  // Close dropdown and tooltip when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setOpenDropdown(null)
+      }
+      // Close tooltip if clicking outside
+      const target = event.target as HTMLElement
+      if (!target.closest('[data-tooltip]')) {
+        setOpenTooltip(null)
       }
     }
 
@@ -154,6 +161,28 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
+
+  // Simple info tooltip component
+  const InfoTooltip = ({ id, text }: { id: string; text: string }) => (
+    <span className="relative inline-flex" data-tooltip>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpenTooltip(openTooltip === id ? null : id)
+        }}
+        className="text-text-tertiary hover:text-text-secondary focus:outline-none"
+      >
+        <Info className="h-3 w-3" />
+      </button>
+      {openTooltip === id && (
+        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs font-normal normal-case tracking-normal text-left text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal w-48">
+          {text}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+        </div>
+      )}
+    </span>
+  )
 
   // Monitor online/offline status
   useEffect(() => {
@@ -724,57 +753,43 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       <div className="flex items-center justify-center gap-1">
                         Total
-                        <span title="Total clients assigned to this trainer">
-                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
-                        </span>
+                        <InfoTooltip id="total" text="Total clients assigned to this trainer" />
                       </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       <div className="flex items-center justify-center gap-1">
                         Active
-                        <span title="Clients with at least one active package (sessions remaining, not expired)">
-                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
-                        </span>
+                        <InfoTooltip id="active" text="Clients with at least one active package (sessions remaining, not expired)" />
                       </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       <div className="flex items-center justify-center gap-1">
                         Not Started
-                        <span title="Clients with active package but no sessions logged yet - need onboarding">
-                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
-                        </span>
+                        <InfoTooltip id="notStarted" text="Clients with active package but no sessions logged yet - need onboarding" />
                       </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       <div className="flex items-center justify-center gap-1">
                         At Risk
-                        <span title="Clients with package expiring within 14 days - follow up for renewal">
-                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
-                        </span>
+                        <InfoTooltip id="atRisk" text="Clients with package expiring within 14 days - follow up for renewal" />
                       </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider border-l border-border">
                       <div className="flex items-center justify-center gap-1">
                         New
-                        <span title="New clients this period - purchased package with no prior sessions in last 30 days">
-                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
-                        </span>
+                        <InfoTooltip id="new" text="New clients this period - purchased package with no prior sessions in last 30 days" />
                       </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       <div className="flex items-center justify-center gap-1">
                         Resold
-                        <span title="Package resales this period - client had active package or recent sessions before purchase">
-                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
-                        </span>
+                        <InfoTooltip id="resold" text="Package resales this period - client had active package or recent sessions before purchase" />
                       </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       <div className="flex items-center justify-center gap-1">
                         Lost
-                        <span title="Clients lost this period - package ended with no replacement purchased">
-                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
-                        </span>
+                        <InfoTooltip id="lost" text="Clients lost this period - package ended with no replacement purchased" />
                       </div>
                     </th>
                   </tr>
