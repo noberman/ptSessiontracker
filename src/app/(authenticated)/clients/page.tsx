@@ -6,12 +6,12 @@ import { prisma } from '@/lib/prisma'
 import { ClientTable } from '@/components/clients/ClientTable'
 import { ClientSearch } from '@/components/clients/ClientSearch'
 import { Button } from '@/components/ui/Button'
-import { getClientState, type ClientState } from '@/lib/package-status'
+import { getClientState, getClientStateFilterWhereClause, type ClientState } from '@/lib/package-status'
 
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ 
+  searchParams: Promise<{
     page?: string
     limit?: string
     search?: string
@@ -19,7 +19,8 @@ export default async function ClientsPage({
     locationIds?: string // New multi-select
     primaryTrainerId?: string // Keep for backwards compatibility
     trainerIds?: string // New multi-select
-    active?: string 
+    clientStates?: string // New: filter by client state
+    active?: string
   }>
 }) {
   const params = await searchParams
@@ -32,22 +33,27 @@ export default async function ClientsPage({
   const page = parseInt(params.page || '1')
   const limit = parseInt(params.limit || '10')
   const search = params.search || ''
-  
+
   // Handle both old single and new multi-select parameters
-  const locationIds = params.locationIds 
+  const locationIds = params.locationIds
     ? params.locationIds.split(',').filter(Boolean)
-    : params.locationId 
+    : params.locationId
     ? [params.locationId]
     : []
-    
+
   const trainerIds = params.trainerIds
     ? params.trainerIds.split(',').filter(Boolean)
     : params.primaryTrainerId
     ? [params.primaryTrainerId]
     : []
-    
+
+  // Parse client states filter
+  const clientStates = params.clientStates
+    ? (params.clientStates.split(',').filter(Boolean) as ClientState[])
+    : []
+
   const active = params.active !== 'false'
-  
+
   const skip = (page - 1) * limit
 
   const where: any = {
@@ -115,6 +121,26 @@ export default async function ClientsPage({
     } else {
       // Regular trainer IDs
       where.primaryTrainerId = { in: trainerIds }
+    }
+  }
+
+  // Handle client state filter
+  if (clientStates.length > 0) {
+    const stateFilter = getClientStateFilterWhereClause(clientStates)
+    if (stateFilter.OR) {
+      // Multiple states - need to combine with existing conditions
+      if (where.AND) {
+        where.AND.push(stateFilter)
+      } else {
+        where.AND = [stateFilter]
+      }
+    } else if (Object.keys(stateFilter).length > 0) {
+      // Single state condition
+      if (where.AND) {
+        where.AND.push(stateFilter)
+      } else {
+        Object.assign(where, stateFilter)
+      }
     }
   }
 

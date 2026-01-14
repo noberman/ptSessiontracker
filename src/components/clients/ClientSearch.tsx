@@ -6,6 +6,15 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
 
+// Client state options for filtering
+const CLIENT_STATE_OPTIONS = [
+  { value: 'active', label: 'Active', subLabel: 'Has active package with sessions' },
+  { value: 'not_started', label: 'Not Started', subLabel: 'Has package, no sessions yet' },
+  { value: 'at_risk', label: 'At Risk', subLabel: 'Package expiring soon' },
+  { value: 'lost', label: 'Lost', subLabel: 'No active packages' },
+  { value: 'new', label: 'New', subLabel: 'No packages yet' },
+]
+
 interface ClientSearchProps {
   locations?: Array<{
     id: string
@@ -37,6 +46,7 @@ export function ClientSearch({
     search: searchParams.get('search') || '',
     locationIds: getArrayFromParam(searchParams.get('locationIds')),
     trainerIds: getArrayFromParam(searchParams.get('trainerIds')),
+    clientStates: getArrayFromParam(searchParams.get('clientStates')),
     active: searchParams.get('active') !== 'false',
   })
 
@@ -49,20 +59,20 @@ export function ClientSearch({
       search: searchParams.get('search') || '',
       locationIds: getArrayFromParam(searchParams.get('locationIds')),
       trainerIds: getArrayFromParam(searchParams.get('trainerIds')),
+      clientStates: getArrayFromParam(searchParams.get('clientStates')),
       active: searchParams.get('active') !== 'false',
     })
     setSearchInput(searchParams.get('search') || '')
   }, [searchParams])
 
   const applyFilters = () => {
-    
     const params = new URLSearchParams()
-    
+
     // Handle search - use the current searchInput value
     if (searchInput) {
       params.set('search', searchInput)
     }
-    
+
     // Handle array filters - use current filter state
     if (filters.locationIds && filters.locationIds.length > 0) {
       params.set('locationIds', filters.locationIds.join(','))
@@ -70,15 +80,18 @@ export function ClientSearch({
     if (filters.trainerIds && filters.trainerIds.length > 0) {
       params.set('trainerIds', filters.trainerIds.join(','))
     }
-    
+    if (filters.clientStates && filters.clientStates.length > 0) {
+      params.set('clientStates', filters.clientStates.join(','))
+    }
+
     // Handle active status
     if (!filters.active && showInactive) {
       params.set('active', 'false')
     }
-    
+
     // Update filters state with search
     setFilters(prev => ({ ...prev, search: searchInput }))
-    
+
     // Reset to page 1 when applying filters
     const url = params.toString() ? `/clients?${params.toString()}` : '/clients'
     router.push(url)
@@ -90,6 +103,7 @@ export function ClientSearch({
       search: '',
       locationIds: [],
       trainerIds: [],
+      clientStates: [],
       active: true,
     })
     setSearchInput('')
@@ -101,31 +115,35 @@ export function ClientSearch({
     // Update filters with search input and then apply
     const updatedFilters = { ...filters, search: searchInput }
     setFilters(updatedFilters)
-    
+
     // Apply filters immediately with updated search
     const params = new URLSearchParams()
-    
+
     if (searchInput) params.set('search', searchInput)
-    
+
     if (updatedFilters.locationIds.length > 0) {
       params.set('locationIds', updatedFilters.locationIds.join(','))
     }
     if (updatedFilters.trainerIds.length > 0) {
       params.set('trainerIds', updatedFilters.trainerIds.join(','))
     }
-    
+    if (updatedFilters.clientStates.length > 0) {
+      params.set('clientStates', updatedFilters.clientStates.join(','))
+    }
+
     if (!updatedFilters.active && showInactive) {
       params.set('active', 'false')
     }
-    
+
     router.push(`/clients?${params.toString()}`)
     router.refresh()
   }
 
-  const activeFilterCount = 
+  const activeFilterCount =
     (filters.search ? 1 : 0) +
-    filters.locationIds.length + 
+    filters.locationIds.length +
     filters.trainerIds.length +
+    filters.clientStates.length +
     (!filters.active ? 1 : 0)
 
   return (
@@ -218,6 +236,20 @@ export function ClientSearch({
                 />
               </div>
             )}
+
+            {/* Client State Filter */}
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Client Status
+              </label>
+              <SearchableMultiSelect
+                options={CLIENT_STATE_OPTIONS}
+                value={filters.clientStates}
+                onChange={(states) => setFilters(prev => ({ ...prev, clientStates: states }))}
+                placeholder="All Statuses"
+                searchPlaceholder="Search statuses..."
+              />
+            </div>
 
             {/* Active Status (if showInactive is true) */}
             {showInactive && (

@@ -230,6 +230,124 @@ export function getClientStateDisplay(state: ClientState): {
 }
 
 // =============================================================================
+// Client State Filter Helpers (for Prisma queries)
+// =============================================================================
+
+/**
+ * Build Prisma where clause to filter clients by state(s)
+ * Returns conditions to be merged with existing where clause
+ *
+ * @param states Array of client states to filter by
+ * @returns Prisma where conditions (OR of all selected states)
+ */
+export function getClientStateFilterWhereClause(states: ClientState[]): any {
+  if (!states || states.length === 0) {
+    return {} // No filter
+  }
+
+  const now = new Date()
+  const atRiskThreshold = new Date()
+  atRiskThreshold.setDate(atRiskThreshold.getDate() + CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
+
+  const stateConditions: any[] = []
+
+  for (const state of states) {
+    switch (state) {
+      case 'active':
+        // Has active package with at least one session against it
+        stateConditions.push({
+          packages: {
+            some: {
+              remainingSessions: { gt: 0 },
+              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
+            }
+          },
+          sessions: {
+            some: {
+              package: {
+                remainingSessions: { gt: 0 },
+                OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
+              }
+            }
+          }
+        })
+        break
+
+      case 'not_started':
+        // Has active package but no sessions against any active package
+        stateConditions.push({
+          packages: {
+            some: {
+              remainingSessions: { gt: 0 },
+              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
+            }
+          },
+          NOT: {
+            sessions: {
+              some: {
+                package: {
+                  remainingSessions: { gt: 0 },
+                  OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
+                }
+              }
+            }
+          }
+        })
+        break
+
+      case 'at_risk':
+        // Has active package expiring within threshold
+        stateConditions.push({
+          packages: {
+            some: {
+              remainingSessions: { gt: 0 },
+              expiresAt: {
+                not: null,
+                gte: now,
+                lte: atRiskThreshold
+              }
+            }
+          }
+        })
+        break
+
+      case 'lost':
+        // Had packages but none are currently active
+        stateConditions.push({
+          packages: {
+            some: {} // Has at least one package
+          },
+          NOT: {
+            packages: {
+              some: {
+                remainingSessions: { gt: 0 },
+                OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
+              }
+            }
+          }
+        })
+        break
+
+      case 'new':
+        // No packages at all
+        stateConditions.push({
+          packages: {
+            none: {}
+          }
+        })
+        break
+    }
+  }
+
+  // If multiple states selected, OR them together
+  if (stateConditions.length === 1) {
+    return stateConditions[0]
+  }
+
+  return { OR: stateConditions }
+}
+
+// =============================================================================
 // Configuration Constants
 // =============================================================================
 
