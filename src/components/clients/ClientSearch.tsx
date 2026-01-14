@@ -251,22 +251,22 @@ export function ClientSearch({
               />
             </div>
 
-            {/* Active Status (if showInactive is true) */}
+            {/* Archived Status (if showInactive is true) */}
             {showInactive && (
               <div className="relative">
                 <label className="block text-sm font-medium text-text-primary mb-1">
-                  Status
+                  Archived
                 </label>
                 <div className="flex items-center space-x-2">
                   <input
-                    id="showInactive"
+                    id="showArchived"
                     type="checkbox"
                     checked={!filters.active}
                     onChange={(e) => setFilters({ ...filters, active: !e.target.checked })}
                     className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="showInactive" className="text-sm text-text-primary">
-                    Include inactive clients
+                  <label htmlFor="showArchived" className="text-sm text-text-primary">
+                    Show archived clients
                   </label>
                 </div>
               </div>

@@ -16,7 +16,7 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
   const [loading, setLoading] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
 
-  const handleDeactivate = async () => {
+  const handleArchive = async () => {
     if (!showConfirm) {
       setShowConfirm(true)
       return
@@ -31,9 +31,9 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
       const data = await response.json()
 
       if (response.ok) {
-        alert(`Client deactivated successfully. ${
-          data.warnings.hadActivePackages 
-            ? `Note: ${data.warnings.packagesDeactivated} active package(s) were also deactivated.` 
+        alert(`Client archived successfully. ${
+          data.warnings.hadActivePackages
+            ? `Note: ${data.warnings.packagesDeactivated} active package(s) were also archived.`
             : ''
         }`)
         router.refresh()
@@ -41,32 +41,32 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
         alert(`Error: ${data.error}`)
       }
     } catch (error) {
-      alert('Failed to deactivate client')
+      alert('Failed to archive client')
     } finally {
       setLoading(false)
       setShowConfirm(false)
     }
   }
 
-  const handleReactivate = async () => {
+  const handleRestore = async () => {
     setLoading(true)
     try {
-      const reactivatePackages = confirm('Do you also want to reactivate any unexpired packages?')
-      
+      const restorePackages = confirm('Do you also want to restore any unexpired packages?')
+
       const response = await fetch(`/api/clients/${clientId}/deactivate`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ reactivatePackages }),
+        body: JSON.stringify({ reactivatePackages: restorePackages }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        alert(`Client reactivated successfully. ${
-          data.packagesReactivated > 0 
-            ? `${data.packagesReactivated} package(s) were also reactivated.` 
+        alert(`Client restored successfully. ${
+          data.packagesReactivated > 0
+            ? `${data.packagesReactivated} package(s) were also restored.`
             : ''
         }`)
         router.refresh()
@@ -74,7 +74,7 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
         alert(`Error: ${data.error}`)
       }
     } catch (error) {
-      alert('Failed to reactivate client')
+      alert('Failed to restore client')
     } finally {
       setLoading(false)
     }
@@ -91,15 +91,15 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
           {showConfirm ? (
             <>
               <span className="text-sm text-error-600">
-                Are you sure you want to deactivate {clientName}?
+                Are you sure you want to archive {clientName}?
               </span>
               <Button
                 variant="danger"
                 size="sm"
-                onClick={handleDeactivate}
+                onClick={handleArchive}
                 disabled={loading}
               >
-                {loading ? 'Deactivating...' : 'Yes, Deactivate'}
+                {loading ? 'Archiving...' : 'Yes, Archive'}
               </Button>
               <Button
                 variant="outline"
@@ -114,10 +114,10 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
             <Button
               variant="danger"
               size="sm"
-              onClick={handleDeactivate}
+              onClick={handleArchive}
               disabled={loading}
             >
-              Deactivate Client
+              Archive Client
             </Button>
           )}
         </>
@@ -125,10 +125,10 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
         <Button
           variant="success"
           size="sm"
-          onClick={handleReactivate}
+          onClick={handleRestore}
           disabled={loading}
         >
-          {loading ? 'Reactivating...' : 'Reactivate Client'}
+          {loading ? 'Restoring...' : 'Restore Client'}
         </Button>
       )}
     </div>

@@ -181,7 +181,13 @@ export function ClientTable({
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {client.clientState ? (
+                  {!client.active ? (
+                    // Client is archived (soft deleted)
+                    <Badge variant="gray" size="sm">
+                      Archived
+                    </Badge>
+                  ) : client.clientState ? (
+                    // Show derived state tag
                     (() => {
                       const stateDisplay = getClientStateDisplay(client.clientState)
                       return (
@@ -194,8 +200,9 @@ export function ClientTable({
                       )
                     })()
                   ) : (
-                    <Badge variant={client.active ? 'success' : 'gray'} size="sm">
-                      {client.active ? 'Active' : 'Inactive'}
+                    // Fallback for backward compatibility
+                    <Badge variant="success" size="sm">
+                      Active
                     </Badge>
                   )}
                 </td>

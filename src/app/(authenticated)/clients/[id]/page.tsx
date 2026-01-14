@@ -107,7 +107,7 @@ export default async function ClientDetailPage({
     const isExpired = pkg.expiresAt && new Date(pkg.expiresAt) < now
 
     if (!pkg.active) {
-      return { label: 'Inactive', variant: 'gray' }
+      return { label: 'Archived', variant: 'gray' }
     }
     if (isExpired) {
       return { label: 'Expired', variant: 'error' }
