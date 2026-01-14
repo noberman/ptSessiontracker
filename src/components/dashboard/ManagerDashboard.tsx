@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DatePicker } from '@/components/ui/DatePicker'
-import { 
+import {
   Download,
-  WifiOff
+  WifiOff,
+  Info
 } from 'lucide-react'
 import {
   LineChart,
@@ -721,25 +722,60 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                       Location
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Total
+                      <div className="flex items-center justify-center gap-1">
+                        Total
+                        <span title="Total clients assigned to this trainer">
+                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
+                        </span>
+                      </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Active
+                      <div className="flex items-center justify-center gap-1">
+                        Active
+                        <span title="Clients with at least one active package (sessions remaining, not expired)">
+                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
+                        </span>
+                      </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Not Started
+                      <div className="flex items-center justify-center gap-1">
+                        Not Started
+                        <span title="Clients with active package but no sessions logged yet - need onboarding">
+                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
+                        </span>
+                      </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      At Risk
+                      <div className="flex items-center justify-center gap-1">
+                        At Risk
+                        <span title="Clients with package expiring within 14 days - follow up for renewal">
+                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
+                        </span>
+                      </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider border-l border-border">
-                      New
+                      <div className="flex items-center justify-center gap-1">
+                        New
+                        <span title="New clients this period - purchased package with no prior sessions in last 30 days">
+                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
+                        </span>
+                      </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Resold
+                      <div className="flex items-center justify-center gap-1">
+                        Resold
+                        <span title="Package resales this period - client had active package or recent sessions before purchase">
+                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
+                        </span>
+                      </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Lost
+                      <div className="flex items-center justify-center gap-1">
+                        Lost
+                        <span title="Clients lost this period - package ended with no replacement purchased">
+                          <Info className="h-3 w-3 text-text-tertiary cursor-help" />
+                        </span>
+                      </div>
                     </th>
                   </tr>
                 </thead>
