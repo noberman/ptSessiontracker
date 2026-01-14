@@ -68,12 +68,12 @@ export function ClientFilters() {
         size="sm"
         onClick={toggleInactive}
       >
-        {showInactive ? 'Showing All Clients' : 'Show Inactive Clients'}
+        {showInactive ? 'Showing All Clients' : 'Show Archived'}
       </Button>
       
       {showInactive && (
         <Badge variant="warning" size="sm">
-          Including inactive clients
+          Including archived clients
         </Badge>
       )}
     </div>

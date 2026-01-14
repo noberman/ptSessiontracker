@@ -252,14 +252,14 @@ export function ClientForm({
           {isEdit && currentUserRole === 'ADMIN' && (
             <div className="flex items-center">
               <input
-                id="active"
+                id="archived"
                 type="checkbox"
-                checked={formData.active}
-                onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                checked={!formData.active}
+                onChange={(e) => setFormData({ ...formData, active: !e.target.checked })}
                 className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
               />
-              <label htmlFor="active" className="ml-2 block text-sm text-text-primary">
-                Active
+              <label htmlFor="archived" className="ml-2 block text-sm text-text-primary">
+                Archived
               </label>
             </div>
           )}
