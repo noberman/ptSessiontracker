@@ -111,7 +111,10 @@ interface DashboardData {
     active: number
     notStarted: number
     atRisk: number
-    lost: number
+    // Period-based metrics
+    newClients: number
+    resold: number
+    newlyLost: number
   }>
 }
 
@@ -729,18 +732,30 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       At Risk
                     </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider border-l border-border">
+                      New
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
+                      Resold
+                    </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       Lost
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-surface divide-y divide-border">
-                  {data.trainerClientHealth.map((trainer) => (
-                    <tr key={trainer.trainerId} className="hover:bg-surface-hover">
+                  {data.trainerClientHealth.map((trainer) => {
+                    const isUnassigned = trainer.trainerId === 'unassigned'
+                    return (
+                    <tr key={trainer.trainerId} className={`hover:bg-surface-hover ${isUnassigned ? 'bg-amber-50' : ''}`}>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div>
-                          <p className="text-sm font-medium text-text-primary">{trainer.trainerName}</p>
-                          <p className="text-xs text-text-secondary">{trainer.trainerEmail}</p>
+                          <p className={`text-sm font-medium ${isUnassigned ? 'text-amber-700 italic' : 'text-text-primary'}`}>
+                            {trainer.trainerName}
+                          </p>
+                          {trainer.trainerEmail && (
+                            <p className="text-xs text-text-secondary">{trainer.trainerEmail}</p>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -766,13 +781,24 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                           {trainer.atRisk}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-center border-l border-border">
+                        <span className={`text-sm font-medium ${trainer.newClients > 0 ? 'text-emerald-600' : 'text-text-secondary'}`}>
+                          {trainer.newClients}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${trainer.lost > 0 ? 'text-red-600' : 'text-text-secondary'}`}>
-                          {trainer.lost}
+                        <span className={`text-sm font-medium ${trainer.resold > 0 ? 'text-purple-600' : 'text-text-secondary'}`}>
+                          {trainer.resold}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-sm font-medium ${trainer.newlyLost > 0 ? 'text-red-600' : 'text-text-secondary'}`}>
+                          {trainer.newlyLost}
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                   {/* Totals Row */}
                   <tr className="bg-background-secondary font-medium">
                     <td className="px-4 py-3 text-sm text-text-primary" colSpan={2}>
@@ -790,8 +816,14 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                     <td className="px-4 py-3 text-center text-sm text-orange-600">
                       {data.stats.clientMetrics?.atRisk ?? 0}
                     </td>
+                    <td className="px-4 py-3 text-center text-sm text-emerald-600 border-l border-border">
+                      {data.stats.clientMetricsPeriod?.newClients ?? 0}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-purple-600">
+                      {data.stats.clientMetricsPeriod?.resoldPackages ?? 0}
+                    </td>
                     <td className="px-4 py-3 text-center text-sm text-red-600">
-                      {data.stats.clientMetrics?.lost ?? 0}
+                      {data.stats.clientMetricsPeriod?.newlyLost ?? 0}
                     </td>
                   </tr>
                 </tbody>
@@ -799,7 +831,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
             </div>
           ) : (
             <p className="text-sm text-text-secondary text-center py-4">
-              No trainers with assigned clients
+              No client data available
             </p>
           )}
         </CardContent>

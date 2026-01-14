@@ -675,15 +675,39 @@ export async function GET(request: Request) {
       // PER-TRAINER CLIENT HEALTH METRICS
       // =====================================================================
 
-      // Calculate client health metrics for each trainer
+      // Get all trainers who have clients assigned (regardless of their role)
+      const trainersWithClients = await prisma.user.findMany({
+        where: {
+          organizationId,
+          id: {
+            in: await prisma.client.findMany({
+              where: { ...clientsWhere, primaryTrainerId: { not: null } },
+              select: { primaryTrainerId: true },
+              distinct: ['primaryTrainerId']
+            }).then(clients => clients.map(c => c.primaryTrainerId!).filter(Boolean))
+          }
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          locations: {
+            select: { locationId: true }
+          }
+        },
+        orderBy: { name: 'asc' }
+      })
+
+      // Calculate client health metrics for each trainer with clients
       const trainerClientHealth = await Promise.all(
-        allTrainers.map(async (trainer) => {
+        trainersWithClients.map(async (trainer) => {
           const trainerClientsWhere = {
             ...clientsWhere,
             primaryTrainerId: trainer.id
           }
 
-          const [total, active, notStarted, atRisk, lost] = await Promise.all([
+          // Snapshot metrics
+          const [total, active, notStarted, atRisk] = await Promise.all([
             // Total clients assigned to this trainer
             prisma.client.count({ where: trainerClientsWhere }),
 
@@ -716,17 +740,72 @@ export async function GET(request: Request) {
                   some: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
                 }
               }
-            }),
-
-            // Lost (had packages but none active)
-            prisma.client.count({
-              where: {
-                ...trainerClientsWhere,
-                packages: { some: {} },
-                NOT: { packages: { some: getActivePackageWhereClause() } }
-              }
             })
           ])
+
+          // Period-based metrics for this trainer
+          // Get packages created in the period for this trainer's clients
+          const trainerPackagesInPeriod = await prisma.package.findMany({
+            where: {
+              organizationId,
+              createdAt: { gte: dateFrom, lte: dateTo },
+              client: { primaryTrainerId: trainer.id, ...clientsWhere }
+            },
+            select: {
+              id: true,
+              clientId: true,
+              createdAt: true
+            }
+          })
+
+          // Calculate new clients and resold for this trainer
+          const trainerNewClientIds = new Set<string>()
+          let trainerResoldCount = 0
+
+          for (const pkg of trainerPackagesInPeriod) {
+            const lookbackDate = new Date(pkg.createdAt)
+            lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
+
+            const [priorSession, hadActivePackageAtPurchase] = await Promise.all([
+              prisma.session.findFirst({
+                where: {
+                  clientId: pkg.clientId,
+                  sessionDate: { gte: lookbackDate, lt: pkg.createdAt }
+                }
+              }),
+              prisma.package.findFirst({
+                where: {
+                  clientId: pkg.clientId,
+                  id: { not: pkg.id },
+                  remainingSessions: { gt: 0 },
+                  OR: [{ expiresAt: null }, { expiresAt: { gt: pkg.createdAt } }]
+                }
+              })
+            ])
+
+            if (!priorSession) {
+              trainerNewClientIds.add(pkg.clientId)
+            }
+            if (hadActivePackageAtPurchase || priorSession) {
+              trainerResoldCount++
+            }
+          }
+
+          // Newly lost clients for this trainer (within period)
+          const trainerNewlyLost = await prisma.client.count({
+            where: {
+              ...trainerClientsWhere,
+              packages: {
+                some: {
+                  OR: [
+                    { remainingSessions: 0, updatedAt: { gte: dateFrom, lte: dateTo } },
+                    { expiresAt: { gte: dateFrom, lte: dateTo } }
+                  ]
+                }
+              },
+              NOT: { packages: { some: getActivePackageWhereClause() } }
+            }
+          })
 
           // Get trainer's location names for display
           const trainerLocations = allLocations
@@ -745,7 +824,10 @@ export async function GET(request: Request) {
             active,
             notStarted,
             atRisk,
-            lost
+            // Period-based metrics
+            newClients: trainerNewClientIds.size,
+            resold: trainerResoldCount,
+            newlyLost: trainerNewlyLost
           }
         })
       )
@@ -754,6 +836,107 @@ export async function GET(request: Request) {
       const trainerClientHealthFiltered = trainerClientHealth
         .filter(t => t.total > 0)
         .sort((a, b) => b.total - a.total)
+
+      // Also calculate metrics for unassigned clients (no primaryTrainerId)
+      const unassignedClientsWhere = {
+        ...clientsWhere,
+        primaryTrainerId: null
+      }
+
+      const [
+        unassignedTotal,
+        unassignedActive,
+        unassignedNotStarted,
+        unassignedAtRisk
+      ] = await Promise.all([
+        prisma.client.count({ where: unassignedClientsWhere }),
+        prisma.client.count({
+          where: { ...unassignedClientsWhere, packages: { some: getActivePackageWhereClause() } }
+        }),
+        prisma.client.count({
+          where: {
+            ...unassignedClientsWhere,
+            packages: { some: getActivePackageWhereClause() },
+            NOT: { sessions: { some: { package: getActivePackageWhereClause() } } }
+          }
+        }),
+        prisma.client.count({
+          where: {
+            ...unassignedClientsWhere,
+            packages: { some: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD) }
+          }
+        })
+      ])
+
+      // Period-based metrics for unassigned clients
+      const unassignedPackagesInPeriod = await prisma.package.findMany({
+        where: {
+          organizationId,
+          createdAt: { gte: dateFrom, lte: dateTo },
+          client: { primaryTrainerId: null, ...clientsWhere }
+        },
+        select: { id: true, clientId: true, createdAt: true }
+      })
+
+      const unassignedNewClientIds = new Set<string>()
+      let unassignedResoldCount = 0
+
+      for (const pkg of unassignedPackagesInPeriod) {
+        const lookbackDate = new Date(pkg.createdAt)
+        lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
+
+        const [priorSession, hadActivePackageAtPurchase] = await Promise.all([
+          prisma.session.findFirst({
+            where: { clientId: pkg.clientId, sessionDate: { gte: lookbackDate, lt: pkg.createdAt } }
+          }),
+          prisma.package.findFirst({
+            where: {
+              clientId: pkg.clientId,
+              id: { not: pkg.id },
+              remainingSessions: { gt: 0 },
+              OR: [{ expiresAt: null }, { expiresAt: { gt: pkg.createdAt } }]
+            }
+          })
+        ])
+
+        if (!priorSession) unassignedNewClientIds.add(pkg.clientId)
+        if (hadActivePackageAtPurchase || priorSession) unassignedResoldCount++
+      }
+
+      const unassignedNewlyLost = await prisma.client.count({
+        where: {
+          ...unassignedClientsWhere,
+          packages: {
+            some: {
+              OR: [
+                { remainingSessions: 0, updatedAt: { gte: dateFrom, lte: dateTo } },
+                { expiresAt: { gte: dateFrom, lte: dateTo } }
+              ]
+            }
+          },
+          NOT: { packages: { some: getActivePackageWhereClause() } }
+        }
+      })
+
+      // Add unassigned row if there are unassigned clients
+      const unassignedRow = unassignedTotal > 0 ? {
+        trainerId: 'unassigned',
+        trainerName: 'Unassigned',
+        trainerEmail: '',
+        locationNames: [],
+        total: unassignedTotal,
+        active: unassignedActive,
+        notStarted: unassignedNotStarted,
+        atRisk: unassignedAtRisk,
+        newClients: unassignedNewClientIds.size,
+        resold: unassignedResoldCount,
+        newlyLost: unassignedNewlyLost
+      } : null
+
+      // Combine trainer rows with unassigned row
+      const allClientHealth = unassignedRow
+        ? [...trainerClientHealthFiltered, unassignedRow]
+        : trainerClientHealthFiltered
 
       return NextResponse.json({
         stats: {
@@ -785,7 +968,7 @@ export async function GET(request: Request) {
           }
         },
         trainerStats: trainerStatsWithInfo,
-        trainerClientHealth: trainerClientHealthFiltered,
+        trainerClientHealth: allClientHealth,
         allTrainers: allTrainers.map(t => ({
           ...t,
           locationIds: t.locations ? t.locations.map(l => l.locationId) : [],
