@@ -176,9 +176,9 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
         <Info className="h-3 w-3" />
       </button>
       {openTooltip === id && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs font-normal normal-case tracking-normal text-left text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal w-48">
+        <div className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 text-xs font-normal normal-case tracking-normal text-left text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal w-48">
           {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900" />
         </div>
       )}
     </span>
