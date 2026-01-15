@@ -8,7 +8,8 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import {
   Download,
   WifiOff,
-  Info
+  Info,
+  Bell
 } from 'lucide-react'
 import {
   LineChart,
@@ -164,11 +165,19 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
     }>
   } | null>(null)
 
+  // State for alerts dropdown
+  const [alertsOpen, setAlertsOpen] = useState(false)
+  const alertsRef = useRef<HTMLDivElement>(null)
+
   // Close dropdown and tooltip when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setOpenDropdown(null)
+      }
+      // Close alerts dropdown if clicking outside
+      if (alertsRef.current && !alertsRef.current.contains(event.target as Node)) {
+        setAlertsOpen(false)
       }
       // Close tooltip if clicking outside
       const target = event.target as HTMLElement
@@ -626,6 +635,49 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
               Export CSV
             </Button>
           )}
+
+          {/* Spacer to push alerts to the right */}
+          <div className="flex-1" />
+
+          {/* Alerts Bell */}
+          {data.stats.unassignedClients && data.stats.unassignedClients > 0 && (
+            <div className="relative" ref={alertsRef}>
+              <button
+                type="button"
+                onClick={() => setAlertsOpen(!alertsOpen)}
+                className="relative p-2 text-text-secondary hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-orange-500 rounded-full">
+                  1
+                </span>
+              </button>
+
+              {/* Alerts Dropdown */}
+              {alertsOpen && (
+                <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-border z-50">
+                  <div className="px-4 py-3 border-b border-border">
+                    <h3 className="text-sm font-semibold text-text-primary">Alerts</h3>
+                  </div>
+                  <div className="py-2">
+                    <a
+                      href="/clients?filter=unassigned"
+                      className="flex items-start space-x-3 px-4 py-3 hover:bg-surface-hover transition-colors"
+                      onClick={() => setAlertsOpen(false)}
+                    >
+                      <span className="text-orange-500 mt-0.5">⚠️</span>
+                      <div>
+                        <p className="text-sm font-medium text-text-primary">Unassigned Clients</p>
+                        <p className="text-xs text-text-secondary mt-0.5">
+                          {data.stats.unassignedClients} client{data.stats.unassignedClients > 1 ? 's' : ''} need trainer assignment
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {isFiltersOpen && (
@@ -1021,29 +1073,6 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
           )}
         </CardContent>
       </Card>
-
-      {/* Alerts Section */}
-      {data.stats.unassignedClients && data.stats.unassignedClients > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Unassigned Clients Alert */}
-          <Card className="border-orange-200 bg-orange-50">
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  <div className="text-orange-600 mt-0.5">⚠️</div>
-                  <div>
-                    <p className="text-sm font-medium text-orange-900">Unassigned Clients</p>
-                    <p className="text-sm text-orange-700 mt-1">
-                      {data.stats.unassignedClients || 0} client{(data.stats.unassignedClients || 0) > 1 ? 's' : ''} need trainer assignment
-                    </p>
-                    <a href="/clients?filter=unassigned" className="text-sm text-orange-600 hover:text-orange-800 mt-2 inline-block">
-                      View unassigned clients →
-                    </a>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-        </div>
-      ) : null}
 
       {/* Cumulative Sessions Chart - Full width */}
       <Card>
