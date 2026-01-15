@@ -766,15 +766,12 @@ export async function GET(request: Request) {
             const lookbackDate = new Date(pkg.createdAt)
             lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
 
-            // Normalize to start of day to avoid counting same-day sessions as "prior"
-            const packageStartOfDay = new Date(pkg.createdAt)
-            packageStartOfDay.setHours(0, 0, 0, 0)
-
             const [priorSession, hadActivePackageAtPurchase] = await Promise.all([
               prisma.session.findFirst({
                 where: {
                   clientId: pkg.clientId,
-                  sessionDate: { gte: lookbackDate, lt: packageStartOfDay }
+                  sessionDate: { gte: lookbackDate, lt: pkg.createdAt },
+                  packageId: { not: pkg.id }
                 }
               }),
               prisma.package.findFirst({
@@ -889,13 +886,9 @@ export async function GET(request: Request) {
         const lookbackDate = new Date(pkg.createdAt)
         lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
 
-        // Normalize to start of day to avoid counting same-day sessions as "prior"
-        const packageStartOfDay = new Date(pkg.createdAt)
-        packageStartOfDay.setHours(0, 0, 0, 0)
-
         const [priorSession, hadActivePackageAtPurchase] = await Promise.all([
           prisma.session.findFirst({
-            where: { clientId: pkg.clientId, sessionDate: { gte: lookbackDate, lt: packageStartOfDay } }
+            where: { clientId: pkg.clientId, sessionDate: { gte: lookbackDate, lt: pkg.createdAt }, packageId: { not: pkg.id } }
           }),
           prisma.package.findFirst({
             where: {
