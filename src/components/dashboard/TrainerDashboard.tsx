@@ -5,14 +5,17 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { 
-  Calendar, 
-  DollarSign, 
-  Clock, 
+import {
+  Calendar,
+  DollarSign,
+  Clock,
   CheckCircle,
   Plus,
   RefreshCw,
-  Mail
+  Mail,
+  Users,
+  AlertTriangle,
+  UserPlus
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
@@ -21,6 +24,20 @@ interface TrainerDashboardProps {
   userId: string
   userName: string
   orgTimezone?: string
+}
+
+interface ClientWithPackage {
+  id: string
+  name: string
+  email: string
+  packages: Array<{
+    id: string
+    name: string
+    remainingSessions: number
+    totalSessions: number
+    expiresAt?: string | null
+    createdAt?: string
+  }>
 }
 
 interface DashboardData {
@@ -33,6 +50,12 @@ interface DashboardData {
     period: {
       from: string
       to: string
+    }
+    clientMetrics?: {
+      total: number
+      active: number
+      notStarted: number
+      atRisk: number
     }
   }
   todaysSessions: Array<{
@@ -67,6 +90,10 @@ interface DashboardData {
       email: string
     }
   }>
+  clientsNeedingAttention?: {
+    notStarted: ClientWithPackage[]
+    atRisk: ClientWithPackage[]
+  }
 }
 
 export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: TrainerDashboardProps) {
@@ -191,7 +218,24 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-secondary">Active Clients</p>
+                <p className="text-2xl font-bold text-text-primary mt-1">
+                  {data.stats.clientMetrics?.active ?? 0}
+                </p>
+                <p className="text-xs text-text-secondary mt-1">
+                  of {data.stats.clientMetrics?.total ?? 0} total
+                </p>
+              </div>
+              <Users className="w-8 h-8 text-primary-500" />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -201,7 +245,7 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
                   {data.stats.totalSessions}
                 </p>
               </div>
-              <Calendar className="w-8 h-8 text-primary-500" />
+              <Calendar className="w-8 h-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
@@ -254,6 +298,82 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
           </CardContent>
         </Card>
       </div>
+
+      {/* Clients Needing Attention - Only show if there are any */}
+      {data.clientsNeedingAttention &&
+       (data.clientsNeedingAttention.notStarted.length > 0 || data.clientsNeedingAttention.atRisk.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-warning-500" />
+              Clients Needing Attention
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Not Started Clients */}
+              {data.clientsNeedingAttention.notStarted.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <UserPlus className="w-4 h-4 text-blue-500" />
+                    <h3 className="text-sm font-medium text-text-primary">
+                      Not Started ({data.clientsNeedingAttention.notStarted.length})
+                    </h3>
+                  </div>
+                  <p className="text-xs text-text-secondary mb-3">
+                    These clients have a package but haven&apos;t had their first session yet
+                  </p>
+                  <div className="space-y-2">
+                    {data.clientsNeedingAttention.notStarted.map((client) => (
+                      <Link key={client.id} href={`/clients/${client.id}`}>
+                        <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
+                          <p className="font-medium text-sm text-text-primary">{client.name}</p>
+                          {client.packages[0] && (
+                            <p className="text-xs text-text-secondary mt-1">
+                              {client.packages[0].name} - {client.packages[0].remainingSessions}/{client.packages[0].totalSessions} sessions
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* At Risk Clients */}
+              {data.clientsNeedingAttention.atRisk.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="w-4 h-4 text-orange-500" />
+                    <h3 className="text-sm font-medium text-text-primary">
+                      Expiring Soon ({data.clientsNeedingAttention.atRisk.length})
+                    </h3>
+                  </div>
+                  <p className="text-xs text-text-secondary mb-3">
+                    These clients&apos; packages expire within 14 days - follow up for renewal
+                  </p>
+                  <div className="space-y-2">
+                    {data.clientsNeedingAttention.atRisk.map((client) => (
+                      <Link key={client.id} href={`/clients/${client.id}`}>
+                        <div className="p-3 bg-orange-50 border border-orange-100 rounded-lg hover:bg-orange-100 transition-colors cursor-pointer">
+                          <p className="font-medium text-sm text-text-primary">{client.name}</p>
+                          {client.packages[0] && (
+                            <p className="text-xs text-text-secondary mt-1">
+                              {client.packages[0].name} - Expires {client.packages[0].expiresAt
+                                ? new Date(client.packages[0].expiresAt).toLocaleDateString()
+                                : 'N/A'}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Sessions */}

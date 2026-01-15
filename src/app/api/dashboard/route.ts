@@ -133,31 +133,36 @@ export async function GET(request: Request) {
         totalSessionValue,
         myClients,
         todaysSessions,
-        recentSessions
+        recentSessions,
+        // Client metrics
+        totalClients,
+        activeClients,
+        notStartedClients,
+        atRiskClients
       ] = await Promise.all([
         // Total sessions this period
         prisma.session.count({ where: sessionsWhere }),
-        
+
         // Validated sessions
-        prisma.session.count({ 
-          where: { ...sessionsWhere, validated: true } 
+        prisma.session.count({
+          where: { ...sessionsWhere, validated: true }
         }),
-        
+
         // Pending validations
-        prisma.session.count({ 
-          where: { 
-            ...sessionsWhere, 
+        prisma.session.count({
+          where: {
+            ...sessionsWhere,
             validated: false,
             validationExpiry: { gte: new Date() }
-          } 
+          }
         }),
-        
+
         // Total session value
         prisma.session.aggregate({
           where: sessionsWhere,
           _sum: { sessionValue: true }
         }),
-        
+
         // My clients
         prisma.client.findMany({
           where: clientsWhere,
@@ -177,7 +182,7 @@ export async function GET(request: Request) {
           },
           orderBy: { name: 'asc' }
         }),
-        
+
         // Today's sessions in org timezone
         prisma.session.findMany({
           where: {
@@ -206,7 +211,7 @@ export async function GET(request: Request) {
           },
           orderBy: { sessionDate: 'desc' }
         }),
-        
+
         // Recent sessions with pending validation
         prisma.session.findMany({
           where: {
@@ -224,10 +229,81 @@ export async function GET(request: Request) {
           },
           orderBy: { sessionDate: 'desc' },
           take: 5
+        }),
+
+        // Total clients assigned to this trainer
+        prisma.client.count({ where: clientsWhere }),
+
+        // Active clients (have active package)
+        prisma.client.count({
+          where: {
+            ...clientsWhere,
+            packages: { some: getActivePackageWhereClause() }
+          }
+        }),
+
+        // Not Started clients (have active package but no sessions against it)
+        prisma.client.findMany({
+          where: {
+            ...clientsWhere,
+            packages: { some: getActivePackageWhereClause() },
+            NOT: {
+              sessions: {
+                some: { package: getActivePackageWhereClause() }
+              }
+            }
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            packages: {
+              where: getActivePackageWhereClause(),
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                id: true,
+                name: true,
+                remainingSessions: true,
+                totalSessions: true,
+                expiresAt: true,
+                createdAt: true
+              }
+            }
+          },
+          orderBy: { name: 'asc' }
+        }),
+
+        // At Risk clients (package expiring within 14 days)
+        prisma.client.findMany({
+          where: {
+            ...clientsWhere,
+            packages: {
+              some: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
+            }
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            packages: {
+              where: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD),
+              orderBy: { expiresAt: 'asc' },
+              take: 1,
+              select: {
+                id: true,
+                name: true,
+                remainingSessions: true,
+                totalSessions: true,
+                expiresAt: true
+              }
+            }
+          },
+          orderBy: { name: 'asc' }
         })
       ])
 
-      const validationRate = totalSessions > 0 
+      const validationRate = totalSessions > 0
         ? Math.round((validatedSessions / totalSessions) * 100)
         : 0
 
@@ -241,11 +317,23 @@ export async function GET(request: Request) {
           period: {
             from: dateFrom,
             to: dateTo
+          },
+          // Client metrics for trainer
+          clientMetrics: {
+            total: totalClients,
+            active: activeClients,
+            notStarted: notStartedClients.length,
+            atRisk: atRiskClients.length
           }
         },
         todaysSessions,
         myClients,
         pendingValidationSessions: recentSessions,
+        // Clients needing attention
+        clientsNeedingAttention: {
+          notStarted: notStartedClients,
+          atRisk: atRiskClients
+        },
         userRole: session.user.role
       })
       
