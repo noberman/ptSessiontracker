@@ -290,7 +290,7 @@ export async function GET(request: Request) {
     if (session.user.role === 'ADMIN' && filterLocationId) {
       sessionsWhere.locationId = filterLocationId
       clientsWhere.locationId = filterLocationId
-      trainersWhere.locationId = filterLocationId
+      trainersWhere.locations = { some: { locationId: filterLocationId } }
     }
     
     // Apply trainer filter if specified (for all manager/admin roles)
