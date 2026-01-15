@@ -143,6 +143,27 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
   const [selectedSessionValue, setSelectedSessionValue] = useState(0)
   const [selectedSessions, setSelectedSessions] = useState<any[]>([])
 
+  // State for client metric modal
+  const [clientModalOpen, setClientModalOpen] = useState(false)
+  const [clientModalLoading, setClientModalLoading] = useState(false)
+  const [clientModalData, setClientModalData] = useState<{
+    metric: string
+    metricLabel: string
+    trainerName: string
+    clients: Array<{
+      id: string
+      name: string
+      email: string
+      packages: Array<{
+        id: string
+        name: string
+        remainingSessions: number
+        totalSessions: number
+        expiresAt: string | null
+      }>
+    }>
+  } | null>(null)
+
   // Close dropdown and tooltip when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -182,6 +203,89 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
         </div>
       )}
     </span>
+  )
+
+  // Metric labels for modal
+  const metricLabels: Record<string, string> = {
+    total: 'Total Clients',
+    active: 'Active Clients',
+    notStarted: 'Not Started Clients',
+    atRisk: 'At Risk Clients',
+    newClients: 'New Clients',
+    resold: 'Resold Packages',
+    newlyLost: 'Lost Clients'
+  }
+
+  // Fetch clients for a specific metric
+  const fetchClientsForMetric = async (
+    trainerId: string,
+    trainerName: string,
+    metric: string,
+    count: number
+  ) => {
+    if (count === 0) return // Don't open modal for zero
+
+    setClientModalLoading(true)
+    setClientModalOpen(true)
+    setClientModalData({
+      metric,
+      metricLabel: metricLabels[metric] || metric,
+      trainerName,
+      clients: []
+    })
+
+    try {
+      const params = new URLSearchParams({
+        trainerId,
+        metric: metric === 'newClients' ? 'new' : metric === 'newlyLost' ? 'lost' : metric
+      })
+
+      // Add date params for period metrics
+      if (['newClients', 'resold', 'newlyLost', 'new', 'lost'].includes(metric) && data?.stats.period) {
+        params.append('dateFrom', data.stats.period.from)
+        params.append('dateTo', data.stats.period.to)
+      }
+
+      const response = await fetch(`/api/dashboard/clients?${params}`)
+      const result = await response.json()
+
+      if (response.ok) {
+        setClientModalData({
+          metric,
+          metricLabel: metricLabels[metric] || metric,
+          trainerName,
+          clients: result.clients
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error)
+    } finally {
+      setClientModalLoading(false)
+    }
+  }
+
+  // Clickable metric number component
+  const MetricNumber = ({
+    value,
+    trainerId,
+    trainerName,
+    metric,
+    colorClass
+  }: {
+    value: number
+    trainerId: string
+    trainerName: string
+    metric: string
+    colorClass: string
+  }) => (
+    <button
+      type="button"
+      onClick={() => fetchClientsForMetric(trainerId, trainerName, metric, value)}
+      className={`text-sm font-medium ${colorClass} ${value > 0 ? 'hover:underline cursor-pointer' : 'cursor-default'}`}
+      disabled={value === 0}
+    >
+      {value}
+    </button>
   )
 
   // Monitor online/offline status
@@ -815,37 +919,67 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                         </p>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className="text-sm font-medium text-text-primary">{trainer.total}</span>
+                        <MetricNumber
+                          value={trainer.total}
+                          trainerId={trainer.trainerId}
+                          trainerName={trainer.trainerName}
+                          metric="total"
+                          colorClass="text-text-primary"
+                        />
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${trainer.active > 0 ? 'text-green-600' : 'text-text-secondary'}`}>
-                          {trainer.active}
-                        </span>
+                        <MetricNumber
+                          value={trainer.active}
+                          trainerId={trainer.trainerId}
+                          trainerName={trainer.trainerName}
+                          metric="active"
+                          colorClass={trainer.active > 0 ? 'text-green-600' : 'text-text-secondary'}
+                        />
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${trainer.notStarted > 0 ? 'text-amber-600' : 'text-text-secondary'}`}>
-                          {trainer.notStarted}
-                        </span>
+                        <MetricNumber
+                          value={trainer.notStarted}
+                          trainerId={trainer.trainerId}
+                          trainerName={trainer.trainerName}
+                          metric="notStarted"
+                          colorClass={trainer.notStarted > 0 ? 'text-amber-600' : 'text-text-secondary'}
+                        />
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${trainer.atRisk > 0 ? 'text-orange-600' : 'text-text-secondary'}`}>
-                          {trainer.atRisk}
-                        </span>
+                        <MetricNumber
+                          value={trainer.atRisk}
+                          trainerId={trainer.trainerId}
+                          trainerName={trainer.trainerName}
+                          metric="atRisk"
+                          colorClass={trainer.atRisk > 0 ? 'text-orange-600' : 'text-text-secondary'}
+                        />
                       </td>
                       <td className="px-4 py-3 text-center border-l border-border">
-                        <span className={`text-sm font-medium ${trainer.newClients > 0 ? 'text-emerald-600' : 'text-text-secondary'}`}>
-                          {trainer.newClients}
-                        </span>
+                        <MetricNumber
+                          value={trainer.newClients}
+                          trainerId={trainer.trainerId}
+                          trainerName={trainer.trainerName}
+                          metric="newClients"
+                          colorClass={trainer.newClients > 0 ? 'text-emerald-600' : 'text-text-secondary'}
+                        />
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${trainer.resold > 0 ? 'text-purple-600' : 'text-text-secondary'}`}>
-                          {trainer.resold}
-                        </span>
+                        <MetricNumber
+                          value={trainer.resold}
+                          trainerId={trainer.trainerId}
+                          trainerName={trainer.trainerName}
+                          metric="resold"
+                          colorClass={trainer.resold > 0 ? 'text-purple-600' : 'text-text-secondary'}
+                        />
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${trainer.newlyLost > 0 ? 'text-red-600' : 'text-text-secondary'}`}>
-                          {trainer.newlyLost}
-                        </span>
+                        <MetricNumber
+                          value={trainer.newlyLost}
+                          trainerId={trainer.trainerId}
+                          trainerName={trainer.trainerName}
+                          metric="newlyLost"
+                          colorClass={trainer.newlyLost > 0 ? 'text-red-600' : 'text-text-secondary'}
+                        />
                       </td>
                     </tr>
                     )
@@ -1012,6 +1146,81 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
         sessions={selectedSessions}
         orgTimezone={orgTimezone}
       />
+
+      {/* Client Metric Modal */}
+      {clientModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setClientModalOpen(false)}
+          />
+          {/* Modal */}
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <div>
+                <h3 className="text-lg font-semibold text-text-primary">
+                  {clientModalData?.metricLabel} ({clientModalData?.clients.length || 0})
+                </h3>
+                <p className="text-sm text-text-secondary">{clientModalData?.trainerName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setClientModalOpen(false)}
+                className="text-text-secondary hover:text-text-primary p-1"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {clientModalLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                </div>
+              ) : clientModalData?.clients.length === 0 ? (
+                <p className="text-center text-text-secondary py-8">No clients found</p>
+              ) : (
+                <div className="space-y-3">
+                  {clientModalData?.clients.map((client) => (
+                    <div key={client.id} className="border border-border rounded-lg p-3 hover:bg-surface-hover">
+                      <a
+                        href={`/clients/${client.id}`}
+                        className="text-sm font-medium text-text-primary hover:text-primary-600 hover:underline"
+                      >
+                        {client.name}
+                      </a>
+                      <p className="text-xs text-text-secondary">{client.email}</p>
+                      {client.packages && client.packages.length > 0 && (
+                        <div className="mt-2">
+                          {client.packages.map((pkg) => (
+                            <a
+                              key={pkg.id}
+                              href={`/packages/${pkg.id}`}
+                              className="flex items-center justify-between text-xs text-text-secondary hover:text-primary-600 group"
+                            >
+                              <span className="group-hover:underline">{pkg.name}</span>
+                              <span className="text-text-tertiary">
+                                {pkg.remainingSessions}/{pkg.totalSessions} sessions
+                                {pkg.expiresAt && (
+                                  <> · Expires {new Date(pkg.expiresAt).toLocaleDateString()}</>
+                                )}
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
