@@ -661,7 +661,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                   </div>
                   <div className="py-2">
                     <a
-                      href="/clients?filter=unassigned"
+                      href="/clients?trainerIds=unassigned"
                       className="flex items-start space-x-3 px-4 py-3 hover:bg-surface-hover transition-colors"
                       onClick={() => setAlertsOpen(false)}
                     >
