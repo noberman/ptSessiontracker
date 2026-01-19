@@ -6,6 +6,7 @@ import { getOrganizationId } from '@/lib/organization-context'
 import {
   getActivePackageWhereClause,
   getExpiringSoonPackageWhereClause,
+  getAtRiskPackageWhereClause,
   CLIENT_METRICS_CONFIG
 } from '@/lib/package-status'
 
@@ -130,12 +131,13 @@ export async function GET(request: Request) {
         break
 
       case 'atRisk':
-        // Clients with package expiring soon
-        clients = await prisma.client.findMany({
+        // Clients at risk: expiring soon OR low sessions, but only if they have exactly 1 active package
+        // (if they have 2+ active packages, they've already renewed)
+        const atRiskRaw = await prisma.client.findMany({
           where: {
             ...baseWhere,
             packages: {
-              some: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
+              some: getAtRiskPackageWhereClause()
             }
           },
           select: {
@@ -143,9 +145,8 @@ export async function GET(request: Request) {
             name: true,
             email: true,
             packages: {
-              where: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD),
+              where: getActivePackageWhereClause(),
               orderBy: { expiresAt: 'asc' },
-              take: 1,
               select: {
                 id: true,
                 name: true,
@@ -157,6 +158,13 @@ export async function GET(request: Request) {
           },
           orderBy: { name: 'asc' }
         })
+        // Filter to only clients with exactly 1 active package
+        clients = atRiskRaw
+          .filter(client => client.packages.length === 1)
+          .map(client => ({
+            ...client,
+            packages: client.packages // Keep the at-risk package
+          }))
         break
 
       case 'new':

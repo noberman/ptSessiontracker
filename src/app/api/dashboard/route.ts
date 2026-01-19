@@ -7,6 +7,7 @@ import { fromZonedTime, toZonedTime } from 'date-fns-tz'
 import {
   getActivePackageWhereClause,
   getExpiringSoonPackageWhereClause,
+  getAtRiskPackageWhereClause,
   CLIENT_METRICS_CONFIG
 } from '@/lib/package-status'
 
@@ -274,12 +275,13 @@ export async function GET(request: Request) {
           orderBy: { name: 'asc' }
         }),
 
-        // At Risk clients (package expiring within 14 days)
+        // At Risk clients (expiring soon OR low sessions, but only if they have exactly 1 active package)
+        // We fetch clients with at-risk packages and their active packages, then filter in code
         prisma.client.findMany({
           where: {
             ...clientsWhere,
             packages: {
-              some: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
+              some: getAtRiskPackageWhereClause()
             }
           },
           select: {
@@ -287,9 +289,8 @@ export async function GET(request: Request) {
             name: true,
             email: true,
             packages: {
-              where: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD),
+              where: getActivePackageWhereClause(),
               orderBy: { expiresAt: 'asc' },
-              take: 1,
               select: {
                 id: true,
                 name: true,
@@ -307,6 +308,15 @@ export async function GET(request: Request) {
         ? Math.round((validatedSessions / totalSessions) * 100)
         : 0
 
+      // Filter at-risk clients to only those with exactly 1 active package
+      // (if they have 2+ active packages, they've already renewed)
+      const filteredAtRiskClients = atRiskClients
+        .filter(client => client.packages.length === 1)
+        .map(client => ({
+          ...client,
+          packages: client.packages // Keep only the at-risk package info
+        }))
+
       return NextResponse.json({
         stats: {
           totalSessions,
@@ -323,7 +333,7 @@ export async function GET(request: Request) {
             total: totalClients,
             active: activeClients,
             notStarted: notStartedClients.length,
-            atRisk: atRiskClients.length
+            atRisk: filteredAtRiskClients.length
           }
         },
         todaysSessions,
@@ -332,7 +342,7 @@ export async function GET(request: Request) {
         // Clients needing attention
         clientsNeedingAttention: {
           notStarted: notStartedClients,
-          atRisk: atRiskClients
+          atRisk: filteredAtRiskClients
         },
         userRole: session.user.role
       })
@@ -526,12 +536,20 @@ export async function GET(request: Request) {
           }
         }),
 
-        // At-Risk clients (package expiring in next 14 days with sessions remaining)
-        prisma.client.count({
+        // At-Risk clients (expiring soon OR low sessions, only if they have exactly 1 active package)
+        // Fetch clients and filter in code since Prisma can't easily express "exactly 1 active package"
+        prisma.client.findMany({
           where: {
             ...clientsWhere,
             packages: {
-              some: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
+              some: getAtRiskPackageWhereClause()
+            }
+          },
+          select: {
+            id: true,
+            packages: {
+              where: getActivePackageWhereClause(),
+              select: { id: true }
             }
           }
         }),
@@ -659,6 +677,12 @@ export async function GET(request: Request) {
       const validationRate = totalSessions > 0
         ? Math.round((validatedSessions / totalSessions) * 100)
         : 0
+
+      // Filter at-risk clients to only those with exactly 1 active package
+      // (if they have 2+ active packages, they've already renewed)
+      const filteredAtRiskCount = atRiskClients.filter(
+        (client: { packages: { id: string }[] }) => client.packages.length === 1
+      ).length
 
       // Calculate average sessions per day/week
       const daysDiff = Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24))
@@ -795,7 +819,7 @@ export async function GET(request: Request) {
           }
 
           // Snapshot metrics
-          const [total, active, notStarted, atRisk] = await Promise.all([
+          const [total, active, notStarted, atRiskClientsRaw] = await Promise.all([
             // Total clients assigned to this trainer
             prisma.client.count({ where: trainerClientsWhere }),
 
@@ -820,16 +844,28 @@ export async function GET(request: Request) {
               }
             }),
 
-            // At Risk (package expiring soon)
-            prisma.client.count({
+            // At Risk (expiring soon OR low sessions, only if they have exactly 1 active package)
+            prisma.client.findMany({
               where: {
                 ...trainerClientsWhere,
                 packages: {
-                  some: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
+                  some: getAtRiskPackageWhereClause()
+                }
+              },
+              select: {
+                id: true,
+                packages: {
+                  where: getActivePackageWhereClause(),
+                  select: { id: true }
                 }
               }
             })
           ])
+
+          // Filter at-risk to only clients with exactly 1 active package
+          const atRisk = atRiskClientsRaw.filter(
+            (client: { packages: { id: string }[] }) => client.packages.length === 1
+          ).length
 
           // Period-based metrics for this trainer
           // Get packages created in the period for this trainer's clients
@@ -936,7 +972,7 @@ export async function GET(request: Request) {
         unassignedTotal,
         unassignedActive,
         unassignedNotStarted,
-        unassignedAtRisk
+        unassignedAtRiskRaw
       ] = await Promise.all([
         prisma.client.count({ where: unassignedClientsWhere }),
         prisma.client.count({
@@ -949,13 +985,25 @@ export async function GET(request: Request) {
             NOT: { sessions: { some: { package: getActivePackageWhereClause() } } }
           }
         }),
-        prisma.client.count({
+        prisma.client.findMany({
           where: {
             ...unassignedClientsWhere,
-            packages: { some: getExpiringSoonPackageWhereClause(CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD) }
+            packages: { some: getAtRiskPackageWhereClause() }
+          },
+          select: {
+            id: true,
+            packages: {
+              where: getActivePackageWhereClause(),
+              select: { id: true }
+            }
           }
         })
       ])
+
+      // Filter at-risk to only clients with exactly 1 active package
+      const unassignedAtRisk = unassignedAtRiskRaw.filter(
+        (client: { packages: { id: string }[] }) => client.packages.length === 1
+      ).length
 
       // Period-based metrics for unassigned clients
       const unassignedPackagesInPeriod = await prisma.package.findMany({
@@ -1039,7 +1087,7 @@ export async function GET(request: Request) {
             total: totalClients,
             active: activeClientsWithPackages,
             notStarted: notStartedClients,
-            atRisk: atRiskClients,
+            atRisk: filteredAtRiskCount,
             lost: lostClients
           },
           // Client metrics - period based

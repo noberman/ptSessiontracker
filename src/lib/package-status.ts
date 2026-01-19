@@ -362,6 +362,67 @@ export const CLIENT_METRICS_CONFIG = {
   // Days window for "resold" check (session within this period before purchase = resold)
   RESOLD_CLIENT_LOOKBACK_DAYS: 30,
 
-  // Days ahead to check for "at risk" packages
-  AT_RISK_DAYS_AHEAD: 14
+  // Days ahead to check for "at risk" packages (expiring soon)
+  AT_RISK_DAYS_AHEAD: 14,
+
+  // Sessions threshold for "at risk" packages (low sessions remaining)
+  AT_RISK_LOW_SESSIONS: 3
+}
+
+// =============================================================================
+// At-Risk Package Helpers
+// =============================================================================
+
+/**
+ * Check if a package is at risk (needs renewal follow-up)
+ * At risk = expiring soon OR low sessions remaining
+ */
+export function isPackageAtRisk(pkg: PackageForStatusCheck): boolean {
+  // Must be active first
+  if (!isPackageActive(pkg)) return false
+
+  // Check if expiring soon
+  if (isPackageExpiringSoon(pkg, CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)) {
+    return true
+  }
+
+  // Check if low sessions
+  if (pkg.remainingSessions < CLIENT_METRICS_CONFIG.AT_RISK_LOW_SESSIONS) {
+    return true
+  }
+
+  return false
+}
+
+/**
+ * Prisma where clause for at-risk packages
+ * At risk = active AND (expiring within 14 days OR less than 3 sessions remaining)
+ */
+export function getAtRiskPackageWhereClause() {
+  const now = new Date()
+  const threshold = new Date()
+  threshold.setDate(threshold.getDate() + CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
+
+  return {
+    active: true,
+    remainingSessions: { gt: 0 },
+    OR: [
+      // Expiring soon (has expiration date within threshold)
+      {
+        expiresAt: {
+          not: null,
+          gte: now,
+          lte: threshold
+        }
+      },
+      // Low sessions remaining (regardless of expiration)
+      {
+        remainingSessions: { lt: CLIENT_METRICS_CONFIG.AT_RISK_LOW_SESSIONS },
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: now } }
+        ]
+      }
+    ]
+  }
 }
