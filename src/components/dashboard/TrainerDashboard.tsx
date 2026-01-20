@@ -256,7 +256,7 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
               <div>
                 <p className="text-sm text-text-secondary">Total Earnings</p>
                 <p className="text-2xl font-bold text-text-primary mt-1">
-                  ${data.stats.totalSessionValue.toFixed(2)}
+                  ${data.stats.totalSessionValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                 </p>
               </div>
               <DollarSign className="w-8 h-8 text-success-500" />

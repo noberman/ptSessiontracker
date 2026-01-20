@@ -823,7 +823,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
             <div>
               <p className="text-sm text-text-secondary">Total Value</p>
               <p className="text-2xl font-bold text-text-primary mt-1">
-                ${data.stats.totalSessionValue.toFixed(0)}
+                ${data.stats.totalSessionValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </p>
             </div>
           </CardContent>
