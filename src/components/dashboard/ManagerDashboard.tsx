@@ -342,17 +342,13 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
     if (locationId === selectedLocation) {
       // Deselecting current location
       setSelectedLocation('')
-      setSelectedTrainers([])
     } else {
-      // Selecting new location - auto-select all trainers from that location
+      // Selecting new location - clear trainer selection to let location filter work alone
+      // This prevents double-filtering (by location AND trainer) which causes data mismatches
       setSelectedLocation(locationId)
-      if (data?.allTrainers) {
-        const locationTrainers = data.allTrainers
-          .filter(t => t.locationIds?.includes(locationId) || t.locationId === locationId)
-          .map(t => t.id)
-        setSelectedTrainers(locationTrainers)
-      }
     }
+    // Clear trainer selection when changing location to avoid data inconsistency
+    setSelectedTrainers([])
   }
 
   const toggleTrainer = (trainerId: string) => {
