@@ -1096,7 +1096,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="date" fontSize={12} />
               <YAxis fontSize={12} />
-              <Tooltip />
+              <Tooltip wrapperStyle={{ zIndex: 1000 }} />
               <Legend />
               {/* Add lines for trainers/PT managers only */}
               {topTrainers.map((trainerName, index) => (
