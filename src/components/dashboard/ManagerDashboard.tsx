@@ -39,7 +39,7 @@ interface DashboardData {
   stats: {
     totalSessions: number
     validatedSessions: number
-    totalSessionValue: number
+    totalSales: number
     validationRate: number
     activeTrainers: number
     // Client metrics - snapshots (current state)
@@ -388,7 +388,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
   const exportToCSV = () => {
     if (!data) return
     
-    const headers = ['Trainer Name', 'Email', 'Sessions', 'Total Value', 'Avg per Session']
+    const headers = ['Trainer Name', 'Email', 'Sessions', 'Session Value', 'Avg per Session']
     const rows = data.trainerStats.map(stat => [
       stat.trainer?.name || 'Unknown',
       stat.trainer?.email || '',
@@ -396,15 +396,18 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
       stat.totalValue.toFixed(2),
       stat.sessionCount > 0 ? (stat.totalValue / stat.sessionCount).toFixed(2) : '0.00'
     ])
-    
+
+    // Calculate totals from trainer stats
+    const totalSessionValue = data.trainerStats.reduce((sum, stat) => sum + stat.totalValue, 0)
+
     // Add totals row
     rows.push([
       'TOTAL',
       '',
       data.stats.totalSessions,
-      data.stats.totalSessionValue.toFixed(2),
-      data.stats.totalSessions > 0 
-        ? (data.stats.totalSessionValue / data.stats.totalSessions).toFixed(2) 
+      totalSessionValue.toFixed(2),
+      data.stats.totalSessions > 0
+        ? (totalSessionValue / data.stats.totalSessions).toFixed(2)
         : '0.00'
     ])
     
@@ -821,9 +824,9 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
         <Card>
           <CardContent className="p-6">
             <div>
-              <p className="text-sm text-text-secondary">Total Value</p>
+              <p className="text-sm text-text-secondary">Total Sales</p>
               <p className="text-2xl font-bold text-text-primary mt-1">
-                ${data.stats.totalSessionValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                ${data.stats.totalSales.toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </p>
             </div>
           </CardContent>

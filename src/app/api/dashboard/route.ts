@@ -402,7 +402,7 @@ export async function GET(request: Request) {
       const [
         totalSessions,
         validatedSessions,
-        totalSessionValue,
+        totalPackageSales,
         trainerStats,
         dailyStats,
         activeTrainers,
@@ -421,16 +421,22 @@ export async function GET(request: Request) {
         prisma.session.count({ where: sessionsWhere }),
         
         // Validated sessions
-        prisma.session.count({ 
-          where: { ...sessionsWhere, validated: true } 
+        prisma.session.count({
+          where: { ...sessionsWhere, validated: true }
         }),
-        
-        // Total session value
-        prisma.session.aggregate({
-          where: sessionsWhere,
-          _sum: { sessionValue: true }
+
+        // Total package sales (packages created in this period)
+        prisma.package.aggregate({
+          where: {
+            organizationId,
+            createdAt: { gte: dateFrom, lte: dateTo },
+            ...(clientsWhere.locationId
+              ? { client: { locationId: typeof clientsWhere.locationId === 'string' ? clientsWhere.locationId : clientsWhere.locationId } }
+              : {})
+          },
+          _sum: { totalValue: true }
         }),
-        
+
         // Stats by trainer (already filtered by sessionsWhere which includes trainer filter)
         prisma.session.groupBy({
           by: ['trainerId'],
@@ -1079,7 +1085,7 @@ export async function GET(request: Request) {
         stats: {
           totalSessions,
           validatedSessions,
-          totalSessionValue: totalSessionValue._sum.sessionValue || 0,
+          totalSales: totalPackageSales._sum.totalValue || 0,
           validationRate,
           activeTrainers,
           // Client metrics - snapshots
