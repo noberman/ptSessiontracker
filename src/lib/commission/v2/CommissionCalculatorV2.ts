@@ -25,11 +25,16 @@ interface ProfileWithTiers extends CommissionProfile {
 export class CommissionCalculatorV2 {
   /**
    * Calculate commission for a trainer for a given period
+   * @param userId - The trainer's user ID
+   * @param period - The date range for calculation
+   * @param options - Optional settings:
+   *   - saveCalculation: Whether to save the calculation to database (default: true)
+   *   - locationId: Filter sessions by location (optional - if not provided, includes all locations)
    */
   async calculateCommission(
     userId: string,
     period: { start: Date; end: Date },
-    options: { saveCalculation?: boolean } = { saveCalculation: true }
+    options: { saveCalculation?: boolean; locationId?: string } = { saveCalculation: true }
   ): Promise<CommissionCalculation> {
     // Get user with profile and organization
     const user = await prisma.user.findUnique({
@@ -58,7 +63,7 @@ export class CommissionCalculatorV2 {
       throw new Error(`User ${userId} has no commission profile assigned`)
     }
     
-    // Get validated sessions for the period
+    // Get validated sessions for the period (optionally filtered by location)
     const sessions = await prisma.session.findMany({
       where: {
         trainerId: userId,
@@ -67,7 +72,8 @@ export class CommissionCalculatorV2 {
           lte: period.end
         },
         validated: true,
-        cancelled: false
+        cancelled: false,
+        ...(options.locationId ? { locationId: options.locationId } : {})
       },
       orderBy: {
         sessionDate: 'asc'
