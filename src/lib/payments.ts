@@ -1,7 +1,10 @@
 import { prisma } from './prisma'
+// Re-export pure utility functions for convenience
+export { calculateUnlockedSessions, calculateSessionsUnlockedByPayment } from './payments-utils'
 
 /**
  * Payment-related utility functions for split payment feature
+ * Server-side only (uses Prisma)
  */
 
 export interface PaymentSummary {
@@ -14,21 +17,6 @@ export interface PaymentSummary {
   availableSessions: number
   isFullyPaid: boolean
   paymentProgress: number // 0-100
-}
-
-/**
- * Calculate the number of unlocked sessions based on payment progress
- * Formula: floor((paidAmount / totalValue) * totalSessions)
- */
-export function calculateUnlockedSessions(
-  paidAmount: number,
-  totalValue: number,
-  totalSessions: number
-): number {
-  if (totalValue <= 0) return totalSessions
-  if (paidAmount >= totalValue) return totalSessions
-
-  return Math.floor((paidAmount / totalValue) * totalSessions)
 }
 
 /**

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { AlertCircle, DollarSign, Check } from 'lucide-react'
-import { calculateUnlockedSessions } from '@/lib/payments'
+import { calculateUnlockedSessions } from '@/lib/payments-utils'
 
 interface PaymentSummary {
   totalValue: number
