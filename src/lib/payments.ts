@@ -102,17 +102,3 @@ export async function canLogSession(packageId: string): Promise<{
     summary
   }
 }
-
-/**
- * Calculate how many additional sessions will be unlocked by a payment
- */
-export function calculateSessionsUnlockedByPayment(
-  currentPaidAmount: number,
-  paymentAmount: number,
-  totalValue: number,
-  totalSessions: number
-): number {
-  const currentUnlocked = calculateUnlockedSessions(currentPaidAmount, totalValue, totalSessions)
-  const newUnlocked = calculateUnlockedSessions(currentPaidAmount + paymentAmount, totalValue, totalSessions)
-  return newUnlocked - currentUnlocked
-}
