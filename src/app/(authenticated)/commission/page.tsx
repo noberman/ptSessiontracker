@@ -219,7 +219,7 @@ export default async function CommissionPage({
   let locations: Array<{ id: string; name: string }> = []
   if (session.user.role === 'ADMIN' || session.user.role === 'PT_MANAGER') {
     locations = await prisma.location.findMany({
-      where: { 
+      where: {
         organizationId,
         active: true
       },
@@ -227,13 +227,22 @@ export default async function CommissionPage({
       orderBy: { name: 'asc' }
     })
   }
-  
+
+  // Count ALL active trainers (same as dashboard) for consistent "Active Trainers" stat
+  const activeTrainerCount = await prisma.user.count({
+    where: {
+      organizationId,
+      role: { in: ['TRAINER', 'PT_MANAGER'] },
+      active: true
+    }
+  })
+
   // Calculate totals
   const totals = {
     totalSessions: commissions.reduce((sum, c) => sum + c.totalSessions, 0),
     totalValue: commissions.reduce((sum, c) => sum + c.totalValue, 0),
     totalCommission: commissions.reduce((sum, c) => sum + c.commissionAmount, 0),
-    trainerCount: commissions.length
+    trainerCount: activeTrainerCount
   }
   
   return (
