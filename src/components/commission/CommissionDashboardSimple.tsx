@@ -266,7 +266,7 @@ export function CommissionDashboard({
             <div className="text-2xl font-bold text-text-primary">
               {totals.totalSessions}
             </div>
-            <p className="text-sm text-text-secondary mt-1">Total Sessions</p>
+            <p className="text-sm text-text-secondary mt-1">Total Validated Sessions</p>
           </CardContent>
         </Card>
 
@@ -275,7 +275,7 @@ export function CommissionDashboard({
             <div className="text-2xl font-bold text-text-primary">
               {formatCurrency(totals.totalValue)}
             </div>
-            <p className="text-sm text-text-secondary mt-1">Session Value</p>
+            <p className="text-sm text-text-secondary mt-1">Total Sales</p>
           </CardContent>
         </Card>
 
