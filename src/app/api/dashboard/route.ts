@@ -730,14 +730,15 @@ export async function GET(request: Request) {
         const lookbackDate = new Date(pkg.createdAt)
         lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
 
-        // Check for prior sessions
+        // Check for prior sessions (exclude sessions on the current package)
         const priorSession = await prisma.session.findFirst({
           where: {
             clientId: pkg.clientId,
             sessionDate: {
               gte: lookbackDate,
               lt: pkg.createdAt
-            }
+            },
+            packageId: { not: pkg.id }
           }
         })
 
