@@ -20,16 +20,21 @@ export async function GET(request: NextRequest) {
   const endDate = searchParams.get('endDate') || ''
 
   try {
+    const organizationId = session.user.organizationId
+    if (!organizationId) {
+      return NextResponse.json({ error: 'No organization found' }, { status: 400 })
+    }
+
     // Get organization timezone
     const organization = await prisma.organization.findUnique({
-      where: { id: session.user.organizationId },
+      where: { id: organizationId },
       select: { timezone: true }
     })
     const orgTimezone = organization?.timezone || 'Asia/Singapore'
 
     // Build where clause (same logic as sessions page)
     const where: any = {
-      organizationId: session.user.organizationId
+      organizationId
     }
 
     // Filter by clients
