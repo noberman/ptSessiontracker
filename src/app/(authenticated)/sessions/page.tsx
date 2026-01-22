@@ -2,13 +2,10 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
 import { SessionFilters } from '@/components/sessions/SessionFilters'
 import { SessionTable } from '@/components/sessions/SessionTable'
+import { SessionsPageHeader } from '@/components/sessions/SessionsPageHeader'
 
 export default async function SessionsPage({
   searchParams,
@@ -318,19 +315,7 @@ export default async function SessionsPage({
 
   return (
     <div>
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Sessions</h1>
-            <p className="text-sm text-text-secondary mt-1">
-              Manage training sessions
-            </p>
-          </div>
-          {canCreate && (
-            <Link href="/sessions/new">
-              <Button>Log New Session</Button>
-            </Link>
-          )}
-        </div>
+        <SessionsPageHeader canCreate={canCreate} />
 
         {/* Filters */}
         <SessionFilters 
