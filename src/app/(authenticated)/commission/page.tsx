@@ -254,6 +254,7 @@ export default async function CommissionPage({
         locations={locations}
         selectedLocationIds={locationIds}
         currentUserRole={session.user.role}
+        orgTimezone={orgTimezone}
       />
     </div>
   )
