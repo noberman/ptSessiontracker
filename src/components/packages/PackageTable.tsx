@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
 import { ActionsDropdown } from '@/components/ui/ActionsDropdown'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { PaymentStatusBadge } from './PaymentStatusBadge'
 
 interface PaymentStatus {
@@ -68,6 +69,8 @@ export function PackageTable({
   const [pagination, setPagination] = useState(initialPagination)
   const [loading, setLoading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [packageToDelete, setPackageToDelete] = useState<Package | null>(null)
+  const [deleteError, setDeleteError] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -151,37 +154,42 @@ export function PackageTable({
     )
   }
 
-  const handleDeletePackage = async (packageId: string) => {
+  const handleDeletePackage = (pkg: Package) => {
     if (deletingId) return // Prevent multiple simultaneous deletions
-    
-    const confirmed = window.confirm('Are you sure you want to delete this package? This action cannot be undone.')
-    if (!confirmed) return
-    
-    setDeletingId(packageId)
-    
+    setDeleteError('')
+    setPackageToDelete(pkg)
+  }
+
+  const confirmDeletePackage = async () => {
+    if (!packageToDelete) return
+
+    setDeletingId(packageToDelete.id)
+
     try {
-      const response = await fetch(`/api/packages/${packageId}`, {
+      const response = await fetch(`/api/packages/${packageToDelete.id}`, {
         method: 'DELETE',
       })
-      
+
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || 'Failed to delete package')
       }
-      
-      // Remove package from local state
-      setPackages(prev => prev.filter(pkg => pkg.id !== packageId))
-      
+
+      // Remove package from local state and close modal
+      setPackages(prev => prev.filter(pkg => pkg.id !== packageToDelete.id))
+      setPackageToDelete(null)
+
       // Refresh the page to update counts
       router.refresh()
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete package')
+      setDeleteError(error instanceof Error ? error.message : 'Failed to delete package')
     } finally {
       setDeletingId(null)
     }
   }
 
   return (
+    <>
     <Card padding="none">
       <div className="overflow-x-auto relative">
         {loading && (
@@ -274,7 +282,7 @@ export function PackageTable({
                         },
                         {
                           label: deletingId === pkg.id ? 'Deleting...' : 'Delete',
-                          onClick: () => handleDeletePackage(pkg.id),
+                          onClick: () => handleDeletePackage(pkg),
                           icon: 'delete',
                           variant: 'danger',
                           show: canDelete
@@ -323,5 +331,28 @@ export function PackageTable({
         </div>
       </div>
     </Card>
+
+    {/* Delete Package Confirmation Modal */}
+    <ConfirmModal
+      isOpen={!!packageToDelete}
+      onClose={() => {
+        setPackageToDelete(null)
+        setDeleteError('')
+      }}
+      onConfirm={confirmDeletePackage}
+      title="Delete Package"
+      message={
+        deleteError
+          ? deleteError
+          : packageToDelete
+            ? `Are you sure you want to delete "${packageToDelete.name}" for ${packageToDelete.client.name}? This action cannot be undone.`
+            : ''
+      }
+      confirmLabel="Delete"
+      cancelLabel="Cancel"
+      variant="danger"
+      loading={!!deletingId}
+    />
+    </>
   )
 }

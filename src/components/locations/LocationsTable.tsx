@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { ArchiveLocationDialog } from './ArchiveLocationDialog'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { 
   MapPin, 
   Users, 
@@ -44,6 +45,9 @@ export function LocationsTable({ userRole, canEdit }: LocationsTableProps) {
   const [showArchived, setShowArchived] = useState(false)
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
+  const [locationToRestore, setLocationToRestore] = useState<Location | null>(null)
+  const [restoreLoading, setRestoreLoading] = useState(false)
+  const [restoreError, setRestoreError] = useState('')
 
   useEffect(() => {
     fetchLocations()
@@ -95,11 +99,17 @@ export function LocationsTable({ userRole, canEdit }: LocationsTableProps) {
     }
   }
 
-  const handleRestore = async (locationId: string) => {
-    if (!confirm('Are you sure you want to restore this location?')) return
+  const handleRestore = (location: Location) => {
+    setRestoreError('')
+    setLocationToRestore(location)
+  }
 
+  const confirmRestoreLocation = async () => {
+    if (!locationToRestore) return
+
+    setRestoreLoading(true)
     try {
-      const response = await fetch(`/api/locations/${locationId}/restore`, {
+      const response = await fetch(`/api/locations/${locationToRestore.id}/restore`, {
         method: 'POST',
       })
 
@@ -108,10 +118,13 @@ export function LocationsTable({ userRole, canEdit }: LocationsTableProps) {
         throw new Error(error.error || 'Failed to restore location')
       }
 
-      // Refresh locations list
+      // Close modal and refresh locations list
+      setLocationToRestore(null)
       await fetchLocations()
     } catch (err: any) {
-      alert(err.message || 'Failed to restore location')
+      setRestoreError(err.message || 'Failed to restore location')
+    } finally {
+      setRestoreLoading(false)
     }
   }
 
@@ -320,7 +333,7 @@ export function LocationsTable({ userRole, canEdit }: LocationsTableProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRestore(location.id)}
+                          onClick={() => handleRestore(location)}
                           className="text-success-600 hover:text-success-700"
                         >
                           <ArchiveRestore className="h-4 w-4 mr-1" />
@@ -349,6 +362,28 @@ export function LocationsTable({ userRole, canEdit }: LocationsTableProps) {
           locationName={selectedLocation.name}
         />
       )}
+
+      {/* Restore Location Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!locationToRestore}
+        onClose={() => {
+          setLocationToRestore(null)
+          setRestoreError('')
+        }}
+        onConfirm={confirmRestoreLocation}
+        title="Restore Location"
+        message={
+          restoreError
+            ? restoreError
+            : locationToRestore
+              ? `Are you sure you want to restore "${locationToRestore.name}"? It will become active again.`
+              : ''
+        }
+        confirmLabel="Restore"
+        cancelLabel="Cancel"
+        variant="info"
+        loading={restoreLoading}
+      />
     </div>
   )
 }

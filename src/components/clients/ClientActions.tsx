@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 
 interface ClientActionsProps {
   clientId: string
@@ -15,6 +16,9 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showRestoreModal, setShowRestoreModal] = useState(false)
+  const [showPackagesModal, setShowPackagesModal] = useState(false)
+  const [restoreError, setRestoreError] = useState('')
 
   const handleArchive = async () => {
     if (!showConfirm) {
@@ -48,11 +52,21 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
     }
   }
 
-  const handleRestore = async () => {
+  const handleRestore = () => {
+    setRestoreError('')
+    setShowRestoreModal(true)
+  }
+
+  const confirmRestore = () => {
+    // Close first modal and open packages question modal
+    setShowRestoreModal(false)
+    setShowPackagesModal(true)
+  }
+
+  const executeRestore = async (restorePackages: boolean) => {
+    setShowPackagesModal(false)
     setLoading(true)
     try {
-      const restorePackages = confirm('Do you also want to restore any unexpired packages?')
-
       const response = await fetch(`/api/clients/${clientId}/deactivate`, {
         method: 'PUT',
         headers: {
@@ -64,17 +78,14 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
       const data = await response.json()
 
       if (response.ok) {
-        alert(`Client restored successfully. ${
-          data.packagesReactivated > 0
-            ? `${data.packagesReactivated} package(s) were also restored.`
-            : ''
-        }`)
         router.refresh()
       } else {
-        alert(`Error: ${data.error}`)
+        setRestoreError(data.error || 'Failed to restore client')
+        setShowRestoreModal(true)
       }
     } catch (error) {
-      alert('Failed to restore client')
+      setRestoreError('Failed to restore client')
+      setShowRestoreModal(true)
     } finally {
       setLoading(false)
     }
@@ -131,6 +142,39 @@ export function ClientActions({ clientId, clientName, isActive, canManage }: Cli
           {loading ? 'Restoring...' : 'Restore Client'}
         </Button>
       )}
+
+      {/* Restore Client Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showRestoreModal}
+        onClose={() => {
+          setShowRestoreModal(false)
+          setRestoreError('')
+        }}
+        onConfirm={confirmRestore}
+        title="Restore Client"
+        message={
+          restoreError
+            ? restoreError
+            : `Are you sure you want to restore ${clientName}?`
+        }
+        confirmLabel="Restore"
+        cancelLabel="Cancel"
+        variant="info"
+        loading={loading}
+      />
+
+      {/* Restore Packages Question Modal */}
+      <ConfirmModal
+        isOpen={showPackagesModal}
+        onClose={() => executeRestore(false)}
+        onConfirm={() => executeRestore(true)}
+        title="Restore Packages"
+        message={`Do you also want to restore any unexpired packages for ${clientName}?`}
+        confirmLabel="Yes, Restore Packages"
+        cancelLabel="No, Just Client"
+        variant="info"
+        loading={loading}
+      />
     </div>
   )
 }

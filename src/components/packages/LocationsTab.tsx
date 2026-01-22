@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { toast } from 'react-hot-toast'
 import { MapPin, Plus, Trash2, Edit2, Check, X } from 'lucide-react'
 
@@ -23,6 +24,8 @@ export function LocationsTab() {
   const [editingData, setEditingData] = useState({ name: '', address: '' })
   const [newLocation, setNewLocation] = useState({ name: '', address: '' })
   const [showNewForm, setShowNewForm] = useState(false)
+  const [locationToDelete, setLocationToDelete] = useState<Location | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     fetchLocations()
@@ -107,18 +110,22 @@ export function LocationsTab() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this location?')) {
-      return
-    }
+  const handleDelete = (location: Location) => {
+    setLocationToDelete(location)
+  }
 
+  const confirmDeleteLocation = async () => {
+    if (!locationToDelete) return
+
+    setDeleteLoading(true)
     try {
-      const response = await fetch(`/api/locations/${id}`, {
+      const response = await fetch(`/api/locations/${locationToDelete.id}`, {
         method: 'DELETE',
       })
 
       if (response.ok) {
-        setLocations(locations.filter(loc => loc.id !== id))
+        setLocations(locations.filter(loc => loc.id !== locationToDelete.id))
+        setLocationToDelete(null)
         toast.success('Location deleted successfully')
       } else {
         const error = await response.json()
@@ -127,6 +134,8 @@ export function LocationsTab() {
     } catch (error) {
       console.error('Error deleting location:', error)
       toast.error('Failed to delete location')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -281,7 +290,7 @@ export function LocationsTab() {
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button
-                        onClick={() => handleDelete(location.id)}
+                        onClick={() => handleDelete(location)}
                         size="sm"
                         variant="outline"
                         className="text-red-600 hover:text-red-700"
@@ -297,6 +306,23 @@ export function LocationsTab() {
           )}
         </div>
       </Card>
+
+      {/* Delete Location Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!locationToDelete}
+        onClose={() => setLocationToDelete(null)}
+        onConfirm={confirmDeleteLocation}
+        title="Delete Location"
+        message={
+          locationToDelete
+            ? `Are you sure you want to delete "${locationToDelete.name}"? This action cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={deleteLoading}
+      />
     </div>
   )
 }

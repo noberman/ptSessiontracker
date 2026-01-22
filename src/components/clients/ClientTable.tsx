@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
 import { ActionsDropdown } from '@/components/ui/ActionsDropdown'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { type ClientState, getClientStateDisplay } from '@/lib/package-status'
 
 interface Client {
@@ -52,6 +53,9 @@ export function ClientTable({
   const [clients, setClients] = useState(initialClients)
   const [pagination, setPagination] = useState(initialPagination)
   const [loading, setLoading] = useState(false)
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -92,28 +96,37 @@ export function ClientTable({
     setPagination(initialPagination)
   }, [initialClients, initialPagination])
 
-  const handleDelete = async (clientId: string) => {
-    if (!confirm('Are you sure you want to deactivate this client?')) {
-      return
-    }
+  const handleDelete = (client: Client) => {
+    setDeleteError('')
+    setClientToDelete(client)
+  }
+
+  const confirmDeleteClient = async () => {
+    if (!clientToDelete) return
+
+    setDeleteLoading(true)
 
     try {
-      const response = await fetch(`/api/clients/${clientId}`, {
+      const response = await fetch(`/api/clients/${clientToDelete.id}`, {
         method: 'DELETE',
       })
 
       if (response.ok) {
-        setClients(clients.filter(c => c.id !== clientId))
+        setClients(clients.filter(c => c.id !== clientToDelete.id))
+        setClientToDelete(null)
       } else {
-        alert('Failed to deactivate client')
+        setDeleteError('Failed to deactivate client')
       }
     } catch (error) {
       console.error('Error deleting client:', error)
-      alert('Failed to deactivate client')
+      setDeleteError('Failed to deactivate client')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
   return (
+    <>
     <Card padding="none">
       <div className="overflow-x-auto relative">
         {loading && (
@@ -223,8 +236,8 @@ export function ClientTable({
                           show: canEdit
                         },
                         {
-                          label: 'Delete',
-                          onClick: () => handleDelete(client.id),
+                          label: 'Deactivate',
+                          onClick: () => handleDelete(client),
                           icon: 'delete',
                           variant: 'danger',
                           show: canDelete
@@ -280,5 +293,28 @@ export function ClientTable({
         </div>
       </div>
     </Card>
+
+    {/* Deactivate Client Confirmation Modal */}
+    <ConfirmModal
+      isOpen={!!clientToDelete}
+      onClose={() => {
+        setClientToDelete(null)
+        setDeleteError('')
+      }}
+      onConfirm={confirmDeleteClient}
+      title="Deactivate Client"
+      message={
+        deleteError
+          ? deleteError
+          : clientToDelete
+            ? `Are you sure you want to deactivate ${clientToDelete.name}? They will no longer appear in active client lists.`
+            : ''
+      }
+      confirmLabel="Deactivate"
+      cancelLabel="Cancel"
+      variant="warning"
+      loading={deleteLoading}
+    />
+    </>
   )
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { formatDistanceToNow } from 'date-fns'
 import { Mail, Copy, X, Clock, CheckCircle, XCircle } from 'lucide-react'
 
@@ -38,6 +39,8 @@ export function InvitationsTable({
   const [resending, setResending] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const [invitationToCancel, setInvitationToCancel] = useState<Invitation | null>(null)
+  const [cancelError, setCancelError] = useState('')
 
   const handleResend = async (invitationId: string) => {
     setResending(invitationId)
@@ -61,26 +64,30 @@ export function InvitationsTable({
     }
   }
 
-  const handleCancel = async (invitationId: string) => {
-    if (!confirm('Are you sure you want to cancel this invitation?')) {
-      return
-    }
+  const handleCancel = (invitation: Invitation) => {
+    setCancelError('')
+    setInvitationToCancel(invitation)
+  }
 
-    setCancelling(invitationId)
+  const confirmCancelInvitation = async () => {
+    if (!invitationToCancel) return
+
+    setCancelling(invitationToCancel.id)
     try {
-      const response = await fetch(`/api/invitations/${invitationId}`, {
+      const response = await fetch(`/api/invitations/${invitationToCancel.id}`, {
         method: 'DELETE',
       })
 
       if (response.ok) {
+        setInvitationToCancel(null)
         onRefresh()
       } else {
         const data = await response.json()
-        alert(data.error || 'Failed to cancel invitation')
+        setCancelError(data.error || 'Failed to cancel invitation')
       }
     } catch (error) {
       console.error('Failed to cancel:', error)
-      alert('Failed to cancel invitation')
+      setCancelError('Failed to cancel invitation')
     } finally {
       setCancelling(null)
     }
@@ -271,7 +278,7 @@ export function InvitationsTable({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleCancel(invitation.id)}
+                          onClick={() => handleCancel(invitation)}
                           disabled={cancelling === invitation.id}
                           className="text-error hover:text-error-600"
                         >
@@ -298,6 +305,28 @@ export function InvitationsTable({
           </tbody>
         </table>
       </div>
+
+      {/* Cancel Invitation Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!invitationToCancel}
+        onClose={() => {
+          setInvitationToCancel(null)
+          setCancelError('')
+        }}
+        onConfirm={confirmCancelInvitation}
+        title="Cancel Invitation"
+        message={
+          cancelError
+            ? cancelError
+            : invitationToCancel
+              ? `Are you sure you want to cancel the invitation for ${invitationToCancel.email}?`
+              : ''
+        }
+        confirmLabel="Cancel Invitation"
+        cancelLabel="Keep"
+        variant="danger"
+        loading={!!cancelling}
+      />
     </div>
   )
 }
