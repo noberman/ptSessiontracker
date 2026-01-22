@@ -44,6 +44,41 @@
     - Update `/docs/schema.md` with changes
     - Include migration and documentation in same commit
 
+## Debugging Procedure
+When debugging issues (UX problems, feature bugs, unexpected behavior), follow this structured process:
+
+**Step 1: Analysis** - Present initial observations
+    - Describe the reported/observed problem clearly
+    - Identify the affected components, pages, or flows
+    - List any error messages, logs, or symptoms observed
+    - Note the expected vs actual behavior
+
+**Step 2: Hypothesis** - State what you think is wrong
+    - Propose a specific hypothesis for the root cause
+    - Explain the reasoning behind this hypothesis
+    - Identify which files/functions are likely involved
+    - Rate confidence level (low/medium/high)
+
+**Step 3: Verification Plan** - How to confirm the hypothesis
+    - Propose specific tests for the user to perform, OR
+    - Suggest adding targeted console.logs or debug statements
+    - Specify exactly what to look for in the output
+    - Define what result would confirm or refute the hypothesis
+    - **DO NOT make code changes yet** - wait for verification results
+
+**Step 4: Solution Proposal** - Only after problem is verified
+    - Present the proposed fix with clear explanation
+    - Explain WHY this fix will resolve the issue
+    - Describe the expected outcome after the fix
+    - List any potential side effects or risks
+    - Wait for approval before implementing
+
+**Key Debugging Rules:**
+- Never jump straight to code changes without completing Steps 1-3
+- If hypothesis is wrong, return to Step 2 with new information
+- Keep debug logs temporary - remove after issue is resolved
+- Document the root cause for future reference
+
 ## Email & Integration Rules
 28. For email notifications (SendGrid/Resend):
     - Follow email service API documentation in `/docs/API.md`
@@ -103,24 +138,3 @@
 45. Audit log all significant actions (session creation, validation, modifications)
 46. Encrypt sensitive data (validation tokens) in database
 
-## Commission & Payroll Constraints
-47. CRITICAL: Commission tiers reset monthly
-48. Only validated sessions count toward commission calculations
-49. No-show sessions must be excluded from commission calculations
-50. Commission tier breakpoints must be configurable by admin
-51. Payroll reports must be exportable in Excel/CSV format
-
-## Database Schema Changes
-52. **CRITICAL SCHEMA RULE**: When proposing ANY database schema changes (new models, new fields, field modifications):
-    - MUST present in ALL CAPS the exact fields being added/modified
-    - MUST explain the business purpose of EACH field
-    - MUST justify why each field is necessary
-    - Example format:
-      ```
-      PROPOSED SCHEMA CHANGES:
-      - NEW FIELD: Session.VALIDATED_AT (DateTime, nullable) - Timestamp when client validated
-      - NEW FIELD: Session.VALIDATION_TOKEN (String, unique) - Secure token for email validation
-      JUSTIFICATION: These fields are needed for tracking session validation status
-      ```
-    - User MUST explicitly approve before implementing any schema changes
-    - This prevents adding unnecessary fields that later require migrations to remove

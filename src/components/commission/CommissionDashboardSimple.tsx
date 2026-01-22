@@ -37,7 +37,7 @@ interface CommissionDashboardProps {
   }
   month: string
   locations: Array<{ id: string; name: string }>
-  selectedLocationId?: string
+  selectedLocationIds?: string[]
   currentUserRole: string
 }
 
@@ -46,18 +46,18 @@ export function CommissionDashboard({
   totals,
   month,
   locations,
-  selectedLocationId,
+  selectedLocationIds = [],
   currentUserRole
 }: CommissionDashboardProps) {
   const router = useRouter()
   const [isExporting, setIsExporting] = useState(false)
   const [expandedTrainer, setExpandedTrainer] = useState<string | null>(null)
-  const [selectedLocations, setSelectedLocations] = useState<string[]>(selectedLocationId ? [selectedLocationId] : [])
+  const [selectedLocations, setSelectedLocations] = useState<string[]>(selectedLocationIds)
   
   const handleMonthChange = (newMonth: string) => {
     const params = new URLSearchParams()
     params.set('month', newMonth)
-    if (selectedLocationId) params.set('locationId', selectedLocationId)
+    if (selectedLocations.length > 0) params.set('locationIds', selectedLocations.join(','))
     router.push(`/commission?${params.toString()}`)
   }
   
@@ -65,8 +65,8 @@ export function CommissionDashboard({
     setSelectedLocations(locationIds)
     const params = new URLSearchParams()
     params.set('month', month)
-    // For now, use first location since backend expects single locationId
-    if (locationIds.length > 0) params.set('locationId', locationIds[0])
+    // Send all selected locations as comma-separated string
+    if (locationIds.length > 0) params.set('locationIds', locationIds.join(','))
     router.push(`/commission?${params.toString()}`)
   }
   
@@ -75,7 +75,7 @@ export function CommissionDashboard({
     try {
       const params = new URLSearchParams()
       params.set('month', month)
-      if (selectedLocationId) params.set('locationId', selectedLocationId)
+      if (selectedLocations.length > 0) params.set('locationIds', selectedLocations.join(','))
       
       const response = await fetch(`/api/commission/export?${params.toString()}`)
       if (!response.ok) throw new Error('Export failed')

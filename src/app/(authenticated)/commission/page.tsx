@@ -9,9 +9,9 @@ import { getMonthBoundariesInUtc } from '@/utils/timezone'
 export default async function CommissionPage({
   searchParams
 }: {
-  searchParams: Promise<{ 
+  searchParams: Promise<{
     month?: string
-    locationId?: string
+    locationIds?: string  // Comma-separated location IDs
   }>
 }) {
   const params = await searchParams
@@ -49,27 +49,32 @@ export default async function CommissionPage({
   // Get date range for the selected month in UTC (for database queries)
   const { start: startOfMonth, end: endOfMonth } = getMonthBoundariesInUtc(year, month, orgTimezone)
   
-  // Get location filter for club managers
-  let locationId = params.locationId
+  // Parse location filter - supports multiple locations as comma-separated string
+  let locationIds: string[] = params.locationIds ? params.locationIds.split(',').filter(Boolean) : []
+
   if (session.user.role === 'CLUB_MANAGER') {
     const manager = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: { locations: true }
     })
-    
-    // Use first accessible location if no locationId provided
+
+    // Use first accessible location if no locationIds provided
     if (manager?.locations && manager.locations.length > 0) {
-      locationId = locationId || manager.locations[0].locationId
-      // Verify they have access to the requested location
-      const hasAccess = manager.locations.some(l => l.locationId === locationId)
-      if (!hasAccess) {
-        locationId = manager.locations[0].locationId
+      const accessibleIds = manager.locations.map(l => l.locationId)
+      if (locationIds.length === 0) {
+        locationIds = [accessibleIds[0]]
+      } else {
+        // Filter to only locations they have access to
+        locationIds = locationIds.filter(id => accessibleIds.includes(id))
+        if (locationIds.length === 0) {
+          locationIds = [accessibleIds[0]]
+        }
       }
     }
   }
   
   // Get all trainers and PT managers with commission profiles
-  // When filtering by location, show trainers who have SESSIONS at that location (not just access)
+  // When filtering by location, show trainers who have SESSIONS at those locations (not just access)
   const trainers = await prisma.user.findMany({
     where: {
       organizationId,
@@ -78,11 +83,11 @@ export default async function CommissionPage({
       },
       active: true,
       commissionProfileId: { not: null },
-      ...(locationId ? {
-        // Filter to trainers who have sessions at this location during the period
+      ...(locationIds.length > 0 ? {
+        // Filter to trainers who have sessions at any of these locations during the period
         sessions: {
           some: {
-            locationId,
+            locationId: { in: locationIds },
             sessionDate: {
               gte: startOfMonth,
               lte: endOfMonth
@@ -122,10 +127,10 @@ export default async function CommissionPage({
       const calculation = await calculator.calculateCommission(
         trainer.id,
         { start: startOfMonth, end: endOfMonth },
-        { saveCalculation: false, locationId: locationId || undefined } // Don't save, just calculate for display
+        { saveCalculation: false, locationIds: locationIds.length > 0 ? locationIds : undefined } // Don't save, just calculate for display
       )
 
-      // Get trainer's sessions for the period to show details (filtered by location if specified)
+      // Get trainer's sessions for the period to show details (filtered by locations if specified)
       const sessions = await prisma.session.findMany({
         where: {
           trainerId: trainer.id,
@@ -135,7 +140,7 @@ export default async function CommissionPage({
           },
           validated: true,
           cancelled: false,
-          ...(locationId ? { locationId } : {})
+          ...(locationIds.length > 0 ? { locationId: { in: locationIds } } : {})
         },
         select: {
           sessionValue: true
@@ -170,7 +175,7 @@ export default async function CommissionPage({
       }))
 
       // Still include the trainer with error indication so they're visible
-      // Get their sessions count at least (filtered by location if specified)
+      // Get their sessions count at least (filtered by locations if specified)
       const sessions = await prisma.session.findMany({
         where: {
           trainerId: trainer.id,
@@ -180,7 +185,7 @@ export default async function CommissionPage({
           },
           validated: true,
           cancelled: false,
-          ...(locationId ? { locationId } : {})
+          ...(locationIds.length > 0 ? { locationId: { in: locationIds } } : {})
         },
         select: {
           sessionValue: true
@@ -247,7 +252,7 @@ export default async function CommissionPage({
         totals={totals}
         month={monthParam}
         locations={locations}
-        selectedLocationId={locationId}
+        selectedLocationIds={locationIds}
         currentUserRole={session.user.role}
       />
     </div>
