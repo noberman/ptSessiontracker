@@ -194,7 +194,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
   }, [])
 
   // Simple info tooltip component
-  const InfoTooltip = ({ id, text }: { id: string; text: string }) => (
+  const InfoTooltip = ({ id, text, position = 'center' }: { id: string; text: string; position?: 'center' | 'left' }) => (
     <span className="relative inline-flex" data-tooltip>
       <button
         type="button"
@@ -207,9 +207,13 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
         <Info className="h-3 w-3" />
       </button>
       {openTooltip === id && (
-        <div className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 text-xs font-normal normal-case tracking-normal text-left text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal w-48">
+        <div className={`absolute z-50 top-full mt-2 px-3 py-2 text-xs font-normal normal-case tracking-normal text-left text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal w-48 ${
+          position === 'left' ? 'right-0' : 'left-1/2 -translate-x-1/2'
+        }`}>
           {text}
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900" />
+          <div className={`absolute bottom-full border-4 border-transparent border-b-gray-900 ${
+            position === 'left' ? 'right-2' : 'left-1/2 -translate-x-1/2'
+          }`} />
         </div>
       )}
     </span>
@@ -956,7 +960,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       <div className="flex items-center justify-center gap-1">
                         Lost
-                        <InfoTooltip id="lost" text="Clients lost this period - package ended with no replacement purchased" />
+                        <InfoTooltip id="lost" text="Clients lost this period - package ended with no replacement purchased" position="left" />
                       </div>
                     </th>
                   </tr>
