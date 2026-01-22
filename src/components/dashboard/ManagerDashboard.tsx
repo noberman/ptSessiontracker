@@ -23,8 +23,6 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts'
-import { TrainerPerformanceTable } from './TrainerPerformanceTable'
-import { SessionDetailsPanel } from './SessionDetailsPanel'
 import { fromZonedTime } from 'date-fns-tz'
 
 interface ManagerDashboardProps {
@@ -138,12 +136,6 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
   const [openTooltip, setOpenTooltip] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
-  
-  // State for session details panel
-  const [detailsPanelOpen, setDetailsPanelOpen] = useState(false)
-  const [selectedTrainerName, setSelectedTrainerName] = useState('')
-  const [selectedSessionValue, setSelectedSessionValue] = useState(0)
-  const [selectedSessions, setSelectedSessions] = useState<any[]>([])
 
   // State for client metric modal
   const [clientModalOpen, setClientModalOpen] = useState(false)
@@ -429,86 +421,6 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
     
     a.click()
     window.URL.revokeObjectURL(url)
-  }
-
-  // Handler for fetching trainer session details
-  const handleFetchTrainerDetails = async (trainerId: string) => {
-    try {
-      let url = `/api/trainers/${trainerId}/sessions`
-      let startDate: Date
-      let endDate: Date = new Date()
-      
-      if (period === 'custom' && customStartDate && customEndDate) {
-        url += `?startDate=${customStartDate}&endDate=${customEndDate}`
-      } else if (period === 'month') {
-        // Current month in org timezone
-        const now = new Date()
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
-        
-        // End of current month in org timezone
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
-        
-        // Convert from org timezone to UTC for API
-        const utcStartDate = fromZonedTime(startDate, orgTimezone)
-        const utcEndDate = fromZonedTime(endDate, orgTimezone)
-        
-        url += `?startDate=${utcStartDate.toISOString()}&endDate=${utcEndDate.toISOString()}`
-      } else if (period === 'week') {
-        // Last 7 days in org timezone
-        const now = new Date()
-        const sevenDaysAgo = new Date(now)
-        sevenDaysAgo.setDate(now.getDate() - 7)
-        
-        startDate = new Date(sevenDaysAgo.getFullYear(), sevenDaysAgo.getMonth(), sevenDaysAgo.getDate(), 0, 0, 0, 0)
-        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-        
-        // Convert from org timezone to UTC for API
-        const utcStartDate = fromZonedTime(startDate, orgTimezone)
-        const utcEndDate = fromZonedTime(endDate, orgTimezone)
-        
-        url += `?startDate=${utcStartDate.toISOString()}&endDate=${utcEndDate.toISOString()}`
-      } else if (period === 'lastMonth' || period === 'last') {
-        // Last month in org timezone
-        const now = new Date()
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0)
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
-        
-        // Convert from org timezone to UTC for API
-        const utcStartDate = fromZonedTime(startDate, orgTimezone)
-        const utcEndDate = fromZonedTime(endDate, orgTimezone)
-        
-        url += `?startDate=${utcStartDate.toISOString()}&endDate=${utcEndDate.toISOString()}`
-      } else if (period === 'day') {
-        // Today only in org timezone
-        const now = new Date()
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
-        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-        
-        // Convert from org timezone to UTC for API
-        const utcStartDate = fromZonedTime(startDate, orgTimezone)
-        const utcEndDate = fromZonedTime(endDate, orgTimezone)
-        
-        url += `?startDate=${utcStartDate.toISOString()}&endDate=${utcEndDate.toISOString()}`
-      }
-      // If no period matches, fetch all sessions (no date filter)
-      
-      const response = await fetch(url)
-      if (!response.ok) throw new Error('Failed to fetch trainer details')
-      
-      return await response.json()
-    } catch (error) {
-      console.error('Error fetching trainer details:', error)
-      return []
-    }
-  }
-
-  // Handler for opening session details panel
-  const handleViewDetails = (trainerId: string, sessionValue: number, sessions: any[]) => {
-    const trainer = data?.trainerStats.find(t => t.trainer?.id === trainerId)
-    setSelectedTrainerName(trainer?.trainer?.name || 'Unknown')
-    setSelectedSessionValue(sessionValue)
-    setSelectedSessions(sessions)
-    setDetailsPanelOpen(true)
   }
 
   if (loading) {
@@ -1132,20 +1044,6 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
         </CardContent>
       </Card>
 
-      {/* Trainer Performance Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Trainer Performance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TrainerPerformanceTable
-            trainers={data.trainerStats}
-            onViewDetails={handleViewDetails}
-            onFetchTrainerDetails={handleFetchTrainerDetails}
-          />
-        </CardContent>
-      </Card>
-
       {/* Peak Activity Hours Chart */}
       {data.peakActivityHours && data.peakActivityHours.length > 0 && (
         <Card>
@@ -1180,16 +1078,6 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
           </CardContent>
         </Card>
       )}
-      
-      {/* Session Details Panel */}
-      <SessionDetailsPanel
-        isOpen={detailsPanelOpen}
-        onClose={() => setDetailsPanelOpen(false)}
-        trainerName={selectedTrainerName}
-        sessionValue={selectedSessionValue}
-        sessions={selectedSessions}
-        orgTimezone={orgTimezone}
-      />
 
       {/* Client Metric Modal */}
       {clientModalOpen && (
