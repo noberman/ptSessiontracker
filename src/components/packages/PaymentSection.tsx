@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { PaymentStatusBadge } from './PaymentStatusBadge'
 import { RecordPaymentModal } from './RecordPaymentModal'
 import { Trash2, DollarSign, AlertCircle } from 'lucide-react'
@@ -49,6 +50,8 @@ export function PaymentSection({
   const [summary, setSummary] = useState<PaymentSummary | null>(null)
   const [showRecordModal, setShowRecordModal] = useState(false)
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null)
+  const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null)
+  const [deleteError, setDeleteError] = useState('')
 
   const fetchPayments = async () => {
     try {
@@ -70,15 +73,18 @@ export function PaymentSection({
     fetchPayments()
   }, [packageId])
 
-  const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm('Are you sure you want to delete this payment?')) {
-      return
-    }
+  const handleDeletePayment = (payment: Payment) => {
+    setDeleteError('')
+    setPaymentToDelete(payment)
+  }
 
-    setDeletingPaymentId(paymentId)
+  const confirmDeletePayment = async () => {
+    if (!paymentToDelete) return
+
+    setDeletingPaymentId(paymentToDelete.id)
 
     try {
-      const response = await fetch(`/api/packages/${packageId}/payments/${paymentId}`, {
+      const response = await fetch(`/api/packages/${packageId}/payments/${paymentToDelete.id}`, {
         method: 'DELETE'
       })
 
@@ -87,11 +93,12 @@ export function PaymentSection({
         throw new Error(data.error || 'Failed to delete payment')
       }
 
-      // Refresh data
+      // Close modal and refresh data
+      setPaymentToDelete(null)
       await fetchPayments()
       router.refresh()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete payment')
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete payment')
     } finally {
       setDeletingPaymentId(null)
     }
@@ -210,7 +217,7 @@ export function PaymentSection({
                         variant="ghost"
                         size="sm"
                         className="text-error-600 hover:text-error-700 hover:bg-error-50"
-                        onClick={() => handleDeletePayment(payment.id)}
+                        onClick={() => handleDeletePayment(payment)}
                         disabled={deletingPaymentId === payment.id}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -236,6 +243,28 @@ export function PaymentSection({
         packageName={packageName}
         summary={summary}
         onSuccess={handlePaymentSuccess}
+      />
+
+      {/* Delete Payment Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!paymentToDelete}
+        onClose={() => {
+          setPaymentToDelete(null)
+          setDeleteError('')
+        }}
+        onConfirm={confirmDeletePayment}
+        title="Delete Payment"
+        message={
+          deleteError
+            ? deleteError
+            : paymentToDelete
+              ? `Are you sure you want to delete the payment of $${paymentToDelete.amount.toFixed(2)} from ${new Date(paymentToDelete.paymentDate).toLocaleDateString()}? This will affect unlocked sessions.`
+              : ''
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={!!deletingPaymentId}
       />
     </>
   )
