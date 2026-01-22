@@ -477,6 +477,35 @@ export function CommissionDashboard({
                                           </span>
                                         </div>
                                       </div>
+
+                                      {/* Calculation Overview */}
+                                      <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <p className="text-xs font-medium text-blue-800 mb-2">Calculation Overview</p>
+                                        <div className="space-y-1 text-xs text-blue-700">
+                                          <p>
+                                            <span className="font-medium">Session Commission:</span>{' '}
+                                            {formatCurrency(commission.totalValue)} (session value) × {commission.totalValue > 0 ? ((commission.breakdown.sessionCommission / commission.totalValue) * 100).toFixed(1) : 0}% (rate at Tier {commission.tierReached || 1}) = {formatCurrency(commission.breakdown.sessionCommission)}
+                                          </p>
+                                          {commission.breakdown.salesCommission > 0 && (
+                                            <p>
+                                              <span className="font-medium">Sales Commission:</span>{' '}
+                                              Commission from package sales = {formatCurrency(commission.breakdown.salesCommission)}
+                                            </p>
+                                          )}
+                                          {commission.breakdown.tierBonus > 0 && (
+                                            <p>
+                                              <span className="font-medium">Tier Bonus:</span>{' '}
+                                              Bonus for reaching Tier {commission.tierReached || 1} = {formatCurrency(commission.breakdown.tierBonus)}
+                                            </p>
+                                          )}
+                                          <p className="pt-1 border-t border-blue-200 font-medium">
+                                            Total: {formatCurrency(commission.breakdown.sessionCommission)}
+                                            {commission.breakdown.salesCommission > 0 && ` + ${formatCurrency(commission.breakdown.salesCommission)}`}
+                                            {commission.breakdown.tierBonus > 0 && ` + ${formatCurrency(commission.breakdown.tierBonus)}`}
+                                            {' '}= {formatCurrency(commission.commissionAmount)}
+                                          </p>
+                                        </div>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
