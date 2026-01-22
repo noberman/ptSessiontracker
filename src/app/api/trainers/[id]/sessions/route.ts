@@ -65,6 +65,11 @@ export async function GET(
             name: true,
             packageType: true
           }
+        },
+        location: {
+          select: {
+            name: true
+          }
         }
       },
       orderBy: {
@@ -93,7 +98,8 @@ export async function GET(
         sessionDate: session.sessionDate.toISOString(), // Keep full ISO string for proper timezone handling
         createdAt: session.createdAt.toISOString(),
         validated: session.validated,
-        packageName: session.package?.name
+        packageName: session.package?.name,
+        locationName: session.location?.name
       })
       
       return acc

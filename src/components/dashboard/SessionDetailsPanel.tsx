@@ -1,6 +1,6 @@
 'use client'
 
-import { X, Calendar, User, Package, CheckCircle, XCircle } from 'lucide-react'
+import { X, Calendar, User, Package, CheckCircle, XCircle, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { displaySessionTime } from '@/utils/timezone'
@@ -13,6 +13,7 @@ interface Session {
   createdAt?: string // Made optional for backward compatibility
   validated: boolean
   packageName?: string
+  locationName?: string
 }
 
 interface SessionDetailsPanelProps {
@@ -184,7 +185,16 @@ export function SessionDetailsPanel({
                                   {formatDate(session.sessionDate, session.createdAt)}
                                 </span>
                               </div>
-                              
+
+                              {session.locationName && (
+                                <div className="flex items-center space-x-3">
+                                  <MapPin className="w-4 h-4 text-text-secondary" />
+                                  <span className="text-sm text-text-secondary">
+                                    {session.locationName}
+                                  </span>
+                                </div>
+                              )}
+
                               {session.packageName && (
                                 <div className="flex items-center space-x-3">
                                   <Package className="w-4 h-4 text-text-secondary" />
