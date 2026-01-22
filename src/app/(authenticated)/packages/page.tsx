@@ -236,7 +236,7 @@ export default async function PackagesPage({
     })
   }
 
-  const [packages, total] = await Promise.all([
+  const [packagesRaw, total] = await Promise.all([
     prisma.package.findMany({
       where,
       skip,
@@ -259,9 +259,16 @@ export default async function PackagesPage({
             email: true,
           },
         },
+        payments: {
+          select: {
+            amount: true,
+          },
+        },
         _count: {
           select: {
-            sessions: true,
+            sessions: {
+              where: { cancelled: false }
+            },
           },
         },
         createdAt: true,
@@ -273,6 +280,39 @@ export default async function PackagesPage({
     }),
     prisma.package.count({ where }),
   ])
+
+  // Add payment status to each package
+  const packages = packagesRaw.map(pkg => {
+    const paidAmount = pkg.payments.reduce((sum, p) => sum + p.amount, 0)
+    const paymentProgress = pkg.totalValue > 0
+      ? Math.min(100, (paidAmount / pkg.totalValue) * 100)
+      : 100
+    const isFullyPaid = paidAmount >= pkg.totalValue
+
+    // Calculate unlocked sessions
+    const unlockedSessions = pkg.totalValue > 0 && paidAmount < pkg.totalValue
+      ? Math.floor((paidAmount / pkg.totalValue) * pkg.totalSessions)
+      : pkg.totalSessions
+
+    const usedSessions = pkg._count.sessions
+    const availableSessions = Math.max(0, unlockedSessions - usedSessions)
+
+    // Remove raw payments array and add computed summary
+    const { payments, ...pkgWithoutPayments } = pkg
+
+    return {
+      ...pkgWithoutPayments,
+      paymentStatus: {
+        paidAmount,
+        remainingBalance: Math.max(0, pkg.totalValue - paidAmount),
+        paymentProgress,
+        isFullyPaid,
+        unlockedSessions,
+        usedSessions,
+        availableSessions
+      }
+    }
+  })
 
   const pagination = {
     page,

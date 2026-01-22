@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
   // ADMIN sees all (no additional filter)
   
   try {
-    const [packages, total] = await Promise.all([
+    const [packagesRaw, total] = await Promise.all([
       prisma.package.findMany({
         where,
         skip,
@@ -101,9 +101,16 @@ export async function GET(request: NextRequest) {
               }
             }
           },
+          payments: {
+            select: {
+              amount: true
+            }
+          },
           _count: {
             select: {
-              sessions: true
+              sessions: {
+                where: { cancelled: false }
+              }
             }
           },
           createdAt: true,
@@ -115,7 +122,41 @@ export async function GET(request: NextRequest) {
       }),
       prisma.package.count({ where }),
     ])
-    
+
+    // Add payment summary to each package
+    const packages = packagesRaw.map(pkg => {
+      const paidAmount = pkg.payments.reduce((sum, p) => sum + p.amount, 0)
+      const paymentProgress = pkg.totalValue > 0
+        ? Math.min(100, (paidAmount / pkg.totalValue) * 100)
+        : 100
+      const isFullyPaid = paidAmount >= pkg.totalValue
+
+      // Calculate unlocked sessions
+      const unlockedSessions = pkg.totalValue > 0 && paidAmount < pkg.totalValue
+        ? Math.floor((paidAmount / pkg.totalValue) * pkg.totalSessions)
+        : pkg.totalSessions
+
+      const usedSessions = pkg._count.sessions
+      const availableSessions = Math.max(0, unlockedSessions - usedSessions)
+
+      // Remove raw payments array and add computed summary
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { payments, ...pkgWithoutPayments } = pkg
+
+      return {
+        ...pkgWithoutPayments,
+        paymentStatus: {
+          paidAmount,
+          remainingBalance: Math.max(0, pkg.totalValue - paidAmount),
+          paymentProgress,
+          isFullyPaid,
+          unlockedSessions,
+          usedSessions,
+          availableSessions
+        }
+      }
+    })
+
     return NextResponse.json({
       packages,
       pagination: {

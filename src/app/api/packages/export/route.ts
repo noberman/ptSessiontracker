@@ -149,9 +149,16 @@ export async function GET(request: NextRequest) {
             }
           }
         },
+        payments: {
+          select: {
+            amount: true
+          }
+        },
         _count: {
           select: {
-            sessions: true
+            sessions: {
+              where: { cancelled: false }
+            }
           }
         }
       },
@@ -189,6 +196,21 @@ export async function GET(request: NextRequest) {
       return amount.toFixed(2)
     }
 
+    // Helper function to get payment status
+    const getPaymentStatus = (pkg: { totalValue: number; payments: { amount: number }[] }) => {
+      const paidAmount = pkg.payments.reduce((sum, p) => sum + p.amount, 0)
+      if (paidAmount >= pkg.totalValue) return 'Fully Paid'
+      if (paidAmount > 0) return 'Partially Paid'
+      return 'Unpaid'
+    }
+
+    // Helper function to calculate unlocked sessions
+    const getUnlockedSessions = (pkg: { totalValue: number; totalSessions: number; payments: { amount: number }[] }) => {
+      const paidAmount = pkg.payments.reduce((sum, p) => sum + p.amount, 0)
+      if (pkg.totalValue <= 0 || paidAmount >= pkg.totalValue) return pkg.totalSessions
+      return Math.floor((paidAmount / pkg.totalValue) * pkg.totalSessions)
+    }
+
     // Helper function to escape CSV fields
     const escapeCSV = (value: string | number | null | undefined) => {
       if (value === null || value === undefined) return ''
@@ -210,31 +232,45 @@ export async function GET(request: NextRequest) {
       'Total Sessions',
       'Remaining Sessions',
       'Sessions Used',
+      'Sessions Unlocked',
       'Total Value',
+      'Paid Amount',
+      'Remaining Balance',
+      'Payment Status',
       'Session Value',
-      'Status',
+      'Package Status',
       'Start Date',
       'Expiry Date',
       'Created Date'
     ]
 
-    const rows = packages.map(pkg => [
-      escapeCSV(pkg.name),
-      escapeCSV(pkg.packageType),
-      escapeCSV(pkg.client.name),
-      escapeCSV(pkg.client.email),
-      escapeCSV(pkg.client.location?.name || ''),
-      escapeCSV(pkg.client.primaryTrainer?.name || ''),
-      pkg.totalSessions,
-      pkg.remainingSessions,
-      pkg._count.sessions,
-      formatCurrency(pkg.totalValue),
-      formatCurrency(pkg.sessionValue),
-      escapeCSV(getStatus(pkg)),
-      formatDate(pkg.startDate),
-      formatDate(pkg.expiresAt),
-      formatDate(pkg.createdAt)
-    ])
+    const rows = packages.map(pkg => {
+      const paidAmount = pkg.payments.reduce((sum, p) => sum + p.amount, 0)
+      const remainingBalance = Math.max(0, pkg.totalValue - paidAmount)
+      const unlockedSessions = getUnlockedSessions(pkg)
+
+      return [
+        escapeCSV(pkg.name),
+        escapeCSV(pkg.packageType),
+        escapeCSV(pkg.client.name),
+        escapeCSV(pkg.client.email),
+        escapeCSV(pkg.client.location?.name || ''),
+        escapeCSV(pkg.client.primaryTrainer?.name || ''),
+        pkg.totalSessions,
+        pkg.remainingSessions,
+        pkg._count.sessions,
+        unlockedSessions,
+        formatCurrency(pkg.totalValue),
+        formatCurrency(paidAmount),
+        formatCurrency(remainingBalance),
+        escapeCSV(getPaymentStatus(pkg)),
+        formatCurrency(pkg.sessionValue),
+        escapeCSV(getStatus(pkg)),
+        formatDate(pkg.startDate),
+        formatDate(pkg.expiresAt),
+        formatDate(pkg.createdAt)
+      ]
+    })
 
     const csv = [headers.join(','), ...rows.map(row => row.join(','))].join('\n')
 

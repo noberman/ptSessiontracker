@@ -67,6 +67,10 @@ export function PackageForm({
     startDate: string
     expiresAt: string
     active: boolean
+    // Initial payment fields
+    initialPaymentAmount: number | string
+    initialPaymentDate: string
+    initialPaymentFullAmount: boolean
   }>({
     clientId: packageData?.clientId || preselectedClientId || '',
     packageTypeId: packageData?.packageTypeId || '',
@@ -74,17 +78,34 @@ export function PackageForm({
     totalValue: packageData?.totalValue || 0,
     totalSessions: packageData?.totalSessions || 0,
     remainingSessions: packageData?.remainingSessions || 0,
-    startDate: packageData?.startDate 
-      ? new Date(packageData.startDate).toISOString().split('T')[0] 
+    startDate: packageData?.startDate
+      ? new Date(packageData.startDate).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0],
-    expiresAt: packageData?.expiresAt 
-      ? new Date(packageData.expiresAt).toISOString().split('T')[0] 
+    expiresAt: packageData?.expiresAt
+      ? new Date(packageData.expiresAt).toISOString().split('T')[0]
       : '',
     active: packageData?.active !== false,
+    // Initial payment defaults
+    initialPaymentAmount: 0,
+    initialPaymentDate: new Date().toISOString().split('T')[0],
+    initialPaymentFullAmount: true, // Default to full payment
   })
 
   const [sessionValue, setSessionValue] = useState(0)
-  
+
+  // Handle "Full amount" checkbox for initial payment
+  useEffect(() => {
+    if (!isEdit && formData.initialPaymentFullAmount) {
+      const totalValue = typeof formData.totalValue === 'string'
+        ? parseFloat(formData.totalValue) || 0
+        : formData.totalValue
+      setFormData(prev => ({
+        ...prev,
+        initialPaymentAmount: totalValue
+      }))
+    }
+  }, [formData.totalValue, formData.initialPaymentFullAmount, isEdit])
+
   // Convert clients to searchable options
   const clientOptions = useMemo(() => {
     return clients.map(client => ({
@@ -224,7 +245,11 @@ export function PackageForm({
           body.packageTypeId = formData.packageTypeId || null
         }
       } else {
-        // For create mode, send all fields
+        // For create mode, send all fields including initial payment
+        const initialPaymentAmount = typeof formData.initialPaymentAmount === 'string'
+          ? parseFloat(formData.initialPaymentAmount) || 0
+          : formData.initialPaymentAmount
+
         body = {
           clientId: formData.clientId,
           packageTypeId: formData.packageTypeId || null,
@@ -233,6 +258,13 @@ export function PackageForm({
           totalSessions: totalSessions,
           startDate: formData.startDate,
           expiresAt: formData.expiresAt || null,
+          // Include initial payment if amount > 0
+          ...(initialPaymentAmount > 0 && {
+            initialPayment: {
+              amount: initialPaymentAmount,
+              paymentDate: formData.initialPaymentDate || formData.startDate
+            }
+          })
         }
       }
 
@@ -395,6 +427,103 @@ export function PackageForm({
               )}
             </p>
           </div>
+
+          {/* Initial Payment Section (only for new packages) */}
+          {!isEdit && (
+            <div className="border border-border rounded-lg p-4 mt-4">
+              <h3 className="text-sm font-semibold text-text-primary mb-3">Initial Payment</h3>
+
+              <div className="flex items-center mb-3">
+                <input
+                  id="initialPaymentFullAmount"
+                  type="checkbox"
+                  checked={formData.initialPaymentFullAmount}
+                  onChange={(e) => {
+                    const isFullAmount = e.target.checked
+                    const totalValue = typeof formData.totalValue === 'string'
+                      ? parseFloat(formData.totalValue) || 0
+                      : formData.totalValue
+                    setFormData({
+                      ...formData,
+                      initialPaymentFullAmount: isFullAmount,
+                      initialPaymentAmount: isFullAmount ? totalValue : formData.initialPaymentAmount
+                    })
+                  }}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label htmlFor="initialPaymentFullAmount" className="ml-2 block text-sm text-text-primary">
+                  Full amount ({typeof formData.totalValue === 'string'
+                    ? `$${parseFloat(formData.totalValue) || 0}`
+                    : `$${formData.totalValue}`})
+                </label>
+              </div>
+
+              {!formData.initialPaymentFullAmount && (
+                <div className="mb-3">
+                  <label htmlFor="initialPaymentAmount" className="block text-sm font-medium text-text-primary mb-1">
+                    Payment Amount ($)
+                  </label>
+                  <Input
+                    id="initialPaymentAmount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    max={typeof formData.totalValue === 'string'
+                      ? parseFloat(formData.totalValue) || 0
+                      : formData.totalValue}
+                    value={formData.initialPaymentAmount}
+                    onChange={(e) => setFormData({ ...formData, initialPaymentAmount: e.target.value })}
+                    placeholder="0.00"
+                  />
+                  <p className="text-xs text-text-secondary mt-1">
+                    Enter the initial payment amount. Sessions will be unlocked proportionally.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="initialPaymentDate" className="block text-sm font-medium text-text-primary mb-1">
+                  Payment Date
+                </label>
+                <DatePicker
+                  value={formData.initialPaymentDate}
+                  onChange={(value) => setFormData({ ...formData, initialPaymentDate: value })}
+                  placeholder="Select payment date"
+                />
+              </div>
+
+              {/* Preview sessions unlocked */}
+              {(() => {
+                const totalValue = typeof formData.totalValue === 'string'
+                  ? parseFloat(formData.totalValue) || 0
+                  : formData.totalValue
+                const totalSessions = typeof formData.totalSessions === 'string'
+                  ? parseInt(formData.totalSessions) || 0
+                  : formData.totalSessions
+                const paymentAmount = typeof formData.initialPaymentAmount === 'string'
+                  ? parseFloat(formData.initialPaymentAmount) || 0
+                  : formData.initialPaymentAmount
+
+                if (totalValue > 0 && totalSessions > 0 && paymentAmount > 0) {
+                  const unlockedSessions = totalValue > 0
+                    ? Math.floor((paymentAmount / totalValue) * totalSessions)
+                    : totalSessions
+
+                  return (
+                    <div className="mt-3 p-2 bg-primary-50 rounded text-sm text-primary-700">
+                      <strong>{unlockedSessions}</strong> of {totalSessions} sessions will be unlocked
+                      {paymentAmount < totalValue && (
+                        <span className="block text-xs mt-1">
+                          Additional payments will unlock more sessions
+                        </span>
+                      )}
+                    </div>
+                  )
+                }
+                return null
+              })()}
+            </div>
+          )}
 
           {isEdit && (
             <div>

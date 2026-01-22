@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { PackageActions } from '@/components/packages/PackageActions'
+import { PaymentSection } from '@/components/packages/PaymentSection'
 
 export default async function ViewPackagePage({
   params,
@@ -101,6 +102,8 @@ export default async function ViewPackagePage({
   
   const canEdit = session.user.role !== 'TRAINER'
   const canDelete = session.user.role === 'ADMIN'
+  const canRecordPayment = ['ADMIN', 'PT_MANAGER'].includes(session.user.role)
+  const canDeletePayment = session.user.role === 'ADMIN'
 
   return (
     <div>
@@ -257,6 +260,16 @@ export default async function ViewPackagePage({
             </dl>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Payment Status */}
+      <div className="mb-6">
+        <PaymentSection
+          packageId={id}
+          packageName={packageData.name}
+          canRecordPayment={canRecordPayment}
+          canDeletePayment={canDeletePayment}
+        />
       </div>
 
       {/* Recent Sessions */}

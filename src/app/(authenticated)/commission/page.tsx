@@ -237,10 +237,25 @@ export default async function CommissionPage({
     }
   })
 
+  // Calculate actual sales from payments received in the period
+  const paymentsInPeriod = await prisma.payment.aggregate({
+    where: {
+      paymentDate: { gte: startOfMonth, lte: endOfMonth },
+      package: {
+        organizationId,
+        ...(locationIds.length > 0 ? {
+          client: { locationId: { in: locationIds } }
+        } : {})
+      }
+    },
+    _sum: { amount: true }
+  })
+  const totalSales = paymentsInPeriod._sum.amount || 0
+
   // Calculate totals
   const totals = {
     totalSessions: commissions.reduce((sum, c) => sum + c.totalSessions, 0),
-    totalValue: commissions.reduce((sum, c) => sum + c.totalValue, 0),
+    totalValue: totalSales, // Now uses actual payment amounts instead of session values
     totalCommission: commissions.reduce((sum, c) => sum + c.commissionAmount, 0),
     trainerCount: activeTrainerCount
   }

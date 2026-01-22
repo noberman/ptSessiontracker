@@ -1,13 +1,18 @@
 import { prisma } from '@/lib/prisma'
-import { 
-  CalculationMethod, 
+import {
+  CalculationMethod,
   TriggerType,
   type CommissionProfile,
   type CommissionTierV2,
   type Session,
   type Package,
+  type Payment,
   type CommissionCalculation
 } from '@prisma/client'
+
+interface PaymentWithPackage extends Payment {
+  package: Package
+}
 
 interface CalculationResult {
   sessionCommission: number
@@ -80,25 +85,34 @@ export class CommissionCalculatorV2 {
       }
     })
     
-    // Get package sales for the period (packages sold by this trainer)
-    const packages = await prisma.package.findMany({
+    // Get payments received for the period (for packages of this trainer's clients)
+    // Sales commission is based on payments received, not package creation date
+    const payments = await prisma.payment.findMany({
       where: {
-        client: {
-          primaryTrainerId: userId
-        },
-        createdAt: {
+        paymentDate: {
           gte: period.start,
           lte: period.end
         },
-        active: true
+        package: {
+          client: {
+            primaryTrainerId: userId
+          }
+        }
+      },
+      include: {
+        package: true
       }
-    })
+    }) as PaymentWithPackage[]
+
+    // Count unique packages that had payments in this period (for flat fee calculations)
+    const uniquePackageIds = new Set(payments.map(p => p.packageId))
     
     // Calculate commission based on the profile's calculation method
     const result = this.calculateByMethod(
       user.commissionProfile,
       sessions,
-      packages
+      payments,
+      uniquePackageIds.size
     )
     
     // Save calculation to database if requested
@@ -112,7 +126,7 @@ export class CommissionCalculatorV2 {
           periodEnd: period.end,
           calculationMethod: user.commissionProfile.calculationMethod,
           totalSessions: sessions.length,
-          totalPackagesSold: packages.length,
+          totalPackagesSold: uniquePackageIds.size,
           sessionCommission: result.sessionCommission,
           salesCommission: result.salesCommission,
           tierBonus: result.tierBonus,
@@ -135,7 +149,7 @@ export class CommissionCalculatorV2 {
       periodEnd: period.end,
       calculationMethod: user.commissionProfile.calculationMethod,
       totalSessions: sessions.length,
-      totalPackagesSold: packages.length,
+      totalPackagesSold: uniquePackageIds.size,
       sessionCommission: result.sessionCommission,
       salesCommission: result.salesCommission,
       tierBonus: result.tierBonus,
@@ -152,15 +166,16 @@ export class CommissionCalculatorV2 {
   private calculateByMethod(
     profile: ProfileWithTiers,
     sessions: Session[],
-    packages: Package[]
+    payments: PaymentWithPackage[],
+    uniquePackageCount: number
   ): CalculationResult {
     switch (profile.calculationMethod) {
       case CalculationMethod.PROGRESSIVE:
-        return this.calculateProgressive(profile, sessions, packages)
+        return this.calculateProgressive(profile, sessions, payments, uniquePackageCount)
       case CalculationMethod.GRADUATED:
-        return this.calculateGraduated(profile, sessions, packages)
+        return this.calculateGraduated(profile, sessions, payments, uniquePackageCount)
       case CalculationMethod.FLAT:
-        return this.calculateFlat(profile, sessions, packages)
+        return this.calculateFlat(profile, sessions, payments, uniquePackageCount)
       default:
         throw new Error(`Unknown calculation method: ${profile.calculationMethod}`)
     }
@@ -172,19 +187,23 @@ export class CommissionCalculatorV2 {
   private calculateProgressive(
     profile: ProfileWithTiers,
     sessions: Session[],
-    packages: Package[]
+    payments: PaymentWithPackage[],
+    uniquePackageCount: number
   ): CalculationResult {
+    // Calculate total payment amount for tier determination
+    const totalPaymentAmount = this.calculateTotalPaymentValue(payments)
+
     // Find the highest tier achieved
     const currentTier = this.determineCurrentTier(
       profile,
       sessions.length,
-      this.calculateTotalSalesValue(packages)
+      totalPaymentAmount
     )
-    
+
     // Calculate commission using the highest tier's rewards
     let sessionCommission = 0
     let salesCommission = 0
-    
+
     // Session commission
     if (currentTier.sessionFlatFee) {
       // Flat fee per session
@@ -194,20 +213,19 @@ export class CommissionCalculatorV2 {
       const totalSessionValue = sessions.reduce((sum, s) => sum + s.sessionValue, 0)
       sessionCommission = totalSessionValue * (currentTier.sessionCommissionPercent / 100)
     }
-    
-    // Sales commission
+
+    // Sales commission (now based on payments received, not package values)
     if (currentTier.salesFlatFee) {
-      // Flat fee per package
-      salesCommission = packages.length * currentTier.salesFlatFee
+      // Flat fee per unique package that had payments in this period
+      salesCommission = uniquePackageCount * currentTier.salesFlatFee
     } else if (currentTier.salesCommissionPercent) {
-      // Percentage of package value
-      const totalSalesValue = this.calculateTotalSalesValue(packages)
-      salesCommission = totalSalesValue * (currentTier.salesCommissionPercent / 100)
+      // Percentage of payment amounts received
+      salesCommission = totalPaymentAmount * (currentTier.salesCommissionPercent / 100)
     }
-    
+
     // Tier bonus (one-time bonus for reaching this tier)
     const tierBonus = currentTier.tierBonus || 0
-    
+
     return {
       sessionCommission,
       salesCommission,
@@ -219,7 +237,8 @@ export class CommissionCalculatorV2 {
         tierUsed: `Tier ${currentTier.tierLevel}`,
         tierLevel: currentTier.tierLevel,
         sessionCount: sessions.length,
-        packageCount: packages.length,
+        packageCount: uniquePackageCount,
+        totalPaymentAmount,
         rates: {
           sessionFlatFee: currentTier.sessionFlatFee,
           sessionCommissionPercent: currentTier.sessionCommissionPercent,
@@ -237,20 +256,21 @@ export class CommissionCalculatorV2 {
   private calculateGraduated(
     profile: ProfileWithTiers,
     sessions: Session[],
-    packages: Package[]
+    payments: PaymentWithPackage[],
+    uniquePackageCount: number
   ): CalculationResult {
     let sessionCommission = 0
     let remainingSessions = sessions.length
     let sessionIndex = 0
-    
+
     // Sort tiers by level
     const sortedTiers = [...profile.tiers].sort((a, b) => a.tierLevel - b.tierLevel)
-    
+
     // Apply each tier to its range of sessions
     for (let i = 0; i < sortedTiers.length; i++) {
       const tier = sortedTiers[i]
       const nextTier = sortedTiers[i + 1]
-      
+
       // Determine how many sessions this tier applies to
       const tierStartThreshold = tier.sessionThreshold || 0
       const tierEndThreshold = nextTier?.sessionThreshold || Infinity
@@ -258,42 +278,46 @@ export class CommissionCalculatorV2 {
         Math.max(0, sessions.length - tierStartThreshold),
         tierEndThreshold - tierStartThreshold
       )
-      
+
       if (sessionsInThisTier > 0) {
         // Calculate commission for sessions in this tier
         const tierSessions = sessions.slice(sessionIndex, sessionIndex + sessionsInThisTier)
-        
+
         if (tier.sessionFlatFee) {
           sessionCommission += sessionsInThisTier * tier.sessionFlatFee
         } else if (tier.sessionCommissionPercent) {
           const tierSessionValue = tierSessions.reduce((sum, s) => sum + s.sessionValue, 0)
           sessionCommission += tierSessionValue * (tier.sessionCommissionPercent / 100)
         }
-        
+
         sessionIndex += sessionsInThisTier
         remainingSessions -= sessionsInThisTier
       }
-      
+
       if (remainingSessions <= 0) break
     }
-    
+
+    // Calculate total payment amount for tier determination
+    const totalPaymentAmount = this.calculateTotalPaymentValue(payments)
+
     // Sales commission uses the highest tier achieved
     const currentTier = this.determineCurrentTier(
       profile,
       sessions.length,
-      this.calculateTotalSalesValue(packages)
+      totalPaymentAmount
     )
-    
+
     let salesCommission = 0
     if (currentTier.salesFlatFee) {
-      salesCommission = packages.length * currentTier.salesFlatFee
+      // Flat fee per unique package that had payments in this period
+      salesCommission = uniquePackageCount * currentTier.salesFlatFee
     } else if (currentTier.salesCommissionPercent) {
-      const totalSalesValue = this.calculateTotalSalesValue(packages)
-      salesCommission = totalSalesValue * (currentTier.salesCommissionPercent / 100)
+      // Percentage of payment amounts received
+      salesCommission = totalPaymentAmount * (currentTier.salesCommissionPercent / 100)
     }
-    
+
     const tierBonus = currentTier.tierBonus || 0
-    
+
     return {
       sessionCommission,
       salesCommission,
@@ -305,7 +329,8 @@ export class CommissionCalculatorV2 {
         tierReached: `Tier ${currentTier.tierLevel}`,
         tierLevel: currentTier.tierLevel,
         sessionCount: sessions.length,
-        packageCount: packages.length,
+        packageCount: uniquePackageCount,
+        totalPaymentAmount,
         tierBreakdown: sortedTiers.map(tier => ({
           tierLevel: tier.tierLevel,
           tierName: `Tier ${tier.tierLevel}`,
@@ -325,18 +350,19 @@ export class CommissionCalculatorV2 {
   private calculateFlat(
     profile: ProfileWithTiers,
     sessions: Session[],
-    packages: Package[]
+    payments: PaymentWithPackage[],
+    uniquePackageCount: number
   ): CalculationResult {
     // For flat method, use the first tier's rates for everything
     const flatTier = profile.tiers.find(t => t.tierLevel === 1) || profile.tiers[0]
-    
+
     if (!flatTier) {
       throw new Error('No tier found for flat calculation')
     }
-    
+
     let sessionCommission = 0
     let salesCommission = 0
-    
+
     // Session commission
     if (flatTier.sessionFlatFee) {
       sessionCommission = sessions.length * flatTier.sessionFlatFee
@@ -344,15 +370,19 @@ export class CommissionCalculatorV2 {
       const totalSessionValue = sessions.reduce((sum, s) => sum + s.sessionValue, 0)
       sessionCommission = totalSessionValue * (flatTier.sessionCommissionPercent / 100)
     }
-    
-    // Sales commission
+
+    // Calculate total payment amount
+    const totalPaymentAmount = this.calculateTotalPaymentValue(payments)
+
+    // Sales commission (now based on payments received, not package values)
     if (flatTier.salesFlatFee) {
-      salesCommission = packages.length * flatTier.salesFlatFee
+      // Flat fee per unique package that had payments in this period
+      salesCommission = uniquePackageCount * flatTier.salesFlatFee
     } else if (flatTier.salesCommissionPercent) {
-      const totalSalesValue = this.calculateTotalSalesValue(packages)
-      salesCommission = totalSalesValue * (flatTier.salesCommissionPercent / 100)
+      // Percentage of payment amounts received
+      salesCommission = totalPaymentAmount * (flatTier.salesCommissionPercent / 100)
     }
-    
+
     return {
       sessionCommission,
       salesCommission,
@@ -363,7 +393,8 @@ export class CommissionCalculatorV2 {
         method: 'FLAT',
         tierUsed: `Tier ${flatTier.tierLevel}`,
         sessionCount: sessions.length,
-        packageCount: packages.length,
+        packageCount: uniquePackageCount,
+        totalPaymentAmount,
         rates: {
           sessionFlatFee: flatTier.sessionFlatFee,
           sessionCommissionPercent: flatTier.sessionCommissionPercent,
@@ -437,10 +468,11 @@ export class CommissionCalculatorV2 {
   }
   
   /**
-   * Calculate total value of packages
+   * Calculate total value of payments received
+   * This is used for sales commission calculations with split payments support
    */
-  private calculateTotalSalesValue(packages: Package[]): number {
-    return packages.reduce((sum, pkg) => sum + pkg.totalValue, 0)
+  private calculateTotalPaymentValue(payments: PaymentWithPackage[]): number {
+    return payments.reduce((sum, payment) => sum + payment.amount, 0)
   }
   
   /**

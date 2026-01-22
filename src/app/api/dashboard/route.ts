@@ -425,16 +425,18 @@ export async function GET(request: Request) {
           where: { ...sessionsWhere, validated: true }
         }),
 
-        // Total package sales (packages created in this period)
-        prisma.package.aggregate({
+        // Total sales (payments received in this period)
+        prisma.payment.aggregate({
           where: {
-            organizationId,
-            createdAt: { gte: dateFrom, lte: dateTo },
-            ...(clientsWhere.locationId
-              ? { client: { locationId: typeof clientsWhere.locationId === 'string' ? clientsWhere.locationId : clientsWhere.locationId } }
-              : {})
+            paymentDate: { gte: dateFrom, lte: dateTo },
+            package: {
+              organizationId,
+              ...(clientsWhere.locationId
+                ? { client: { locationId: typeof clientsWhere.locationId === 'string' ? clientsWhere.locationId : clientsWhere.locationId } }
+                : {})
+            }
           },
-          _sum: { totalValue: true }
+          _sum: { amount: true }
         }),
 
         // Stats by trainer (already filtered by sessionsWhere which includes trainer filter)
@@ -707,63 +709,90 @@ export async function GET(request: Request) {
         ? { client: { locationId: { in: clientsWhere.locationId.in } } }
         : {}
 
-      // Get packages created in the period for new/resold calculations
-      const packagesInPeriod = await prisma.package.findMany({
+      // Get payments received in the period for new/resold calculations (split payments support)
+      const paymentsInPeriod = await prisma.payment.findMany({
         where: {
-          organizationId,
-          createdAt: { gte: dateFrom, lte: dateTo },
-          ...packageLocationFilter
+          paymentDate: { gte: dateFrom, lte: dateTo },
+          package: {
+            organizationId,
+            ...packageLocationFilter
+          }
         },
         select: {
           id: true,
-          clientId: true,
-          createdAt: true,
-          totalValue: true
+          amount: true,
+          packageId: true,
+          package: {
+            select: {
+              id: true,
+              clientId: true,
+              createdAt: true
+            }
+          }
         }
       })
 
-      // Calculate New Clients (purchased package in period with no prior sessions in 30 days)
+      // Cache package classification (new vs resold) to avoid repeated queries
+      const packageClassification = new Map<string, { isNew: boolean, isResold: boolean }>()
+
+      // Calculate New Clients and Resold data based on payments received in period
       const newClientIds = new Set<string>()
       const resoldPackageData = { count: 0, totalValue: 0 }
+      const resoldPackageIds = new Set<string>()
 
-      for (const pkg of packagesInPeriod) {
-        const lookbackDate = new Date(pkg.createdAt)
-        lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
+      for (const payment of paymentsInPeriod) {
+        const pkg = payment.package
 
-        // Check for prior sessions (exclude sessions on the current package)
-        const priorSession = await prisma.session.findFirst({
-          where: {
-            clientId: pkg.clientId,
-            sessionDate: {
-              gte: lookbackDate,
-              lt: pkg.createdAt
-            },
-            packageId: { not: pkg.id }
-          }
-        })
+        // Check if we've already classified this package
+        if (!packageClassification.has(pkg.id)) {
+          const lookbackDate = new Date(pkg.createdAt)
+          lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
 
-        // Check for other active packages at time of purchase (for resold)
-        const hadActivePackageAtPurchase = await prisma.package.findFirst({
-          where: {
-            clientId: pkg.clientId,
-            id: { not: pkg.id },
-            remainingSessions: { gt: 0 },
-            OR: [
-              { expiresAt: null },
-              { expiresAt: { gt: pkg.createdAt } }
-            ]
-          }
-        })
+          // Check for prior sessions (exclude sessions on the current package)
+          const priorSession = await prisma.session.findFirst({
+            where: {
+              clientId: pkg.clientId,
+              sessionDate: {
+                gte: lookbackDate,
+                lt: pkg.createdAt
+              },
+              packageId: { not: pkg.id }
+            }
+          })
 
-        if (!priorSession) {
-          // No prior sessions = new client
+          // Check for other active packages at time of purchase (for resold)
+          const hadActivePackageAtPurchase = await prisma.package.findFirst({
+            where: {
+              clientId: pkg.clientId,
+              id: { not: pkg.id },
+              remainingSessions: { gt: 0 },
+              OR: [
+                { expiresAt: null },
+                { expiresAt: { gt: pkg.createdAt } }
+              ]
+            }
+          })
+
+          const isNew = !priorSession
+          const isResold = !!(hadActivePackageAtPurchase || priorSession)
+
+          packageClassification.set(pkg.id, { isNew, isResold })
+        }
+
+        const classification = packageClassification.get(pkg.id)!
+
+        if (classification.isNew) {
           newClientIds.add(pkg.clientId)
         }
 
-        if (hadActivePackageAtPurchase || priorSession) {
-          // Had active package or recent session = resold
-          resoldPackageData.count++
-          resoldPackageData.totalValue += pkg.totalValue
+        if (classification.isResold) {
+          // Track payment amount for resold packages (instead of package totalValue)
+          resoldPackageData.totalValue += payment.amount
+          // Only count each resold package once
+          if (!resoldPackageIds.has(pkg.id)) {
+            resoldPackageData.count++
+            resoldPackageIds.add(pkg.id)
+          }
         }
       }
 
@@ -1088,7 +1117,7 @@ export async function GET(request: Request) {
         stats: {
           totalSessions,
           validatedSessions,
-          totalSales: totalPackageSales._sum.totalValue || 0,
+          totalSales: totalPackageSales._sum.amount || 0,
           validationRate,
           activeTrainers,
           // Client metrics - snapshots

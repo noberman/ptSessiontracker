@@ -8,6 +8,17 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { PageSizeSelector } from '@/components/ui/PageSizeSelector'
 import { ActionsDropdown } from '@/components/ui/ActionsDropdown'
+import { PaymentStatusBadge } from './PaymentStatusBadge'
+
+interface PaymentStatus {
+  paidAmount: number
+  remainingBalance: number
+  paymentProgress: number
+  isFullyPaid: boolean
+  unlockedSessions: number
+  usedSessions: number
+  availableSessions: number
+}
 
 interface Package {
   id: string
@@ -32,6 +43,7 @@ interface Package {
   _count: {
     sessions: number
   }
+  paymentStatus?: PaymentStatus
 }
 
 interface PackageTableProps {
@@ -190,6 +202,9 @@ export function PackageTable({
                 Sessions
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Payment
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Expiry
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
@@ -223,6 +238,17 @@ export function PackageTable({
                   <div className="text-xs text-text-secondary">
                     {pkg._count.sessions} used
                   </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {pkg.paymentStatus ? (
+                    <PaymentStatusBadge
+                      paidAmount={pkg.paymentStatus.paidAmount}
+                      totalValue={pkg.totalValue}
+                      size="sm"
+                    />
+                  ) : (
+                    <Badge variant="gray" size="sm">Unknown</Badge>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                   {formatDate(pkg.expiresAt)}

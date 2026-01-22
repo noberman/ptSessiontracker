@@ -6,6 +6,7 @@ import { EmailService } from '@/lib/email/sender'
 import { renderSessionValidationEmail } from '@/lib/email/render'
 import { getOrganizationId } from '@/lib/organization-context'
 import { canCreateSession, canTrainerLogSessions, canUseLocation } from '@/lib/usage-limits'
+import { canLogSession } from '@/lib/payments'
 import { orgTimeToUtc, TIMEZONE_FIX_DEPLOYMENT_DATE } from '@/utils/timezone'
 import crypto from 'crypto'
 
@@ -356,6 +357,19 @@ export async function POST(request: Request) {
     if (pkg.remainingSessions <= 0) {
       return NextResponse.json(
         { error: 'Package has no remaining sessions. Please purchase a new package.' },
+        { status: 400 }
+      )
+    }
+
+    // Check if session can be logged based on payment progress (split payments feature)
+    const sessionAllowance = await canLogSession(packageId)
+    if (!sessionAllowance.allowed) {
+      return NextResponse.json(
+        {
+          error: sessionAllowance.reason || 'Cannot log session',
+          paymentRequired: true,
+          summary: sessionAllowance.summary
+        },
         { status: 400 }
       )
     }

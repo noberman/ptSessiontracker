@@ -8,6 +8,8 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { SearchableSelect, type Option } from '@/components/ui/SearchableSelect'
+import Link from 'next/link'
+import { AlertTriangle } from 'lucide-react'
 
 interface Package {
   id: string
@@ -66,6 +68,13 @@ export function SessionForm({
     notes: '',
     isNoShow: false
   })
+
+  const [paymentRequired, setPaymentRequired] = useState(false)
+  const [paymentSummary, setPaymentSummary] = useState<{
+    unlockedSessions: number
+    usedSessions: number
+    remainingBalance: number
+  } | null>(null)
 
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null)
@@ -187,7 +196,22 @@ export function SessionForm({
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create session')
+        // Check if this is a payment-required error
+        if (data.paymentRequired && data.summary) {
+          setPaymentRequired(true)
+          setPaymentSummary({
+            unlockedSessions: data.summary.unlockedSessions,
+            usedSessions: data.summary.usedSessions,
+            remainingBalance: data.summary.remainingBalance
+          })
+          setError(data.error || 'Payment required to unlock more sessions')
+        } else {
+          setPaymentRequired(false)
+          setPaymentSummary(null)
+          throw new Error(data.error || 'Failed to create session')
+        }
+        setLoading(false)
+        return
       }
 
       // Redirect to sessions list or client page
@@ -198,6 +222,8 @@ export function SessionForm({
       }
       router.refresh()
     } catch (err: any) {
+      setPaymentRequired(false)
+      setPaymentSummary(null)
       setError(err.message || 'Failed to create session')
     } finally {
       setLoading(false)
@@ -225,8 +251,35 @@ export function SessionForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded-lg bg-error-50 border border-error-200 p-4">
-              <p className="text-sm text-error-700">{error}</p>
+            <div className={`rounded-lg p-4 ${paymentRequired ? 'bg-warning-50 border border-warning-200' : 'bg-error-50 border border-error-200'}`}>
+              {paymentRequired ? (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-warning-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-warning-800">Payment Required</p>
+                      <p className="text-sm text-warning-700 mt-1">{error}</p>
+                    </div>
+                  </div>
+                  {paymentSummary && (
+                    <div className="text-sm text-warning-700 bg-warning-100 rounded p-3">
+                      <p>Sessions unlocked: <strong>{paymentSummary.unlockedSessions}</strong></p>
+                      <p>Sessions used: <strong>{paymentSummary.usedSessions}</strong></p>
+                      <p>Remaining balance: <strong>${paymentSummary.remainingBalance.toFixed(2)}</strong></p>
+                    </div>
+                  )}
+                  {formData.packageId && (
+                    <Link
+                      href={`/packages/${formData.packageId}`}
+                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-warning-700 bg-warning-100 hover:bg-warning-200 rounded-md transition-colors"
+                    >
+                      Go to Package to Record Payment
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-error-700">{error}</p>
+              )}
             </div>
           )}
 

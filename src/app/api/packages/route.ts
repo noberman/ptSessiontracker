@@ -141,16 +141,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { 
-      clientId, 
-      packageType, 
+    const {
+      clientId,
+      packageType,
       packageTypeId,
-      name, 
-      totalValue, 
+      name,
+      totalValue,
       totalSessions,
       startDate,
       expiresAt,
-      isDemo = false 
+      isDemo = false,
+      initialPayment // Optional: { amount: number, paymentDate?: string }
     } = body
 
     // Validate required fields
@@ -253,6 +254,25 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+
+    // Create initial payment record
+    // If no initialPayment provided, assume full payment (backward compatible)
+    const paymentAmount = initialPayment?.amount ?? totalValue
+    const paymentDate = initialPayment?.paymentDate
+      ? new Date(initialPayment.paymentDate)
+      : newPackage.startDate || new Date()
+
+    if (paymentAmount > 0) {
+      await prisma.payment.create({
+        data: {
+          packageId: newPackage.id,
+          amount: paymentAmount,
+          paymentDate,
+          notes: paymentAmount < totalValue ? 'Initial payment' : 'Full payment',
+          createdById: session.user.id
+        }
+      })
+    }
 
     return NextResponse.json(newPackage, { status: 201 })
   } catch (error) {

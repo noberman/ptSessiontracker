@@ -176,6 +176,7 @@ model User {
   createdTokens         TempAuthToken[] @relation("TokenAdmin")
   usedTokens            TempAuthToken[] @relation("TokenUser")
   locations             UserLocation[]
+  createdPayments       Payment[]       @relation("PaymentCreatedBy")
   organization          Organization?   @relation(fields: [organizationId], references: [id])
 
   @@unique([email, organizationId])
@@ -226,9 +227,27 @@ model Package {
   organization      Organization? @relation(fields: [organizationId], references: [id])
   packageTypeModel  PackageType?  @relation(fields: [packageTypeId], references: [id])
   sessions          Session[]
+  payments          Payment[]
 
   @@index([organizationId])
   @@map("packages")
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  packageId   String
+  amount      Float
+  paymentDate DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  createdById String?
+
+  package     Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  createdBy   User?    @relation("PaymentCreatedBy", fields: [createdById], references: [id])
+
+  @@index([packageId])
+  @@index([paymentDate])
+  @@map("payments")
 }
 
 model Session {
