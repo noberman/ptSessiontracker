@@ -56,6 +56,7 @@ interface DashboardData {
       resoldPackages: number
       newlyLost: number
     }
+    renewalSales: number
     unassignedClients?: number
     period: {
       from: string
@@ -827,6 +828,17 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
               <p className="text-sm text-text-secondary">Total Sales</p>
               <p className="text-2xl font-bold text-text-primary mt-1">
                 ${data.stats.totalSales.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div>
+              <p className="text-sm text-text-secondary">Renewal Sales</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">
+                ${(data.stats.renewalSales ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </p>
             </div>
           </CardContent>

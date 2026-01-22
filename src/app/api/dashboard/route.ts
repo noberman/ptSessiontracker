@@ -717,13 +717,14 @@ export async function GET(request: Request) {
         select: {
           id: true,
           clientId: true,
-          createdAt: true
+          createdAt: true,
+          totalValue: true
         }
       })
 
       // Calculate New Clients (purchased package in period with no prior sessions in 30 days)
       const newClientIds = new Set<string>()
-      const resoldPackageCount = { count: 0 }
+      const resoldPackageData = { count: 0, totalValue: 0 }
 
       for (const pkg of packagesInPeriod) {
         const lookbackDate = new Date(pkg.createdAt)
@@ -760,7 +761,8 @@ export async function GET(request: Request) {
 
         if (hadActivePackageAtPurchase || priorSession) {
           // Had active package or recent session = resold
-          resoldPackageCount.count++
+          resoldPackageData.count++
+          resoldPackageData.totalValue += pkg.totalValue
         }
       }
 
@@ -1099,9 +1101,10 @@ export async function GET(request: Request) {
           // Client metrics - period based
           clientMetricsPeriod: {
             newClients: newClientIds.size,
-            resoldPackages: resoldPackageCount.count,
+            resoldPackages: resoldPackageData.count,
             newlyLost: newlyLostClients
           },
+          renewalSales: resoldPackageData.totalValue,
           unassignedClients,
           averagePerDay,
           averagePerWeek,
