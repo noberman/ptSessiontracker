@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { calculateUnlockedSessions } from './payments-utils'
 // Re-export pure utility functions for convenience
 export { calculateUnlockedSessions, calculateSessionsUnlockedByPayment } from './payments-utils'
 
