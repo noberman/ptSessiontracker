@@ -187,21 +187,32 @@ export async function GET(request: Request) {
           }
         })
 
-        // Filter to truly new clients (no prior sessions on OTHER packages)
+        // Filter to truly new clients (no prior sessions AND no active packages at time of purchase)
         const newClientIds = new Set<string>()
         for (const pkg of newPackages) {
           const lookbackDate = new Date(pkg.createdAt)
           lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
 
-          const priorSession = await prisma.session.findFirst({
-            where: {
-              clientId: pkg.clientId,
-              sessionDate: { gte: lookbackDate, lt: pkg.createdAt },
-              packageId: { not: pkg.id }
-            }
-          })
+          const [priorSession, hadActivePackage] = await Promise.all([
+            prisma.session.findFirst({
+              where: {
+                clientId: pkg.clientId,
+                sessionDate: { gte: lookbackDate, lt: pkg.createdAt },
+                packageId: { not: pkg.id }
+              }
+            }),
+            prisma.package.findFirst({
+              where: {
+                clientId: pkg.clientId,
+                id: { not: pkg.id },
+                remainingSessions: { gt: 0 },
+                OR: [{ expiresAt: null }, { expiresAt: { gt: pkg.createdAt } }]
+              }
+            })
+          ])
 
-          if (!priorSession) {
+          // New = no prior sessions AND no active packages (mutually exclusive with resold)
+          if (!priorSession && !hadActivePackage) {
             newClientIds.add(pkg.clientId)
           }
         }
