@@ -778,7 +778,10 @@ export async function GET(request: Request) {
             }
           })
 
-          const isNew = !priorSession
+          // New = no prior sessions AND no active packages at time of purchase
+          // Resold = had active package OR had prior sessions
+          // These are now mutually exclusive
+          const isNew = !priorSession && !hadActivePackageAtPurchase
           const isResold = !!(hadActivePackageAtPurchase || priorSession)
 
           packageClassification.set(pkg.id, { isNew, isResold })
@@ -951,7 +954,8 @@ export async function GET(request: Request) {
               })
             ])
 
-            if (!priorSession) {
+            // New = no prior sessions AND no active packages (mutually exclusive with resold)
+            if (!priorSession && !hadActivePackageAtPurchase) {
               trainerNewClientIds.add(pkg.clientId)
             }
             if (hadActivePackageAtPurchase || priorSession) {
@@ -1081,7 +1085,8 @@ export async function GET(request: Request) {
           })
         ])
 
-        if (!priorSession) unassignedNewClientIds.add(pkg.clientId)
+        // New = no prior sessions AND no active packages (mutually exclusive with resold)
+        if (!priorSession && !hadActivePackageAtPurchase) unassignedNewClientIds.add(pkg.clientId)
         if (hadActivePackageAtPurchase || priorSession) unassignedResoldCount++
       }
 
