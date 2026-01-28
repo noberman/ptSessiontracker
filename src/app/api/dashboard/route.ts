@@ -394,7 +394,8 @@ export async function GET(request: Request) {
     // Apply trainer filter if specified (for all manager/admin roles)
     if (filterTrainerIds && filterTrainerIds.length > 0 && session.user.role !== 'TRAINER') {
       sessionsWhere.trainerId = { in: filterTrainerIds }
-      // Note: This filter only affects session data, not the list of trainers shown
+      // Also filter clients to only those assigned to selected trainers
+      clientsWhere.primaryTrainerId = { in: filterTrainerIds }
     }
 
     // For managers and admins, get aggregate data
@@ -996,8 +997,10 @@ export async function GET(request: Request) {
       )
 
       // Filter out trainers with no clients and sort by total clients descending
+      // Also filter by selected trainers if filter is active
       const trainerClientHealthFiltered = trainerClientHealth
         .filter(t => t.total > 0)
+        .filter(t => !filterTrainerIds || filterTrainerIds.length === 0 || filterTrainerIds.includes(t.trainerId))
         .sort((a, b) => b.total - a.total)
 
       // Also calculate metrics for unassigned clients (no primaryTrainerId)
@@ -1108,8 +1111,9 @@ export async function GET(request: Request) {
         newlyLost: unassignedNewlyLost
       } : null
 
-      // Combine trainer rows with unassigned row
-      const allClientHealth = unassignedRow
+      // Combine trainer rows with unassigned row (hide unassigned when filtering by trainers)
+      const showUnassigned = !filterTrainerIds || filterTrainerIds.length === 0
+      const allClientHealth = (unassignedRow && showUnassigned)
         ? [...trainerClientHealthFiltered, unassignedRow]
         : trainerClientHealthFiltered
 
