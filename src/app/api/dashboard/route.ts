@@ -400,6 +400,15 @@ export async function GET(request: Request) {
 
     // For managers and admins, get aggregate data
     if (session.user.role !== 'TRAINER') {
+      // Build client filter for payment queries (combines trainer and location filters)
+      const paymentClientFilter: any = {}
+      if (filterTrainerIds && filterTrainerIds.length > 0) {
+        paymentClientFilter.primaryTrainerId = { in: filterTrainerIds }
+      }
+      if (clientsWhere.locationId) {
+        paymentClientFilter.locationId = clientsWhere.locationId
+      }
+
       const [
         totalSessions,
         validatedSessions,
@@ -432,8 +441,8 @@ export async function GET(request: Request) {
             paymentDate: { gte: dateFrom, lte: dateTo },
             package: {
               organizationId,
-              ...(clientsWhere.locationId
-                ? { client: { locationId: typeof clientsWhere.locationId === 'string' ? clientsWhere.locationId : clientsWhere.locationId } }
+              ...(Object.keys(paymentClientFilter).length > 0
+                ? { client: paymentClientFilter }
                 : {})
             }
           },
@@ -703,20 +712,15 @@ export async function GET(request: Request) {
       // CLIENT METRICS - PERIOD BASED (Within Time Filter)
       // =====================================================================
 
-      // Build location filter for package queries
-      const packageLocationFilter = clientsWhere.locationId
-        ? { client: { locationId: clientsWhere.locationId } }
-        : clientsWhere.locationId?.in
-        ? { client: { locationId: { in: clientsWhere.locationId.in } } }
-        : {}
-
       // Get payments received in the period for new/resold calculations (split payments support)
       const paymentsInPeriod = await prisma.payment.findMany({
         where: {
           paymentDate: { gte: dateFrom, lte: dateTo },
           package: {
             organizationId,
-            ...packageLocationFilter
+            ...(Object.keys(paymentClientFilter).length > 0
+              ? { client: paymentClientFilter }
+              : {})
           }
         },
         select: {
