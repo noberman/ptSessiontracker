@@ -266,7 +266,8 @@ export async function GET(request: Request) {
         })
 
         // Filter to resold (had active package or recent session on OTHER packages)
-        const resoldResults: any[] = []
+        // Deduplicate by client - show each client once with their most recent resold package
+        const resoldClientMap = new Map<string, any>()
         for (const pkg of resoldPackages) {
           const lookbackDate = new Date(pkg.createdAt)
           lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
@@ -290,22 +291,26 @@ export async function GET(request: Request) {
           ])
 
           if (hadActivePackage || priorSession) {
-            resoldResults.push({
-              id: pkg.client.id,
-              name: pkg.client.name,
-              email: pkg.client.email,
-              packages: [{
-                id: pkg.id,
-                name: pkg.name,
-                remainingSessions: pkg.remainingSessions,
-                totalSessions: pkg.totalSessions,
-                expiresAt: pkg.expiresAt,
-                createdAt: pkg.createdAt
-              }]
-            })
+            // Only keep the most recently created package per client
+            const existing = resoldClientMap.get(pkg.clientId)
+            if (!existing || new Date(pkg.createdAt) > new Date(existing.packages[0].createdAt)) {
+              resoldClientMap.set(pkg.clientId, {
+                id: pkg.client.id,
+                name: pkg.client.name,
+                email: pkg.client.email,
+                packages: [{
+                  id: pkg.id,
+                  name: pkg.name,
+                  remainingSessions: pkg.remainingSessions,
+                  totalSessions: pkg.totalSessions,
+                  expiresAt: pkg.expiresAt,
+                  createdAt: pkg.createdAt
+                }]
+              })
+            }
           }
         }
-        clients = resoldResults
+        clients = Array.from(resoldClientMap.values())
         break
 
       case 'lost':

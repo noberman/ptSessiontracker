@@ -742,7 +742,8 @@ export async function GET(request: Request) {
 
       // Calculate New Clients and Resold data based on payments received in period
       const newClientIds = new Set<string>()
-      const resoldPackageData = { count: 0, totalValue: 0 }
+      const resoldClientIds = new Set<string>()
+      const resoldPackageData = { totalValue: 0 }
       const resoldPackageIds = new Set<string>()
 
       for (const payment of paymentsInPeriod) {
@@ -794,13 +795,11 @@ export async function GET(request: Request) {
         }
 
         if (classification.isResold) {
-          // Track payment amount for resold packages (instead of package totalValue)
+          // Track unique resold clients
+          resoldClientIds.add(pkg.clientId)
+          // Track payment amount for renewal sales
           resoldPackageData.totalValue += payment.amount
-          // Only count each resold package once
-          if (!resoldPackageIds.has(pkg.id)) {
-            resoldPackageData.count++
-            resoldPackageIds.add(pkg.id)
-          }
+          resoldPackageIds.add(pkg.id)
         }
       }
 
@@ -930,7 +929,7 @@ export async function GET(request: Request) {
 
           // Calculate new clients and resold for this trainer
           const trainerNewClientIds = new Set<string>()
-          let trainerResoldCount = 0
+          const trainerResoldClientIds = new Set<string>()
 
           for (const pkg of trainerPackagesInPeriod) {
             const lookbackDate = new Date(pkg.createdAt)
@@ -959,7 +958,7 @@ export async function GET(request: Request) {
               trainerNewClientIds.add(pkg.clientId)
             }
             if (hadActivePackageAtPurchase || priorSession) {
-              trainerResoldCount++
+              trainerResoldClientIds.add(pkg.clientId)
             }
           }
 
@@ -998,7 +997,7 @@ export async function GET(request: Request) {
             atRisk,
             // Period-based metrics
             newClients: trainerNewClientIds.size,
-            resold: trainerResoldCount,
+            resold: trainerResoldClientIds.size,
             newlyLost: trainerNewlyLost
           }
         })
@@ -1065,7 +1064,7 @@ export async function GET(request: Request) {
       })
 
       const unassignedNewClientIds = new Set<string>()
-      let unassignedResoldCount = 0
+      const unassignedResoldClientIds = new Set<string>()
 
       for (const pkg of unassignedPackagesInPeriod) {
         const lookbackDate = new Date(pkg.createdAt)
@@ -1087,7 +1086,7 @@ export async function GET(request: Request) {
 
         // New = no prior sessions AND no active packages (mutually exclusive with resold)
         if (!priorSession && !hadActivePackageAtPurchase) unassignedNewClientIds.add(pkg.clientId)
-        if (hadActivePackageAtPurchase || priorSession) unassignedResoldCount++
+        if (hadActivePackageAtPurchase || priorSession) unassignedResoldClientIds.add(pkg.clientId)
       }
 
       const unassignedNewlyLost = await prisma.client.count({
@@ -1116,7 +1115,7 @@ export async function GET(request: Request) {
         notStarted: unassignedNotStarted,
         atRisk: unassignedAtRisk,
         newClients: unassignedNewClientIds.size,
-        resold: unassignedResoldCount,
+        resold: unassignedResoldClientIds.size,
         newlyLost: unassignedNewlyLost
       } : null
 
@@ -1144,7 +1143,7 @@ export async function GET(request: Request) {
           // Client metrics - period based
           clientMetricsPeriod: {
             newClients: newClientIds.size,
-            resoldPackages: resoldPackageData.count,
+            resoldClients: resoldClientIds.size,
             newlyLost: newlyLostClients
           },
           renewalSales: resoldPackageData.totalValue,

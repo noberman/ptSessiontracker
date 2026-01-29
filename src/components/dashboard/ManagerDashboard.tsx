@@ -51,7 +51,7 @@ interface DashboardData {
     // Client metrics - period based (within time filter)
     clientMetricsPeriod: {
       newClients: number
-      resoldPackages: number
+      resoldClients: number
       newlyLost: number
     }
     renewalSales: number
@@ -218,7 +218,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
     notStarted: 'Not Started Clients',
     atRisk: 'At Risk Clients',
     newClients: 'New Clients',
-    resold: 'Resold Packages',
+    resold: 'Resold Clients',
     newlyLost: 'Lost Clients'
   }
 
@@ -811,7 +811,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                 <span className="text-text-secondary">new</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="font-medium text-purple-600">{data.stats.clientMetricsPeriod?.resoldPackages ?? 0}</span>
+                <span className="font-medium text-purple-600">{data.stats.clientMetricsPeriod?.resoldClients ?? 0}</span>
                 <span className="text-text-secondary">resold</span>
               </div>
               <div className="flex items-center gap-1">
@@ -866,7 +866,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       <div className="flex items-center justify-center gap-1">
                         Resold
-                        <InfoTooltip id="resold" text="Package resales this period - client had active package or recent sessions before purchase" />
+                        <InfoTooltip id="resold" text="Clients who renewed this period - had an active package or recent sessions before purchasing a new one" />
                       </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
@@ -984,7 +984,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                       {data.stats.clientMetricsPeriod?.newClients ?? 0}
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-purple-600">
-                      {data.stats.clientMetricsPeriod?.resoldPackages ?? 0}
+                      {data.stats.clientMetricsPeriod?.resoldClients ?? 0}
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-red-600">
                       {data.stats.clientMetricsPeriod?.newlyLost ?? 0}
