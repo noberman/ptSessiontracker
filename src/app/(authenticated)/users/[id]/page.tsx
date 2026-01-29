@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { getClientState, getClientStateDisplay } from '@/lib/package-status'
 
 export default async function UserDetailPage({
   params,
@@ -29,6 +30,22 @@ export default async function UserDetailPage({
       },
       assignedClients: {
         take: 10,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          active: true,
+          packages: {
+            select: {
+              id: true,
+              remainingSessions: true,
+              expiresAt: true,
+              _count: {
+                select: { sessions: true }
+              }
+            }
+          }
+        }
       },
       _count: {
         select: {
@@ -203,9 +220,20 @@ export default async function UserDetailPage({
                           <p className="text-sm font-medium text-text-primary">{client.name}</p>
                           <p className="text-xs text-text-secondary">{client.email}</p>
                         </div>
-                        <Badge variant={client.active ? 'success' : 'gray'} size="xs">
-                          {client.active ? 'Active' : 'Inactive'}
-                        </Badge>
+                        {!client.active ? (
+                          <Badge variant="gray" size="xs">Archived</Badge>
+                        ) : (() => {
+                          const clientState = getClientState({ packages: client.packages })
+                          const stateDisplay = getClientStateDisplay(clientState)
+                          return (
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${stateDisplay.bgColor} ${stateDisplay.color}`}
+                              title={stateDisplay.description}
+                            >
+                              {stateDisplay.label}
+                            </span>
+                          )
+                        })()}
                       </div>
                     ))}
                   </div>
