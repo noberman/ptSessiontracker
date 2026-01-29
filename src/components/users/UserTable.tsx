@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -59,6 +59,15 @@ export function UserTable({
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Sync state when server re-renders with new data (e.g. after search)
+  useEffect(() => {
+    setUsers(initialUsers)
+  }, [initialUsers])
+
+  useEffect(() => {
+    setPagination(initialPagination)
+  }, [initialPagination])
   
   // State for deletion flow
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
