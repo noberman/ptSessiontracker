@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { getOrganizationId } from '@/lib/organization-context'
+import { getActivePackageWhereClause } from '@/lib/package-status'
 
 // GET /api/users/[id] - Get single user details
 export async function GET(
@@ -401,24 +402,37 @@ export async function DELETE(
       }
     }
 
-    // Check if trainer or PT manager has assigned clients
+    // Check if trainer or PT manager has clients with active packages
     if (userToDelete?.role === 'TRAINER' || userToDelete?.role === 'PT_MANAGER') {
-      const assignedClients = await prisma.client.count({
+      const clientsWithActivePackages = await prisma.client.count({
         where: {
           primaryTrainerId: id,
-          active: true
+          active: true,
+          organizationId,
+          packages: {
+            some: getActivePackageWhereClause()
+          }
         }
       })
-      
-      if (assignedClients > 0) {
+
+      if (clientsWithActivePackages > 0) {
         return NextResponse.json(
-          { 
-            error: `Cannot delete user: ${assignedClients} active client${assignedClients > 1 ? 's are' : ' is'} assigned. Please reassign ${assignedClients > 1 ? 'them' : 'this client'} first.`,
-            assignedClients
+          {
+            error: `Cannot deactivate user: ${clientsWithActivePackages} client${clientsWithActivePackages > 1 ? 's have' : ' has'} active packages. Please reassign ${clientsWithActivePackages > 1 ? 'them' : 'this client'} first.`,
+            assignedClients: clientsWithActivePackages
           },
           { status: 400 }
         )
       }
+
+      // Auto-unassign any remaining clients (lost/new - no active packages)
+      await prisma.client.updateMany({
+        where: {
+          primaryTrainerId: id,
+          organizationId
+        },
+        data: { primaryTrainerId: null }
+      })
     }
 
     // Soft delete (set inactive)

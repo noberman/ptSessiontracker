@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -66,7 +65,8 @@ export function UserTable({
   const [showReassignDialog, setShowReassignDialog] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const [affectedClients, setAffectedClients] = useState<any[]>([])
-  const [deleteClientCount, setDeleteClientCount] = useState(0)
+  const [activePackageClientCount, setActivePackageClientCount] = useState(0)
+  const [inactiveClientCount, setInactiveClientCount] = useState(0)
   const [checkingDelete, setCheckingDelete] = useState(false)
   
   // Fetch users when page or limit changes
@@ -114,15 +114,19 @@ export function UserTable({
         const clientsResponse = await fetch(`/api/users/${userId}/clients`)
         if (clientsResponse.ok) {
           const clientData = await clientsResponse.json()
-          setDeleteClientCount(clientData.totalCount || 0)
+          setActivePackageClientCount(clientData.activePackageClientCount || 0)
+          setInactiveClientCount(clientData.inactiveClientCount || 0)
         } else {
-          setDeleteClientCount(0)
+          setActivePackageClientCount(0)
+          setInactiveClientCount(0)
         }
       } catch {
-        setDeleteClientCount(0)
+        setActivePackageClientCount(0)
+        setInactiveClientCount(0)
       }
     } else {
-      setDeleteClientCount(0)
+      setActivePackageClientCount(0)
+      setInactiveClientCount(0)
     }
 
     setCheckingDelete(false)
@@ -132,16 +136,17 @@ export function UserTable({
   // Step 2: User confirms deletion in our custom dialog
   const handleDeleteConfirm = async () => {
     if (!userToDelete) return
-    
+
     setShowDeleteDialog(false)
 
-    // If user has clients, go to reassignment
-    if (deleteClientCount > 0 && (userToDelete.role === 'TRAINER' || userToDelete.role === 'PT_MANAGER')) {
+    // If user has clients with active packages, go to reassignment
+    if (activePackageClientCount > 0 && (userToDelete.role === 'TRAINER' || userToDelete.role === 'PT_MANAGER')) {
       try {
         const clientsResponse = await fetch(`/api/users/${userToDelete.id}/clients`)
         if (clientsResponse.ok) {
           const clientData = await clientsResponse.json()
-          setAffectedClients(clientData.clients || [])
+          // Only pass active-package clients for reassignment
+          setAffectedClients(clientData.activePackageClients || [])
           setShowReassignDialog(true)
         }
       } catch (error) {
@@ -149,7 +154,7 @@ export function UserTable({
         alert('Failed to fetch client details')
       }
     } else {
-      // No clients, proceed with deletion
+      // No active-package clients, proceed with deletion (inactive clients auto-unassigned by API)
       await performDelete()
     }
   }
@@ -167,7 +172,8 @@ export function UserTable({
         setUsers(users.filter(u => u.id !== userToDelete.id))
         setUserToDelete(null)
         setAffectedClients([])
-        setDeleteClientCount(0)
+        setActivePackageClientCount(0)
+        setInactiveClientCount(0)
       } else {
         const error = await response.json()
         alert(error.error || 'Failed to delete user')
@@ -392,12 +398,14 @@ export function UserTable({
         onClose={() => {
           setShowDeleteDialog(false)
           setUserToDelete(null)
-          setDeleteClientCount(0)
+          setActivePackageClientCount(0)
+          setInactiveClientCount(0)
         }}
         onConfirm={handleDeleteConfirm}
         userName={userToDelete.name}
         userRole={userToDelete.role}
-        clientCount={deleteClientCount}
+        activePackageClientCount={activePackageClientCount}
+        inactiveClientCount={inactiveClientCount}
         isLoading={checkingDelete}
       />
     )}
@@ -415,9 +423,9 @@ export function UserTable({
         affectedClients={affectedClients}
         currentTrainerId={userToDelete.id}
         currentTrainerName={userToDelete.name}
-        title="Reassign Clients Before User Deletion"
-        description={`Before deleting ${userToDelete.name}, all ${affectedClients.length} active client${affectedClients.length > 1 ? 's' : ''} must be reassigned to other trainers. Once reassigned, the user will be marked as inactive.`}
-        confirmButtonText="Reassign & Delete User"
+        title="Reassign Clients Before User Deactivation"
+        description={`Before deactivating ${userToDelete.name}, ${affectedClients.length} client${affectedClients.length > 1 ? 's' : ''} with active packages must be reassigned to other trainers.${inactiveClientCount > 0 ? ` ${inactiveClientCount} inactive client${inactiveClientCount > 1 ? 's' : ''} will be automatically unassigned.` : ''} Once complete, the user will be marked as inactive.`}
+        confirmButtonText="Reassign & Deactivate User"
       />
     )}
     </>

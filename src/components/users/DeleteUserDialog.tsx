@@ -10,7 +10,8 @@ interface DeleteUserDialogProps {
   onConfirm: () => void
   userName: string
   userRole: string
-  clientCount?: number
+  activePackageClientCount?: number
+  inactiveClientCount?: number
   isLoading?: boolean
 }
 
@@ -20,7 +21,8 @@ export function DeleteUserDialog({
   onConfirm,
   userName,
   userRole,
-  clientCount = 0,
+  activePackageClientCount = 0,
+  inactiveClientCount = 0,
   isLoading = false
 }: DeleteUserDialogProps) {
   const [confirmChecked, setConfirmChecked] = useState(false)
@@ -37,7 +39,9 @@ export function DeleteUserDialog({
 
   if (!isOpen) return null
 
-  const hasClients = clientCount > 0 && (userRole === 'TRAINER' || userRole === 'PT_MANAGER')
+  const isTrainerRole = userRole === 'TRAINER' || userRole === 'PT_MANAGER'
+  const hasActivePackageClients = activePackageClientCount > 0 && isTrainerRole
+  const hasInactiveClients = inactiveClientCount > 0 && isTrainerRole
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -54,18 +58,35 @@ export function DeleteUserDialog({
 
           {/* Warnings */}
           <div className="space-y-3">
-            {hasClients && (
+            {hasActivePackageClients && (
               <div className="flex items-start space-x-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
                   <p className="text-sm font-medium text-amber-800">
-                    Active Clients Require Reassignment
+                    Clients With Active Packages
                   </p>
                   <p className="text-sm text-amber-700 mt-1">
-                    This user has <strong>{clientCount} active {clientCount === 1 ? 'client' : 'clients'}</strong> that 
-                    must be reassigned before deletion.
+                    This trainer has <strong>{activePackageClientCount} {activePackageClientCount === 1 ? 'client' : 'clients'}</strong> with
+                    active packages that must be reassigned before deactivation.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {hasInactiveClients && (
+              <div className="flex items-start space-x-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    Inactive Clients
+                  </p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    <strong>{inactiveClientCount} {inactiveClientCount === 1 ? 'client' : 'clients'}</strong> with
+                    no active packages will be automatically unassigned.
                   </p>
                 </div>
               </div>
@@ -88,10 +109,16 @@ export function DeleteUserDialog({
                   <span className="mr-2">•</span>
                   <span>Remove them from active user lists</span>
                 </li>
-                {hasClients && (
+                {hasActivePackageClients && (
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>Require reassignment of all clients first</span>
+                    <span>Require reassignment of clients with active packages</span>
+                  </li>
+                )}
+                {hasInactiveClients && (
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>Automatically unassign inactive clients</span>
                   </li>
                 )}
               </ul>
@@ -109,7 +136,7 @@ export function DeleteUserDialog({
             />
             <label htmlFor="confirm-delete" className="text-sm text-gray-700">
               I understand the consequences and want to proceed with deactivating this user
-              {hasClients && ' and reassigning their clients'}
+              {hasActivePackageClients && ' and reassigning their active clients'}
             </label>
           </div>
 
@@ -131,7 +158,7 @@ export function DeleteUserDialog({
               disabled={!confirmChecked || isLoading}
               className="flex-1"
             >
-              {isLoading ? 'Processing...' : (hasClients ? 'Proceed to Reassignment' : 'Deactivate User')}
+              {isLoading ? 'Processing...' : (hasActivePackageClients ? 'Proceed to Reassignment' : 'Deactivate User')}
             </Button>
           </div>
         </CardContent>

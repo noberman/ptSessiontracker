@@ -2,17 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getActivePackageWhereClause } from '@/lib/package-status'
 
 // GET /api/users/[id]/clients - Get all clients assigned to a user
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   const { id: userId } = await context.params
-  
+
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -22,11 +23,12 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Get all active clients assigned to this user
+    // Get all non-archived clients assigned to this user with package data
     const clients = await prisma.client.findMany({
       where: {
         primaryTrainerId: userId,
-        active: true
+        active: true,
+        organizationId: session.user.organizationId
       },
       select: {
         id: true,
@@ -38,6 +40,10 @@ export async function GET(
             id: true,
             name: true
           }
+        },
+        packages: {
+          where: getActivePackageWhereClause(),
+          select: { id: true }
         }
       },
       orderBy: {
@@ -45,18 +51,34 @@ export async function GET(
       }
     })
 
-    // Format clients with location info for the dialog
-    const formattedClients = clients.map(client => ({
-      id: client.id,
-      name: client.name,
-      email: client.email,
-      locationId: client.locationId,
-      locationName: client.location.name
-    }))
+    // Categorize clients: those with active packages vs those without
+    const activePackageClients = []
+    const inactiveClients = []
+
+    for (const client of clients) {
+      const formatted = {
+        id: client.id,
+        name: client.name,
+        email: client.email,
+        locationId: client.locationId,
+        locationName: client.location.name
+      }
+
+      if (client.packages.length > 0) {
+        activePackageClients.push(formatted)
+      } else {
+        inactiveClients.push(formatted)
+      }
+    }
 
     return NextResponse.json({
-      clients: formattedClients,
-      totalCount: formattedClients.length
+      activePackageClients,
+      inactiveClients,
+      activePackageClientCount: activePackageClients.length,
+      inactiveClientCount: inactiveClients.length,
+      // Backward compatibility
+      clients: [...activePackageClients, ...inactiveClients],
+      totalCount: clients.length
     })
 
   } catch (error) {
