@@ -29,6 +29,7 @@ export default async function UserDetailPage({
         },
       },
       assignedClients: {
+        where: { organizationId: session.user.organizationId },
         take: 10,
         select: {
           id: true,
@@ -49,7 +50,7 @@ export default async function UserDetailPage({
       },
       _count: {
         select: {
-          assignedClients: true,
+          assignedClients: { where: { organizationId: session.user.organizationId } },
           sessions: true,
         },
       },
