@@ -116,10 +116,16 @@ export function ColumnMapper({
       <CardContent className="space-y-6">
         {/* Mapping Table */}
         <div className="space-y-3">
-          {csvHeaders.map(header => {
+          {csvHeaders.map((header, headerIndex) => {
             const suggestion = suggestedMappings[header]
             const currentValue = mapping[header]
             const isDuplicate = currentValue && currentValue !== 'skip' && duplicates.includes(currentValue)
+
+            // Get sample values from preview rows for this column
+            const sampleValues = previewRows
+              .map(row => row[headerIndex] || '')
+              .filter(v => v.trim() !== '')
+              .slice(0, 3)
 
             return (
               <div
@@ -132,7 +138,7 @@ export function ColumnMapper({
                 <div className="flex-shrink-0">{getRowIcon(header)}</div>
 
                 {/* CSV column name */}
-                <div className="flex-1 min-w-0">
+                <div className="w-[160px] min-w-[160px]">
                   <code className="text-sm font-mono bg-background-secondary px-2 py-1 rounded">
                     {header}
                   </code>
@@ -172,6 +178,21 @@ export function ColumnMapper({
                     <p className="text-xs text-error-600 mt-1">
                       This field is already mapped to another column
                     </p>
+                  )}
+                </div>
+
+                {/* Sample data from CSV */}
+                <div className="w-[200px] min-w-[200px] text-right">
+                  {sampleValues.length > 0 ? (
+                    <div className="flex flex-col items-end gap-0.5">
+                      {sampleValues.map((val, i) => (
+                        <span key={i} className="text-xs text-text-tertiary truncate max-w-[200px] block">
+                          {val}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-text-tertiary italic">no data</span>
                   )}
                 </div>
               </div>
