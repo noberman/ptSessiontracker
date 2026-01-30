@@ -394,13 +394,23 @@ export function PaymentsPageClient({
                       ${payment.amount.toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-sm text-text-primary">
-                      {payment.clientName}
+                      <a
+                        href={`/clients/${payment.clientId}`}
+                        className="text-primary-600 hover:underline"
+                      >
+                        {payment.clientName}
+                      </a>
                     </td>
                     <td className="px-4 py-3 text-sm text-text-primary">
                       {payment.trainerName || '—'}
                     </td>
                     <td className="px-4 py-3 text-sm text-text-primary">
-                      {payment.packageName}
+                      <a
+                        href={`/packages/${payment.packageId}`}
+                        className="text-primary-600 hover:underline"
+                      >
+                        {payment.packageName}
+                      </a>
                     </td>
                     <td className="px-4 py-3 text-sm text-text-secondary whitespace-nowrap">
                       {PAYMENT_METHOD_LABELS[payment.paymentMethod] || payment.paymentMethod}
