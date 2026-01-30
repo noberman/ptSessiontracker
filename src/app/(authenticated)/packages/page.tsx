@@ -14,6 +14,7 @@ export default async function PackagesPage({
     clientIds?: string  // comma-separated IDs
     locationIds?: string  // comma-separated IDs
     packageTypes?: string  // comma-separated package types
+    activeStatuses?: string  // comma-separated values
     expirationStatus?: string
     startDate?: string
     endDate?: string
@@ -62,9 +63,19 @@ export default async function PackagesPage({
     }
   }
 
-  // Always show only active packages on the main view
-  // Archived (inactive) packages are shown in a separate tab
-  where.active = true
+  // Filter by active status (multi-select)
+  if (params.activeStatuses) {
+    const statuses = params.activeStatuses.split(',').filter(Boolean)
+    if (statuses.length === 1) {
+      where.active = statuses[0] === 'true'
+    } else if (statuses.length > 1) {
+      // If both are selected, show all (no filter needed)
+      // This is effectively the same as no filter
+    }
+  } else {
+    // Default to showing only active packages
+    where.active = true
+  }
 
   // Filter by expiration status
   if (params.expirationStatus) {
@@ -225,23 +236,7 @@ export default async function PackagesPage({
     })
   }
 
-  // Count archived (inactive) packages for tab badge
-  const archivedWhere: any = {
-    organizationId: session.user.organizationId,
-    active: false,
-  }
-  // Apply same role-based location restrictions for archived count
-  if (session.user.role === 'TRAINER' || session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
-    if (userAccessibleLocationIds.length > 0) {
-      archivedWhere.client = { locationId: { in: userAccessibleLocationIds } }
-    } else if (session.user.role === 'TRAINER') {
-      archivedWhere.client = { primaryTrainerId: session.user.id }
-    } else {
-      archivedWhere.id = 'no-access'
-    }
-  }
-
-  const [packagesRaw, total, archivedCount] = await Promise.all([
+  const [packagesRaw, total] = await Promise.all([
     prisma.package.findMany({
       where,
       skip,
@@ -284,7 +279,6 @@ export default async function PackagesPage({
       },
     }),
     prisma.package.count({ where }),
-    prisma.package.count({ where: archivedWhere }),
   ])
 
   // Add payment status to each package
@@ -344,7 +338,6 @@ export default async function PackagesPage({
       canEdit={canEdit}
       canDelete={canDelete}
       canManageTypes={canManageTypes}
-      archivedCount={archivedCount}
       searchParams={params}
     />
   )
