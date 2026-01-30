@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/Button'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { PaymentFormModal } from './PaymentFormModal'
 import {
@@ -16,6 +17,7 @@ import { format } from 'date-fns'
 interface FilterOption {
   id: string
   name: string
+  email?: string
 }
 
 interface Payment {
@@ -74,20 +76,20 @@ export function PaymentsPageClient({
   const [period, setPeriod] = useState<'month' | 'lastMonth' | 'custom'>('month')
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
-  const [locationId, setLocationId] = useState('')
-  const [trainerId, setTrainerId] = useState('')
-  const [clientId, setClientId] = useState('')
+  const [locationIds, setLocationIds] = useState<string[]>([])
+  const [trainerIds, setTrainerIds] = useState<string[]>([])
+  const [clientIds, setClientIds] = useState<string[]>([])
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
 
   // Computed filter helpers
-  const activeFilterCount = [locationId, trainerId, clientId].filter(Boolean).length
+  const activeFilterCount = locationIds.length + trainerIds.length + clientIds.length
   const clearFilters = () => {
     setPeriod('month')
     setCustomStartDate('')
     setCustomEndDate('')
-    setLocationId('')
-    setTrainerId('')
-    setClientId('')
+    setLocationIds([])
+    setTrainerIds([])
+    setClientIds([])
   }
 
   // Data state
@@ -116,9 +118,9 @@ export function PaymentsPageClient({
       const params = new URLSearchParams()
       if (startDate) params.set('startDate', startDate)
       if (endDate) params.set('endDate', endDate)
-      if (locationId) params.set('locationId', locationId)
-      if (trainerId) params.set('trainerId', trainerId)
-      if (clientId) params.set('clientId', clientId)
+      if (locationIds.length > 0) params.set('locationIds', locationIds.join(','))
+      if (trainerIds.length > 0) params.set('trainerIds', trainerIds.join(','))
+      if (clientIds.length > 0) params.set('clientIds', clientIds.join(','))
 
       const response = await fetch(`/api/payments?${params.toString()}`)
       if (!response.ok) throw new Error('Failed to fetch payments')
@@ -131,7 +133,7 @@ export function PaymentsPageClient({
     } finally {
       setLoading(false)
     }
-  }, [getDateRange, locationId, trainerId, clientId])
+  }, [getDateRange, locationIds, trainerIds, clientIds])
 
   useEffect(() => {
     fetchPayments()
@@ -262,59 +264,54 @@ export function PaymentsPageClient({
               {locations.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1">
-                    Location
+                    Locations
                   </label>
-                  <select
-                    value={locationId}
-                    onChange={(e) => setLocationId(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                  >
-                    <option value="">All Locations</option>
-                    {locations.map((loc) => (
-                      <option key={loc.id} value={loc.id}>
-                        {loc.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableMultiSelect
+                    options={locations.map((loc) => ({
+                      value: loc.id,
+                      label: loc.name,
+                    }))}
+                    value={locationIds}
+                    onChange={setLocationIds}
+                    placeholder="All Locations"
+                    searchPlaceholder="Search locations..."
+                  />
                 </div>
               )}
 
               {/* Trainer Filter */}
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">
-                  Trainer
+                  Trainers
                 </label>
-                <select
-                  value={trainerId}
-                  onChange={(e) => setTrainerId(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                >
-                  <option value="">All Trainers</option>
-                  {trainers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
+                <SearchableMultiSelect
+                  options={trainers.map((t) => ({
+                    value: t.id,
+                    label: t.name,
+                  }))}
+                  value={trainerIds}
+                  onChange={setTrainerIds}
+                  placeholder="All Trainers"
+                  searchPlaceholder="Search trainers..."
+                />
               </div>
 
               {/* Client Filter */}
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">
-                  Client
+                  Clients
                 </label>
-                <select
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                >
-                  <option value="">All Clients</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <SearchableMultiSelect
+                  options={clients.map((c) => ({
+                    value: c.id,
+                    label: c.name,
+                    subLabel: c.email,
+                  }))}
+                  value={clientIds}
+                  onChange={setClientIds}
+                  placeholder="All Clients"
+                  searchPlaceholder="Search by name or email..."
+                />
               </div>
             </div>
           </div>

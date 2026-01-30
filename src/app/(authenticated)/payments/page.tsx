@@ -59,7 +59,7 @@ export default async function PaymentsPage() {
           ? { locationId: { in: accessibleLocations } }
           : {}),
       },
-      select: { id: true, name: true },
+      select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     }),
   ])

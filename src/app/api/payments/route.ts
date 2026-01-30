@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
-    const trainerId = searchParams.get('trainerId')
-    const clientId = searchParams.get('clientId')
-    const locationId = searchParams.get('locationId')
+    const trainerIds = searchParams.get('trainerIds')?.split(',').filter(Boolean) || []
+    const clientIds = searchParams.get('clientIds')?.split(',').filter(Boolean) || []
+    const locationIds = searchParams.get('locationIds')?.split(',').filter(Boolean) || []
 
     // Build where clause — payments don't have org directly,
     // so we filter through package -> client -> organization
@@ -60,11 +60,11 @@ export async function GET(request: NextRequest) {
     // Location scoping — auto-filter for managers
     const packageClientFilter = (where.package as Record<string, unknown>).client as Record<string, unknown>
 
-    if (locationId) {
+    if (locationIds.length > 0) {
       // Explicit location filter
       packageClientFilter.primaryTrainer = {
         locations: {
-          some: { locationId },
+          some: { locationId: { in: locationIds } },
         },
       }
     } else if (session.user.role !== 'ADMIN') {
@@ -89,13 +89,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Trainer filter
-    if (trainerId) {
-      packageClientFilter.primaryTrainerId = trainerId
+    if (trainerIds.length > 0) {
+      packageClientFilter.primaryTrainerId = { in: trainerIds }
     }
 
     // Client filter
-    if (clientId) {
-      packageClientFilter.id = clientId
+    if (clientIds.length > 0) {
+      packageClientFilter.id = { in: clientIds }
     }
 
     const payments = await prisma.payment.findMany({
