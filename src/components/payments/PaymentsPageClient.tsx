@@ -330,7 +330,7 @@ export function PaymentsPageClient({
         <div className="bg-surface rounded-lg border border-border p-4">
           <p className="text-sm text-text-secondary">Total Amount</p>
           <p className="text-2xl font-bold text-text-primary">
-            ${summary.totalAmount.toFixed(2)}
+            ${summary.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
       </div>
