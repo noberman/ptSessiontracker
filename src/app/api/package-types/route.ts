@@ -67,6 +67,28 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check if a package type with this name already exists
+    const existing = await prisma.packageType.findFirst({
+      where: {
+        organizationId: session.user.organizationId,
+        name: { equals: name, mode: 'insensitive' },
+      },
+      select: { id: true, isActive: true },
+    })
+
+    if (existing) {
+      if (!existing.isActive) {
+        return NextResponse.json(
+          { error: `A package type named "${name}" already exists in your archived types. You can reactivate it from the Archived tab in Package Types settings.` },
+          { status: 409 }
+        )
+      }
+      return NextResponse.json(
+        { error: 'A package type with this name already exists' },
+        { status: 409 }
+      )
+    }
+
     // Get the highest sortOrder for this organization
     const maxSortOrder = await prisma.packageType.findFirst({
       where: { organizationId: session.user.organizationId },
