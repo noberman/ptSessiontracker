@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { 
-  Upload, 
-  Download, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  Upload,
+  Download,
+  AlertCircle,
+  CheckCircle,
   XCircle,
   FileText,
   Users,
@@ -18,6 +18,20 @@ import {
   AlertTriangle,
   Loader2
 } from 'lucide-react'
+import { ColumnMapper } from './import/ColumnMapper'
+import { PackageTypeSetup } from './import/PackageTypeSetup'
+import {
+  detectHeaderMatches,
+  allRequiredFieldsMapped,
+  parseCsvPreview,
+  remapCsvHeaders,
+  remapPackageNames,
+  extractPackageNames,
+  analyzePackageNames,
+  FITSYNC_FIELDS,
+  type MatchedPackage,
+  type UnmatchedPackage,
+} from '@/lib/csv-column-mapping'
 
 interface ValidationResult {
   valid: boolean
@@ -94,6 +108,19 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
   const [duplicateHandling, setDuplicateHandling] = useState<'skip' | 'overwrite'>('skip')
   const [showValidationBanner, setShowValidationBanner] = useState(false)
 
+  // Smart import wizard state
+  const [wizardStep, setWizardStep] = useState<'upload' | 'columnMapping' | 'packageSetup' | 'validate'>('upload')
+  const [rawCsvText, setRawCsvText] = useState('')
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([])
+  const [csvPreviewRows, setCsvPreviewRows] = useState<string[][]>([])
+  const [headerMatches, setHeaderMatches] = useState<Record<string, any>>({})
+  const [processedCsvText, setProcessedCsvText] = useState('')
+  const [matchedPkgs, setMatchedPkgs] = useState<MatchedPackage[]>([])
+  const [unmatchedPkgs, setUnmatchedPkgs] = useState<UnmatchedPackage[]>([])
+  const [fetchedPackageTypes, setFetchedPackageTypes] = useState<Array<{ id: string; name: string; defaultSessions?: number | null; defaultPrice?: number | null }>>([])
+  const [needsColumnMapping, setNeedsColumnMapping] = useState(false)
+  const [needsPackageSetup, setNeedsPackageSetup] = useState(false)
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
@@ -157,15 +184,167 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
     }
   }
 
-  const validateFile = async () => {
+  // Start the smart import wizard: check headers, then packages, then validate
+  const startWizard = async () => {
     if (!file) {
       alert('Please select a file first')
       return
     }
 
     setLoading(true)
+    try {
+      // Step 1: Read the file and check headers
+      const text = await file.text()
+      setRawCsvText(text)
+
+      const { headers, previewRows } = parseCsvPreview(text)
+      setCsvHeaders(headers)
+      setCsvPreviewRows(previewRows)
+
+      if (headers.length === 0) {
+        alert('CSV file appears to be empty or has no headers')
+        setLoading(false)
+        return
+      }
+
+      // Step 2: Detect header matches
+      const matches = detectHeaderMatches(headers)
+      setHeaderMatches(matches)
+
+      // Build a mapping from exact matches only
+      const autoMapping: Record<string, string> = {}
+      for (const [header, match] of Object.entries(matches)) {
+        if (match.confidence === 'exact' && match.field) {
+          autoMapping[header] = match.field
+        }
+      }
+
+      const { satisfied } = allRequiredFieldsMapped(autoMapping)
+
+      if (satisfied) {
+        // All required headers match exactly — skip column mapping
+        // Apply the exact-match mapping to normalize any casing differences
+        const mappedText = remapCsvHeaders(text, autoMapping)
+        setProcessedCsvText(mappedText)
+        setNeedsColumnMapping(false)
+
+        // Proceed to package check
+        await checkPackageTypes(mappedText)
+      } else {
+        // Headers need manual mapping
+        setNeedsColumnMapping(true)
+        setWizardStep('columnMapping')
+      }
+    } catch (error: any) {
+      alert(error.message || 'Failed to process file')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // After column mapping is confirmed
+  const handleColumnMappingConfirm = async (mapping: Record<string, string>) => {
+    setLoading(true)
+    try {
+      const mappedText = remapCsvHeaders(rawCsvText, mapping)
+      setProcessedCsvText(mappedText)
+      await checkPackageTypes(mappedText)
+    } catch (error: any) {
+      alert(error.message || 'Failed to process mapping')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Check if CSV package names match existing package types
+  const checkPackageTypes = async (csvText: string) => {
+    try {
+      // Fetch existing package types
+      const response = await fetch('/api/package-types')
+      const types = await response.json()
+      setFetchedPackageTypes(Array.isArray(types) ? types : [])
+
+      // Extract unique package names from CSV
+      const packageNameCounts = extractPackageNames(csvText)
+
+      if (packageNameCounts.size === 0 || !Array.isArray(types) || types.length === 0) {
+        // No packages to check or no types defined — go straight to validate
+        setNeedsPackageSetup(false)
+        await runValidation(csvText)
+        return
+      }
+
+      // Analyze matches
+      const { matched, unmatched } = analyzePackageNames(packageNameCounts, types)
+      setMatchedPkgs(matched)
+      setUnmatchedPkgs(unmatched)
+
+      if (unmatched.length === 0) {
+        // All packages matched — skip package setup
+        // Remap fuzzy-matched package names so the API finds them
+        const nameMap: Record<string, string> = {}
+        for (const m of matched) {
+          if (m.matchType === 'fuzzy' && m.csvName !== m.packageType.name) {
+            nameMap[m.csvName] = m.packageType.name
+          }
+        }
+        const finalCsv = remapPackageNames(csvText, nameMap)
+        setProcessedCsvText(finalCsv)
+        setNeedsPackageSetup(false)
+        await runValidation(finalCsv)
+      } else {
+        setNeedsPackageSetup(true)
+        setProcessedCsvText(csvText)
+        setWizardStep('packageSetup')
+      }
+    } catch (error: any) {
+      console.error('Error checking package types:', error)
+      // If package type check fails, proceed to validate anyway
+      await runValidation(csvText)
+    }
+  }
+
+  // After package type setup is completed
+  const handlePackageSetupComplete = async (
+    resolutions: Record<string, { packageTypeId: string; packageTypeName: string }>
+  ) => {
+    setLoading(true)
+    try {
+      // Build name map for packages that were mapped to existing (not created new with same name)
+      const nameMap: Record<string, string> = {}
+
+      // Also include fuzzy-matched packages from the matched list
+      for (const m of matchedPkgs) {
+        if (m.matchType === 'fuzzy' && m.csvName !== m.packageType.name) {
+          nameMap[m.csvName] = m.packageType.name
+        }
+      }
+
+      // For mapped resolutions, remap CSV name to the existing type name
+      for (const [csvName, resolution] of Object.entries(resolutions)) {
+        if (resolution.packageTypeName !== csvName) {
+          nameMap[csvName] = resolution.packageTypeName
+        }
+      }
+
+      const finalCsv = remapPackageNames(processedCsvText, nameMap)
+      setProcessedCsvText(finalCsv)
+      await runValidation(finalCsv)
+    } catch (error: any) {
+      alert(error.message || 'Failed to process package setup')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Run the actual validation against the API
+  const runValidation = async (csvText: string) => {
+    setLoading(true)
+    setWizardStep('validate')
+
+    const csvFile = new File([csvText], file?.name || 'import.csv', { type: 'text/csv' })
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', csvFile)
     formData.append('action', 'validate')
     formData.append('trainerAssignments', JSON.stringify(trainerAssignments))
 
@@ -186,22 +365,24 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
       setLocations(data.locations || [])
       setTrainers(data.trainers || [])
       setPackageTypes(data.packageTypes || [])
-      
+
       // Show validation banner and auto-hide after 5 seconds
       setShowValidationBanner(true)
       setTimeout(() => setShowValidationBanner(false), 5000)
-      
+
       // Auto-scroll to validation results after a brief delay for render
       setTimeout(() => {
         if (validationResultsRef.current) {
-          validationResultsRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
+          validationResultsRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
           })
         }
       }, 100)
     } catch (error: any) {
       alert(error.message || 'Failed to validate file')
+      // Go back to upload on failure
+      setWizardStep('upload')
     } finally {
       setLoading(false)
     }
@@ -217,8 +398,12 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
     // The server will validate with the manual assignments
 
     setLoading(true)
+    // Use the processed CSV (with remapped headers/package names) if available
+    const importFile = processedCsvText
+      ? new File([processedCsvText], file?.name || 'import.csv', { type: 'text/csv' })
+      : file!
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', importFile)
     formData.append('action', 'import')
     formData.append('trainerAssignments', JSON.stringify(trainerAssignments))
     formData.append('locationAssignments', JSON.stringify(locationAssignments))
@@ -412,6 +597,15 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                   setImportResults(null)
                   setShowResults(false)
                   setTrainerAssignments({})
+                  setLocationAssignments({})
+                  setPackageTypeAssignments({})
+                  setWizardStep('upload')
+                  setRawCsvText('')
+                  setProcessedCsvText('')
+                  setCsvHeaders([])
+                  setCsvPreviewRows([])
+                  setMatchedPkgs([])
+                  setUnmatchedPkgs([])
                   if (fileInputRef.current) {
                     fileInputRef.current.value = ''
                   }
@@ -429,6 +623,47 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
 
   return (
     <div className="space-y-6">
+      {/* Column Mapping Step */}
+      {wizardStep === 'columnMapping' && (
+        <ColumnMapper
+          csvHeaders={csvHeaders}
+          suggestedMappings={headerMatches}
+          previewRows={csvPreviewRows}
+          onConfirm={handleColumnMappingConfirm}
+          onBack={() => {
+            setWizardStep('upload')
+            setNeedsColumnMapping(false)
+          }}
+        />
+      )}
+
+      {/* Package Type Setup Step */}
+      {wizardStep === 'packageSetup' && (
+        <PackageTypeSetup
+          matchedPackages={matchedPkgs}
+          unmatchedPackages={unmatchedPkgs}
+          existingPackageTypes={fetchedPackageTypes}
+          onComplete={handlePackageSetupComplete}
+          onBack={() => {
+            if (needsColumnMapping) {
+              setWizardStep('columnMapping')
+            } else {
+              setWizardStep('upload')
+            }
+          }}
+        />
+      )}
+
+      {/* Loading indicator during wizard transitions */}
+      {loading && (wizardStep === 'columnMapping' || wizardStep === 'packageSetup') && (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-primary-500 mr-3" />
+            <span className="text-text-secondary">Processing...</span>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Validation Complete Banner */}
       {showValidationBanner && validationResults && (
         <div className="mb-4 p-4 bg-success-50 border border-success-200 rounded-lg flex items-center justify-between">
@@ -445,7 +680,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
       )}
       
       {/* File Upload Section */}
-      <Card>
+      <Card className={wizardStep !== 'upload' && wizardStep !== 'validate' ? 'hidden' : ''}>
         <CardHeader>
           <CardTitle>Upload CSV File</CardTitle>
         </CardHeader>
@@ -507,14 +742,14 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
               </Button>
               
               <Button
-                onClick={validateFile}
+                onClick={startWizard}
                 disabled={!file || loading}
                 className="flex-1"
               >
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Validating...
+                    Processing...
                   </>
                 ) : (
                   'Validate File'
@@ -806,6 +1041,13 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
                       setTrainerAssignments({})
                       setLocationAssignments({})
                       setPackageTypeAssignments({})
+                      setWizardStep('upload')
+                      setRawCsvText('')
+                      setProcessedCsvText('')
+                      setCsvHeaders([])
+                      setCsvPreviewRows([])
+                      setMatchedPkgs([])
+                      setUnmatchedPkgs([])
                       if (fileInputRef.current) {
                         fileInputRef.current.value = ''
                       }

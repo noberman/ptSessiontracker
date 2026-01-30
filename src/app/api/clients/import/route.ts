@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parse } from 'csv-parse/sync'
 import { getUserAccessibleLocations } from '@/lib/user-locations'
+import { findBestMatch } from '@/lib/fuzzy-match'
 
 interface ImportRow {
   name: string
@@ -364,12 +365,28 @@ export async function POST(request: Request) {
       }
       
       if (!location && row.location) {
-        // Provide more helpful error message for club managers and PT managers
-        if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
-          const locationNames = locations.map(l => l.name).join(', ') || 'your accessible locations'
-          errors.push(`Location '${row.location}' not available. You can only import to: ${locationNames}`)
+        // Try fuzzy matching before reporting an error
+        const locationNames = locations.map(l => l.name)
+        const fuzzyResult = findBestMatch(row.location, locationNames, 0.5)
+
+        if (fuzzyResult && fuzzyResult.score >= 0.8) {
+          // High confidence — auto-assign with a warning
+          location = locations.find(l => l.name === fuzzyResult.match)
+          warnings.push(`Location '${row.location}' matched to '${fuzzyResult.match}' (close match)`)
+        } else if (fuzzyResult && fuzzyResult.score >= 0.5) {
+          // Medium confidence — keep as error but suggest
+          if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+            errors.push(`Location '${row.location}' not available. Did you mean '${fuzzyResult.match}'? You can only import to: ${locationNames.join(', ')}`)
+          } else {
+            errors.push(`Location '${row.location}' not found. Did you mean '${fuzzyResult.match}'?`)
+          }
         } else {
-          errors.push(`Location '${row.location}' not found`)
+          // No fuzzy match
+          if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+            errors.push(`Location '${row.location}' not available. You can only import to: ${locationNames.join(', ') || 'your accessible locations'}`)
+          } else {
+            errors.push(`Location '${row.location}' not found`)
+          }
         }
       }
 
