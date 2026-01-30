@@ -43,7 +43,7 @@ export default async function PaymentsPage() {
       where: {
         organizationId: orgId,
         active: true,
-        role: { in: ['TRAINER', 'PT_MANAGER', 'CLUB_MANAGER', 'ADMIN'] },
+        role: { in: ['TRAINER', 'PT_MANAGER', 'CLUB_MANAGER'] },
         ...(accessibleLocations && accessibleLocations.length > 0
           ? { locations: { some: { locationId: { in: accessibleLocations } } } }
           : {}),

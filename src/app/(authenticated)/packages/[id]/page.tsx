@@ -112,6 +112,7 @@ export default async function ViewPackagePage({
         where: {
           organizationId: session.user.organizationId,
           active: true,
+          role: { in: ['TRAINER', 'PT_MANAGER', 'CLUB_MANAGER'] },
         },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },

@@ -87,7 +87,7 @@ export function PaymentFormModal({
     setLoadingPackages(true)
     setPackageId('')
 
-    fetch(`/api/packages?clientIds=${clientId}&activeStatuses=true&limit=100`)
+    fetch(`/api/packages?clientId=${clientId}&active=true&limit=100`)
       .then((res) => res.json())
       .then((data) => {
         // Data comes from the packages list endpoint
