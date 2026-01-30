@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   MapPin,
   DollarSign,
+  CreditCard,
   Settings,
 } from 'lucide-react'
 import Image from 'next/image'
@@ -57,6 +58,12 @@ const navItems: NavItem[] = [
     title: 'Packages',
     href: '/packages',
     icon: Package,
+  },
+  {
+    title: 'Payments',
+    href: '/payments',
+    icon: CreditCard,
+    roles: ['PT_MANAGER', 'ADMIN', 'CLUB_MANAGER'],
   },
   {
     title: 'Commission',

@@ -30,6 +30,12 @@ export async function GET(
           include: {
             createdBy: {
               select: { name: true }
+            },
+            salesAttributedTo: {
+              select: { id: true, name: true }
+            },
+            salesAttributedTo2: {
+              select: { id: true, name: true }
             }
           }
         },
@@ -56,9 +62,14 @@ export async function GET(
         id: p.id,
         amount: p.amount,
         paymentDate: p.paymentDate,
+        paymentMethod: p.paymentMethod,
         notes: p.notes,
         createdAt: p.createdAt,
-        createdBy: p.createdBy?.name || null
+        createdBy: p.createdBy?.name || null,
+        salesAttributedToId: p.salesAttributedTo?.id || null,
+        salesAttributedToName: p.salesAttributedTo?.name || null,
+        salesAttributedTo2Id: p.salesAttributedTo2?.id || null,
+        salesAttributedTo2Name: p.salesAttributedTo2?.name || null,
       })),
       summary
     })
@@ -97,7 +108,7 @@ export async function POST(
 
   try {
     const body = await request.json()
-    const { amount, paymentDate, notes } = body
+    const { amount, paymentDate, notes, paymentMethod, salesAttributedToId, salesAttributedTo2Id } = body
 
     // Validate amount
     if (!amount || typeof amount !== 'number' || amount <= 0) {
@@ -145,8 +156,11 @@ export async function POST(
         packageId,
         amount,
         paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+        paymentMethod: paymentMethod || 'CARD',
         notes: notes || null,
-        createdById: session.user.id
+        createdById: session.user.id,
+        salesAttributedToId: salesAttributedToId || null,
+        salesAttributedTo2Id: salesAttributedTo2Id || null,
       }
     })
 

@@ -194,6 +194,45 @@ model Package {
 - Sessions not blocked if package exceeded
 - Active flag for current vs historical packages
 
+### Payment
+Tracks individual payment transactions against packages. Supports split payments (multiple installments per package) and explicit sales commission attribution.
+
+```prisma
+model Payment {
+  id                   String         @id @default(cuid())
+  packageId            String
+  amount               Float
+  paymentDate          DateTime
+  paymentMethod        PaymentMethod  @default(CARD)
+  notes                String?
+  createdAt            DateTime       @default(now())
+  createdById          String?
+  salesAttributedToId  String?
+  salesAttributedTo2Id String?
+
+  package              Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  createdBy            User?    @relation("PaymentCreatedBy", fields: [createdById], references: [id])
+  salesAttributedTo    User?    @relation("SalesAttributedTo", fields: [salesAttributedToId], references: [id])
+  salesAttributedTo2   User?    @relation("SalesAttributedTo2", fields: [salesAttributedTo2Id], references: [id])
+
+  @@index([packageId])
+  @@index([paymentDate])
+  @@index([salesAttributedToId])
+  @@index([salesAttributedTo2Id])
+  @@map("payments")
+}
+```
+
+**Business Rules:**
+- Each payment is linked to a package (no standalone transactions)
+- `salesAttributedToId` / `salesAttributedTo2Id`: explicit sales commission attribution
+  - 1 person: 100% sales commission credit
+  - 2 people: 50/50 split
+  - Both null: no sales commission for this payment (no fallback to primaryTrainer)
+- `paymentMethod`: CARD, BANK_TRANSFER, or OTHER
+- Payments unlock sessions proportionally (see Task 48)
+- Cannot delete a payment if it would lock sessions already used
+
 ### Session
 Core model representing individual training sessions.
 
@@ -466,6 +505,17 @@ enum SubscriptionStatus {
   ACTIVE    // Subscription is active
   CANCELED  // Subscription cancelled
   PAST_DUE  // Payment overdue
+}
+```
+
+### PaymentMethod
+Defines how a payment was made.
+
+```prisma
+enum PaymentMethod {
+  CARD           // Card payment
+  BANK_TRANSFER  // Bank transfer
+  OTHER          // Other payment method
 }
 ```
 

@@ -102,8 +102,21 @@ export default async function ViewPackagePage({
   
   const canEdit = session.user.role !== 'TRAINER'
   const canDelete = session.user.role === 'ADMIN'
-  const canRecordPayment = ['ADMIN', 'PT_MANAGER'].includes(session.user.role)
-  const canDeletePayment = session.user.role === 'ADMIN'
+  const canRecordPayment = ['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(session.user.role)
+  const canDeletePayment = ['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(session.user.role)
+  const canEditPayment = ['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(session.user.role)
+
+  // Fetch trainers for sales attribution dropdowns
+  const orgTrainers = canRecordPayment || canEditPayment
+    ? await prisma.user.findMany({
+        where: {
+          organizationId: session.user.organizationId,
+          active: true,
+        },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      })
+    : []
 
   return (
     <div>
@@ -269,6 +282,8 @@ export default async function ViewPackagePage({
           packageName={packageData.name}
           canRecordPayment={canRecordPayment}
           canDeletePayment={canDeletePayment}
+          canEditPayment={canEditPayment}
+          trainers={orgTrainers}
         />
       </div>
 

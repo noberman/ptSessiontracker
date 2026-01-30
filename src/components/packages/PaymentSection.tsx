@@ -7,15 +7,21 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { PaymentStatusBadge } from './PaymentStatusBadge'
 import { RecordPaymentModal } from './RecordPaymentModal'
-import { Trash2, DollarSign, AlertCircle } from 'lucide-react'
+import { EditPaymentModal } from './EditPaymentModal'
+import { Trash2, Pencil, DollarSign, AlertCircle } from 'lucide-react'
 
 interface Payment {
   id: string
   amount: number
   paymentDate: string
+  paymentMethod: string
   notes: string | null
   createdAt: string
   createdBy: string | null
+  salesAttributedToName: string | null
+  salesAttributedTo2Name: string | null
+  salesAttributedToId: string | null
+  salesAttributedTo2Id: string | null
 }
 
 interface PaymentSummary {
@@ -30,18 +36,33 @@ interface PaymentSummary {
   paymentProgress: number
 }
 
+interface TrainerOption {
+  id: string
+  name: string
+}
+
 interface PaymentSectionProps {
   packageId: string
   packageName: string
   canRecordPayment: boolean
   canDeletePayment: boolean
+  canEditPayment: boolean
+  trainers?: TrainerOption[]
+}
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CARD: 'Card',
+  BANK_TRANSFER: 'Bank Transfer',
+  OTHER: 'Other',
 }
 
 export function PaymentSection({
   packageId,
   packageName,
   canRecordPayment,
-  canDeletePayment
+  canDeletePayment,
+  canEditPayment,
+  trainers = [],
 }: PaymentSectionProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -49,6 +70,7 @@ export function PaymentSection({
   const [payments, setPayments] = useState<Payment[]>([])
   const [summary, setSummary] = useState<PaymentSummary | null>(null)
   const [showRecordModal, setShowRecordModal] = useState(false)
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null)
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null)
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null)
   const [deleteError, setDeleteError] = useState('')
@@ -207,22 +229,43 @@ export function PaymentSection({
                         <span className="text-sm text-text-secondary">
                           {new Date(payment.paymentDate).toLocaleDateString()}
                         </span>
+                        <span className="text-xs text-text-tertiary px-1.5 py-0.5 bg-gray-100 rounded">
+                          {PAYMENT_METHOD_LABELS[payment.paymentMethod] || payment.paymentMethod}
+                        </span>
                       </div>
                       {payment.notes && (
                         <p className="text-sm text-text-secondary mt-1">{payment.notes}</p>
                       )}
+                      {payment.salesAttributedToName && (
+                        <p className="text-xs text-text-tertiary mt-1">
+                          Sales credit: {payment.salesAttributedToName}
+                          {payment.salesAttributedTo2Name && ` & ${payment.salesAttributedTo2Name} (50/50)`}
+                        </p>
+                      )}
                     </div>
-                    {canDeletePayment && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-error-600 hover:text-error-700 hover:bg-error-50"
-                        onClick={() => handleDeletePayment(payment)}
-                        disabled={deletingPaymentId === payment.id}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {canEditPayment && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-text-secondary hover:text-text-primary"
+                          onClick={() => setEditingPayment(payment)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {canDeletePayment && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-error-600 hover:text-error-700 hover:bg-error-50"
+                          onClick={() => handleDeletePayment(payment)}
+                          disabled={deletingPaymentId === payment.id}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -242,8 +285,20 @@ export function PaymentSection({
         packageId={packageId}
         packageName={packageName}
         summary={summary}
+        trainers={trainers}
         onSuccess={handlePaymentSuccess}
       />
+
+      {/* Edit Payment Modal */}
+      {editingPayment && (
+        <EditPaymentModal
+          isOpen={!!editingPayment}
+          onClose={() => setEditingPayment(null)}
+          payment={editingPayment}
+          trainers={trainers}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
 
       {/* Delete Payment Confirmation Modal */}
       <ConfirmModal

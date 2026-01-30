@@ -85,34 +85,45 @@ export class CommissionCalculatorV2 {
       }
     })
     
-    // Get payments received for the period (for packages of this trainer's clients)
-    // Sales commission is based on payments received, not package creation date
+    // Get payments attributed to this user for the period
+    // Sales commission is based on explicit salesAttributedToId/salesAttributedTo2Id
+    // Payments with null attribution have NO sales commission (no fallback to primaryTrainerId)
     const payments = await prisma.payment.findMany({
       where: {
         paymentDate: {
           gte: period.start,
           lte: period.end
         },
-        package: {
-          client: {
-            primaryTrainerId: userId
-          }
-        }
+        OR: [
+          { salesAttributedToId: userId },
+          { salesAttributedTo2Id: userId }
+        ]
       },
       include: {
         package: true
       }
     }) as PaymentWithPackage[]
 
-    // Count unique packages that had payments in this period (for flat fee calculations)
-    const uniquePackageIds = new Set(payments.map(p => p.packageId))
-    
+    // Calculate attributed amounts (50/50 split when both slots are filled)
+    // Also count unique packages for flat fee calculations
+    const uniquePackageIds = new Set<string>()
+    let attributedPaymentTotal = 0
+
+    for (const payment of payments) {
+      const isSplit = payment.salesAttributedToId && payment.salesAttributedTo2Id
+      const attributedAmount = isSplit ? payment.amount / 2 : payment.amount
+      attributedPaymentTotal += attributedAmount
+      uniquePackageIds.add(payment.packageId)
+    }
+
     // Calculate commission based on the profile's calculation method
+    // Pass attributed total instead of raw payment total for sales volume
     const result = this.calculateByMethod(
       user.commissionProfile,
       sessions,
       payments,
-      uniquePackageIds.size
+      uniquePackageIds.size,
+      attributedPaymentTotal
     )
     
     // Save calculation to database if requested
@@ -167,15 +178,16 @@ export class CommissionCalculatorV2 {
     profile: ProfileWithTiers,
     sessions: Session[],
     payments: PaymentWithPackage[],
-    uniquePackageCount: number
+    uniquePackageCount: number,
+    attributedPaymentTotal: number
   ): CalculationResult {
     switch (profile.calculationMethod) {
       case CalculationMethod.PROGRESSIVE:
-        return this.calculateProgressive(profile, sessions, payments, uniquePackageCount)
+        return this.calculateProgressive(profile, sessions, payments, uniquePackageCount, attributedPaymentTotal)
       case CalculationMethod.GRADUATED:
-        return this.calculateGraduated(profile, sessions, payments, uniquePackageCount)
+        return this.calculateGraduated(profile, sessions, payments, uniquePackageCount, attributedPaymentTotal)
       case CalculationMethod.FLAT:
-        return this.calculateFlat(profile, sessions, payments, uniquePackageCount)
+        return this.calculateFlat(profile, sessions, payments, uniquePackageCount, attributedPaymentTotal)
       default:
         throw new Error(`Unknown calculation method: ${profile.calculationMethod}`)
     }
@@ -188,10 +200,11 @@ export class CommissionCalculatorV2 {
     profile: ProfileWithTiers,
     sessions: Session[],
     payments: PaymentWithPackage[],
-    uniquePackageCount: number
+    uniquePackageCount: number,
+    attributedPaymentTotal: number
   ): CalculationResult {
-    // Calculate total payment amount for tier determination
-    const totalPaymentAmount = this.calculateTotalPaymentValue(payments)
+    // Use attributed payment total (accounts for 50/50 splits)
+    const totalPaymentAmount = attributedPaymentTotal
 
     // Find the highest tier achieved
     const currentTier = this.determineCurrentTier(
@@ -257,7 +270,8 @@ export class CommissionCalculatorV2 {
     profile: ProfileWithTiers,
     sessions: Session[],
     payments: PaymentWithPackage[],
-    uniquePackageCount: number
+    uniquePackageCount: number,
+    attributedPaymentTotal: number
   ): CalculationResult {
     let sessionCommission = 0
     let remainingSessions = sessions.length
@@ -297,8 +311,8 @@ export class CommissionCalculatorV2 {
       if (remainingSessions <= 0) break
     }
 
-    // Calculate total payment amount for tier determination
-    const totalPaymentAmount = this.calculateTotalPaymentValue(payments)
+    // Use attributed payment total (accounts for 50/50 splits)
+    const totalPaymentAmount = attributedPaymentTotal
 
     // Sales commission uses the highest tier achieved
     const currentTier = this.determineCurrentTier(
@@ -351,7 +365,8 @@ export class CommissionCalculatorV2 {
     profile: ProfileWithTiers,
     sessions: Session[],
     payments: PaymentWithPackage[],
-    uniquePackageCount: number
+    uniquePackageCount: number,
+    attributedPaymentTotal: number
   ): CalculationResult {
     // For flat method, use the first tier's rates for everything
     const flatTier = profile.tiers.find(t => t.tierLevel === 1) || profile.tiers[0]
@@ -371,10 +386,10 @@ export class CommissionCalculatorV2 {
       sessionCommission = totalSessionValue * (flatTier.sessionCommissionPercent / 100)
     }
 
-    // Calculate total payment amount
-    const totalPaymentAmount = this.calculateTotalPaymentValue(payments)
+    // Use attributed payment total (accounts for 50/50 splits)
+    const totalPaymentAmount = attributedPaymentTotal
 
-    // Sales commission (now based on payments received, not package values)
+    // Sales commission (based on attributed payment amounts)
     if (flatTier.salesFlatFee) {
       // Flat fee per unique package that had payments in this period
       salesCommission = uniquePackageCount * flatTier.salesFlatFee

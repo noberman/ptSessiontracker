@@ -177,6 +177,8 @@ model User {
   usedTokens            TempAuthToken[] @relation("TokenUser")
   locations             UserLocation[]
   createdPayments       Payment[]       @relation("PaymentCreatedBy")
+  salesAttributedPayments  Payment[]   @relation("SalesAttributedTo")
+  salesAttributedPayments2 Payment[]   @relation("SalesAttributedTo2")
   organization          Organization?   @relation(fields: [organizationId], references: [id])
 
   @@unique([email, organizationId])
@@ -234,19 +236,26 @@ model Package {
 }
 
 model Payment {
-  id          String   @id @default(cuid())
-  packageId   String
-  amount      Float
-  paymentDate DateTime
-  notes       String?
-  createdAt   DateTime @default(now())
-  createdById String?
+  id                   String         @id @default(cuid())
+  packageId            String
+  amount               Float
+  paymentDate          DateTime
+  paymentMethod        PaymentMethod  @default(CARD)
+  notes                String?
+  createdAt            DateTime       @default(now())
+  createdById          String?
+  salesAttributedToId  String?
+  salesAttributedTo2Id String?
 
-  package     Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  createdBy   User?    @relation("PaymentCreatedBy", fields: [createdById], references: [id])
+  package              Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  createdBy            User?    @relation("PaymentCreatedBy", fields: [createdById], references: [id])
+  salesAttributedTo    User?    @relation("SalesAttributedTo", fields: [salesAttributedToId], references: [id])
+  salesAttributedTo2   User?    @relation("SalesAttributedTo2", fields: [salesAttributedTo2Id], references: [id])
 
   @@index([packageId])
   @@index([paymentDate])
+  @@index([salesAttributedToId])
+  @@index([salesAttributedTo2Id])
   @@map("payments")
 }
 
@@ -456,4 +465,10 @@ enum TriggerType {
   SALES_VOLUME
   EITHER_OR
   BOTH_AND
+}
+
+enum PaymentMethod {
+  CARD
+  BANK_TRANSFER
+  OTHER
 }
