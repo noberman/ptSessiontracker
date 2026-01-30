@@ -130,71 +130,67 @@ export function ColumnMapper({
             return (
               <div
                 key={header}
-                className={`flex items-center gap-3 p-3 rounded-lg border ${
+                className={`p-3 rounded-lg border ${
                   isDuplicate ? 'border-error-300 bg-error-50' : 'border-border bg-surface'
                 }`}
               >
-                {/* Status icon */}
-                <div className="flex-shrink-0">{getRowIcon(header)}</div>
+                <div className="flex items-center gap-3">
+                  {/* Status icon */}
+                  <div className="flex-shrink-0">{getRowIcon(header)}</div>
 
-                {/* CSV column name */}
-                <div className="w-[160px] min-w-[160px]">
-                  <code className="text-sm font-mono bg-background-secondary px-2 py-1 rounded">
-                    {header}
-                  </code>
+                  {/* CSV column name */}
+                  <div className="flex-1 min-w-0">
+                    <code className="text-sm font-mono bg-background-secondary px-2 py-1 rounded">
+                      {header}
+                    </code>
+                  </div>
+
+                  {/* Arrow */}
+                  <ArrowRight className="h-4 w-4 text-text-tertiary flex-shrink-0" />
+
+                  {/* FitSync field dropdown */}
+                  <div className="flex-1 min-w-0">
+                    <select
+                      className={`w-full text-sm border rounded-lg px-3 py-2 bg-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        isDuplicate ? 'border-error-400' : 'border-border'
+                      }`}
+                      value={currentValue}
+                      onChange={e => updateMapping(header, e.target.value)}
+                    >
+                      <option value="">-- Select field --</option>
+                      <option value="skip">-- Skip this column --</option>
+                      {ALL_FIELDS.map(field => {
+                        const isUsed = usedFields.has(field) && currentValue !== field
+                        return (
+                          <option key={field} value={field} disabled={isUsed}>
+                            {field}{FITSYNC_FIELDS.required.includes(field as typeof FITSYNC_FIELDS.required[number]) ? ' *' : ''}
+                            {isUsed ? ' (already mapped)' : ''}
+                          </option>
+                        )
+                      })}
+                    </select>
+                    {/* Show suggestion hint */}
+                    {suggestion?.confidence === 'synonym' && !currentValue && (
+                      <p className="text-xs text-primary-600 mt-1">
+                        Suggested: {suggestion.field}
+                      </p>
+                    )}
+                    {isDuplicate && (
+                      <p className="text-xs text-error-600 mt-1">
+                        This field is already mapped to another column
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                {/* Arrow */}
-                <ArrowRight className="h-4 w-4 text-text-tertiary flex-shrink-0" />
-
-                {/* FitSync field dropdown */}
-                <div className="flex-1 min-w-0">
-                  <select
-                    className={`w-full text-sm border rounded-lg px-3 py-2 bg-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      isDuplicate ? 'border-error-400' : 'border-border'
-                    }`}
-                    value={currentValue}
-                    onChange={e => updateMapping(header, e.target.value)}
-                  >
-                    <option value="">-- Select field --</option>
-                    <option value="skip">-- Skip this column --</option>
-                    {ALL_FIELDS.map(field => {
-                      const isUsed = usedFields.has(field) && currentValue !== field
-                      return (
-                        <option key={field} value={field} disabled={isUsed}>
-                          {field}{FITSYNC_FIELDS.required.includes(field as typeof FITSYNC_FIELDS.required[number]) ? ' *' : ''}
-                          {isUsed ? ' (already mapped)' : ''}
-                        </option>
-                      )
-                    })}
-                  </select>
-                  {/* Show suggestion hint */}
-                  {suggestion?.confidence === 'synonym' && !currentValue && (
-                    <p className="text-xs text-primary-600 mt-1">
-                      Suggested: {suggestion.field}
-                    </p>
-                  )}
-                  {isDuplicate && (
-                    <p className="text-xs text-error-600 mt-1">
-                      This field is already mapped to another column
-                    </p>
-                  )}
-                </div>
-
-                {/* Sample data from CSV */}
-                <div className="w-[200px] min-w-[200px] text-right">
-                  {sampleValues.length > 0 ? (
-                    <div className="flex flex-col items-end gap-0.5">
-                      {sampleValues.map((val, i) => (
-                        <span key={i} className="text-xs text-text-tertiary truncate max-w-[200px] block">
-                          {val}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-text-tertiary italic">no data</span>
-                  )}
-                </div>
+                {/* Sample data preview */}
+                {sampleValues.length > 0 && (
+                  <div className="mt-2 ml-8 text-xs text-text-tertiary">
+                    <span className="text-text-secondary">e.g.</span>{' '}
+                    {sampleValues.join(', ')}
+                    {previewRows.length > sampleValues.length && ', ...'}
+                  </div>
+                )}
               </div>
             )
           })}
