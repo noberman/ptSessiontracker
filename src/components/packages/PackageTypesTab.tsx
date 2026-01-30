@@ -142,6 +142,7 @@ export function PackageTypesTab() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingType, setEditingType] = useState<PackageType | null>(null)
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active')
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -170,6 +171,9 @@ export function PackageTypesTab() {
       setLoading(false)
     }
   }
+
+  const activeTypes = packageTypes.filter(t => t.isActive)
+  const archivedTypes = packageTypes.filter(t => !t.isActive)
 
   const handleToggleActive = async (type: PackageType) => {
     try {
@@ -233,16 +237,18 @@ export function PackageTypesTab() {
       return
     }
 
-    const oldIndex = packageTypes.findIndex((type) => type.id === active.id)
-    const newIndex = packageTypes.findIndex((type) => type.id === over.id)
+    const currentActive = packageTypes.filter(t => t.isActive)
+    const oldIndex = currentActive.findIndex((type) => type.id === active.id)
+    const newIndex = currentActive.findIndex((type) => type.id === over.id)
 
-    const reorderedTypes = arrayMove(packageTypes, oldIndex, newIndex)
-    
+    const reorderedActive = arrayMove(currentActive, oldIndex, newIndex)
+    const archived = packageTypes.filter(t => !t.isActive)
+
     // Update local state immediately for responsive UI
-    setPackageTypes(reorderedTypes)
+    setPackageTypes([...reorderedActive, ...archived])
 
     // Update sort orders
-    const updates = reorderedTypes.map((type, index) => ({
+    const updates = reorderedActive.map((type, index) => ({
       id: type.id,
       sortOrder: index
     }))
@@ -281,9 +287,38 @@ export function PackageTypesTab() {
             Define the categories of packages your organization offers
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          Add Package Type
-        </Button>
+        {activeTab === 'active' && (
+          <Button onClick={() => setShowForm(true)}>
+            Add Package Type
+          </Button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex space-x-1 border-b border-border mb-6">
+        <button
+          onClick={() => setActiveTab('active')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'active'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border'
+          }`}
+        >
+          Active Types
+        </button>
+        <button
+          onClick={() => setActiveTab('archived')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'archived'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border'
+          }`}
+        >
+          Archived
+          {archivedTypes.length > 0 && (
+            <Badge variant="gray" size="sm">{archivedTypes.length}</Badge>
+          )}
+        </button>
       </div>
 
       {showForm && (
@@ -292,7 +327,7 @@ export function PackageTypesTab() {
             <h3 className="text-lg font-semibold mb-4">
               {editingType ? (editingType.id ? 'Edit Package Type' : 'Clone Package Type') : 'New Package Type'}
             </h3>
-            <PackageTypeForm 
+            <PackageTypeForm
               packageType={editingType}
               onSuccess={handleFormClose}
               onCancel={() => {
@@ -304,33 +339,87 @@ export function PackageTypesTab() {
         </div>
       )}
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={packageTypes.map(t => t.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="space-y-4">
-            {packageTypes.map((type) => (
-              <SortablePackageTypeItem
-                key={type.id}
-                type={type}
-                onEdit={handleEdit}
-                onToggleActive={handleToggleActive}
-                onClone={handleClone}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {activeTab === 'active' && (
+        <>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={activeTypes.map(t => t.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-4">
+                {activeTypes.map((type) => (
+                  <SortablePackageTypeItem
+                    key={type.id}
+                    type={type}
+                    onEdit={handleEdit}
+                    onToggleActive={handleToggleActive}
+                    onClone={handleClone}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
 
-      {packageTypes.length === 0 && (
-        <Card className="p-6 text-center text-text-secondary">
-          No package types defined yet. Click &quot;Add Package Type&quot; to create your first one.
-        </Card>
+          {activeTypes.length === 0 && (
+            <Card className="p-6 text-center text-text-secondary">
+              No package types defined yet. Click &quot;Add Package Type&quot; to create your first one.
+            </Card>
+          )}
+        </>
+      )}
+
+      {activeTab === 'archived' && (
+        <>
+          {archivedTypes.length === 0 ? (
+            <Card className="p-6 text-center">
+              <p className="text-text-secondary">No archived package types</p>
+              <p className="text-sm text-text-tertiary mt-2">
+                Deactivated package types will appear here and can be reactivated
+              </p>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {archivedTypes.map((type) => (
+                <Card key={type.id} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-text-primary">
+                          {type.name}
+                        </h3>
+                        <Badge variant="gray">Archived</Badge>
+                        {type._count && type._count.packages > 0 && (
+                          <Badge variant="secondary">
+                            {type._count.packages} packages
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-4 mt-2 text-sm text-text-secondary">
+                        {type.defaultSessions && (
+                          <span>Default sessions: {type.defaultSessions}</span>
+                        )}
+                        {type.defaultPrice && (
+                          <span>Default price: ${type.defaultPrice}</span>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleActive(type)}
+                    >
+                      Reactivate
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
