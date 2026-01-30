@@ -20,8 +20,18 @@ export async function GET(request: NextRequest) {
   
   const skip = (page - 1) * limit
   
-  const where: any = {}
-  
+  const where: any = {
+    organizationId: session.user.organizationId,
+  }
+
+  // Filter by active status (used by archived tab)
+  const activeParam = searchParams.get('active')
+  if (activeParam === 'false') {
+    where.active = false
+  } else if (activeParam === 'true') {
+    where.active = true
+  }
+
   if (search) {
     where.OR = [
       { name: { contains: search, mode: 'insensitive' } },

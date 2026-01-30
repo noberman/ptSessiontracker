@@ -28,7 +28,6 @@ interface FilterData {
   clientIds: string[]
   locationIds: string[]
   packageTypes: string[]
-  activeStatuses: string[]
   expirationStatus: string
   startDate: string
   endDate: string
@@ -46,7 +45,6 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
   
   // Only use local state for UI state, not filter values
   const [isOpen, setIsOpen] = useState(false)
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [localChanges, setLocalChanges] = useState<Record<string, any>>({})
   const [hasInitialized, setHasInitialized] = useState(false)
 
@@ -65,17 +63,15 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
     clientIds: getArrayFromParam(searchParams.get('clientIds')),
     locationIds: getArrayFromParam(searchParams.get('locationIds')),
     packageTypes: getArrayFromParam(searchParams.get('packageTypes')),
-    activeStatuses: getArrayFromParam(searchParams.get('activeStatuses')),
     expirationStatus: searchParams.get('expirationStatus') || '',
     startDate: searchParams.get('startDate') || '',
     endDate: searchParams.get('endDate') || '',
   }
-  
+
   const currentFilters = {
     clientIds: getFilterValue('clientIds', true) as string[],
     locationIds: getFilterValue('locationIds', true) as string[],
     packageTypes: getFilterValue('packageTypes', true) as string[],
-    activeStatuses: getFilterValue('activeStatuses', true) as string[],
     expirationStatus: getFilterValue('expirationStatus') as string,
     startDate: getFilterValue('startDate') as string,
     endDate: getFilterValue('endDate') as string,
@@ -104,9 +100,6 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
           }
           if (filters.packageTypes?.length > 0) {
             params.set('packageTypes', filters.packageTypes.join(','))
-          }
-          if (filters.activeStatuses?.length > 0) {
-            params.set('activeStatuses', filters.activeStatuses.join(','))
           }
           if (filters.expirationStatus) params.set('expirationStatus', filters.expirationStatus)
           if (filters.startDate) params.set('startDate', filters.startDate)
@@ -140,10 +133,6 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
     if (currentFilters.packageTypes.length > 0) {
       params.set('packageTypes', currentFilters.packageTypes.join(','))
     }
-    if (currentFilters.activeStatuses.length > 0) {
-      params.set('activeStatuses', currentFilters.activeStatuses.join(','))
-    }
-    
     // Handle single value filters
     if (currentFilters.expirationStatus) params.set('expirationStatus', currentFilters.expirationStatus)
     if (currentFilters.startDate) params.set('startDate', currentFilters.startDate)
@@ -164,7 +153,6 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
       clientIds: [],
       locationIds: [],
       packageTypes: [],
-      activeStatuses: [],
       expirationStatus: '',
       startDate: '',
       endDate: ''
@@ -176,26 +164,13 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
     router.refresh() // Force refresh to clear filters
   }
 
-  const activeFilterCount = 
-    currentFilters.clientIds.length + 
-    currentFilters.locationIds.length + 
+  const activeFilterCount =
+    currentFilters.clientIds.length +
+    currentFilters.locationIds.length +
     currentFilters.packageTypes.length +
-    currentFilters.activeStatuses.length + 
     (currentFilters.expirationStatus ? 1 : 0) +
-    (currentFilters.startDate ? 1 : 0) + 
+    (currentFilters.startDate ? 1 : 0) +
     (currentFilters.endDate ? 1 : 0)
-
-  // Toggle function for status (still using dropdown)
-  const toggleActiveStatus = (status: string) => {
-    const current = currentFilters.activeStatuses
-    setLocalChanges(prev => ({
-      ...prev,
-      activeStatuses: current.includes(status)
-        ? current.filter(s => s !== status)
-        : [...current, status]
-    }))
-  }
-
 
   return (
     <div className="mb-4">
@@ -304,57 +279,6 @@ export function PackageFilters({ clients, locations, packageTypes, currentUserRo
                 />
               </div>
             )}
-
-            {/* Active Status Filter - Multi-select Dropdown */}
-            <div className="relative">
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Status
-              </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-left text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm flex items-center justify-between"
-                >
-                  <span>
-                    {currentFilters.activeStatuses.length === 0 
-                      ? 'All Status' 
-                      : currentFilters.activeStatuses.length === 2
-                      ? 'All Status'
-                      : currentFilters.activeStatuses.includes('true') 
-                      ? 'Active' 
-                      : 'Inactive'}
-                  </span>
-                  <svg className="h-4 w-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {openDropdown === 'status' && (
-                  <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg">
-                    <div className="p-2">
-                      <label className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={currentFilters.activeStatuses.includes('true')}
-                          onChange={() => toggleActiveStatus('true')}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                        />
-                        <span className="text-sm text-text-primary">Active</span>
-                      </label>
-                      <label className="flex items-center space-x-2 hover:bg-surface-hover p-2 rounded cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={currentFilters.activeStatuses.includes('false')}
-                          onChange={() => toggleActiveStatus('false')}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                        />
-                        <span className="text-sm text-text-primary">Inactive</span>
-                      </label>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* Expiration Status Filter - Dropdown */}
             <div>

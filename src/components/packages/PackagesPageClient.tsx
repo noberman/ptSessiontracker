@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { PackageFilters } from '@/components/packages/PackageFilters'
 import { PackageTable } from '@/components/packages/PackageTable'
+import { ArchivedPackagesTable } from '@/components/packages/ArchivedPackagesTable'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { Settings, Download } from 'lucide-react'
 
 interface PackagesPageClientProps {
@@ -19,6 +21,7 @@ interface PackagesPageClientProps {
   canEdit: boolean
   canDelete: boolean
   canManageTypes: boolean
+  archivedCount: number
   searchParams: any
 }
 
@@ -33,10 +36,58 @@ export function PackagesPageClient({
   canEdit,
   canDelete,
   canManageTypes,
+  archivedCount: initialArchivedCount,
   searchParams
 }: PackagesPageClientProps) {
   const [isExporting, setIsExporting] = useState(false)
+  const [activeTab, setActiveTab] = useState<'packages' | 'archived'>('packages')
+  const [archivedPackages, setArchivedPackages] = useState<any[]>([])
+  const [archivedCount, setArchivedCount] = useState(initialArchivedCount)
+  const [archiveLoading, setArchiveLoading] = useState(false)
   const urlSearchParams = useSearchParams()
+  const router = useRouter()
+
+  const fetchArchivedPackages = useCallback(async () => {
+    setArchiveLoading(true)
+    try {
+      const response = await fetch('/api/packages/list?active=false')
+      if (!response.ok) throw new Error('Failed to fetch archived packages')
+      const data = await response.json()
+      setArchivedPackages(data.packages || [])
+      setArchivedCount(data.packages?.length || 0)
+    } catch (error) {
+      console.error('Failed to fetch archived packages:', error)
+    } finally {
+      setArchiveLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'archived' && archivedPackages.length === 0) {
+      fetchArchivedPackages()
+    }
+  }, [activeTab, fetchArchivedPackages])
+
+  const handleReactivate = async (packageId: string) => {
+    try {
+      const response = await fetch(`/api/packages/${packageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: true }),
+      })
+      if (!response.ok) throw new Error('Failed to reactivate package')
+
+      // Remove from archived list and update count
+      setArchivedPackages(prev => prev.filter(p => p.id !== packageId))
+      setArchivedCount(prev => prev - 1)
+
+      // Refresh the main view to show the reactivated package
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to reactivate package:', error)
+      alert('Failed to reactivate package')
+    }
+  }
 
   const handleExport = async () => {
     setIsExporting(true)
@@ -104,20 +155,61 @@ export function PackagesPageClient({
             </div>
           </div>
         </div>
-        
-        <PackageFilters
-          clients={availableClients}
-          locations={availableLocations}
-          packageTypes={availablePackageTypes}
-          currentUserRole={currentUserRole}
-        />
-        
-        <PackageTable 
-          initialPackages={packages}
-          pagination={pagination}
-          canEdit={canEdit}
-          canDelete={canDelete}
-        />
+
+        {/* Tabs */}
+        <div className="flex space-x-1 border-b border-border mb-4">
+          <button
+            onClick={() => setActiveTab('packages')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'packages'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border'
+            }`}
+          >
+            Active Packages
+          </button>
+          <button
+            onClick={() => setActiveTab('archived')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+              activeTab === 'archived'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border'
+            }`}
+          >
+            Archived
+            {archivedCount > 0 && (
+              <Badge variant="gray" size="sm">{archivedCount}</Badge>
+            )}
+          </button>
+        </div>
+
+        {activeTab === 'packages' && (
+          <>
+            <PackageFilters
+              clients={availableClients}
+              locations={availableLocations}
+              packageTypes={availablePackageTypes}
+              currentUserRole={currentUserRole}
+            />
+
+            <PackageTable
+              initialPackages={packages}
+              pagination={pagination}
+              canEdit={canEdit}
+              canDelete={canDelete}
+            />
+          </>
+        )}
+
+        {activeTab === 'archived' && (
+          <ArchivedPackagesTable
+            packages={archivedPackages}
+            loading={archiveLoading}
+            onReactivate={handleReactivate}
+            onRefresh={fetchArchivedPackages}
+            canEdit={canEdit}
+          />
+        )}
     </div>
   )
 }
