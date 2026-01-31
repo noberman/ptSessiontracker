@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     // so we filter through package -> client -> organization
     const where: Record<string, unknown> = {
       package: {
+        active: true,
         client: {
           organizationId: orgId,
         },

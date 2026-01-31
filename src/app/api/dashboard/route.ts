@@ -435,12 +435,13 @@ export async function GET(request: Request) {
           where: { ...sessionsWhere, validated: true }
         }),
 
-        // Total sales (payments received in this period)
+        // Total sales (payments received in this period, active packages only)
         prisma.payment.aggregate({
           where: {
             paymentDate: { gte: dateFrom, lte: dateTo },
             package: {
               organizationId,
+              active: true,
               ...(Object.keys(paymentClientFilter).length > 0
                 ? { client: paymentClientFilter }
                 : {})
@@ -712,12 +713,13 @@ export async function GET(request: Request) {
       // CLIENT METRICS - PERIOD BASED (Within Time Filter)
       // =====================================================================
 
-      // Get payments received in the period for new/resold calculations (split payments support)
+      // Get payments received in the period for new/resold calculations (split payments support, active packages only)
       const paymentsInPeriod = await prisma.payment.findMany({
         where: {
           paymentDate: { gte: dateFrom, lte: dateTo },
           package: {
             organizationId,
+            active: true,
             ...(Object.keys(paymentClientFilter).length > 0
               ? { client: paymentClientFilter }
               : {})
