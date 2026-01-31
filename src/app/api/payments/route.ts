@@ -62,12 +62,8 @@ export async function GET(request: NextRequest) {
     const packageClientFilter = (where.package as Record<string, unknown>).client as Record<string, unknown>
 
     if (locationIds.length > 0) {
-      // Explicit location filter
-      packageClientFilter.primaryTrainer = {
-        locations: {
-          some: { locationId: { in: locationIds } },
-        },
-      }
+      // Explicit location filter — use client.locationId to match dashboard logic
+      packageClientFilter.locationId = { in: locationIds }
     } else if (session.user.role !== 'ADMIN') {
       // Auto-scope to manager's locations
       const accessibleLocations = await getUserAccessibleLocations(
@@ -75,11 +71,7 @@ export async function GET(request: NextRequest) {
         session.user.role
       )
       if (accessibleLocations && accessibleLocations.length > 0) {
-        packageClientFilter.primaryTrainer = {
-          locations: {
-            some: { locationId: { in: accessibleLocations } },
-          },
-        }
+        packageClientFilter.locationId = { in: accessibleLocations }
       } else if (accessibleLocations && accessibleLocations.length === 0) {
         // No location access — return empty
         return NextResponse.json({
