@@ -88,7 +88,7 @@ export function SetupChecklist() {
           id: 'session',
           label: 'Log your first session',
           completed: sessions.sessions?.length > 0,
-          href: '/sessions/log'
+          href: '/sessions/new'
         },
         {
           id: 'team',
