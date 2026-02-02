@@ -556,7 +556,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
           <div className="flex-1" />
 
           {/* Alerts Bell */}
-          {data.stats.unassignedClients && data.stats.unassignedClients > 0 && (
+          {data.stats.unassignedClients != null && data.stats.unassignedClients > 0 && (
             <div className="relative" ref={alertsRef}>
               <button
                 type="button"
