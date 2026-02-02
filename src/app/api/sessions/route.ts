@@ -7,6 +7,7 @@ import { renderSessionValidationEmail } from '@/lib/email/render'
 import { getOrganizationId } from '@/lib/organization-context'
 import { canCreateSession, canTrainerLogSessions, canUseLocation } from '@/lib/usage-limits'
 import { canLogSession } from '@/lib/payments'
+import { calculateExpiryDate } from '@/lib/package-expiry'
 import { orgTimeToUtc, TIMEZONE_FIX_DEPLOYMENT_DATE } from '@/utils/timezone'
 import crypto from 'crypto'
 
@@ -345,10 +346,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check if package has expired
+    // Check if package has expired (hard lock — no new sessions allowed)
     if (pkg.expiresAt && new Date(pkg.expiresAt) < new Date()) {
+      const expiryDate = new Date(pkg.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
       return NextResponse.json(
-        { error: 'Package has expired' },
+        { error: `This package expired on ${expiryDate}. Please extend the package or assign a new one.` },
         { status: 400 }
       )
     }
@@ -503,16 +505,38 @@ export async function POST(request: Request) {
       })
 
       // Update package remaining sessions
+      const packageUpdateData: any = {}
       if (pkg.remainingSessions > 0) {
-        await tx.package.update({
-          where: { id: packageId },
-          data: {
-            remainingSessions: pkg.remainingSessions - 1
-          }
-        })
+        packageUpdateData.remainingSessions = pkg.remainingSessions - 1
       }
 
-      // TODO: Add audit logging when AuditLog model is created
+      // First session trigger: if package has no effectiveStartDate, this is the first session
+      if (!pkg.effectiveStartDate && pkg.packageTypeId) {
+        const pkgType = await tx.packageType.findUnique({
+          where: { id: pkg.packageTypeId },
+          select: { startTrigger: true, expiryDurationValue: true, expiryDurationUnit: true },
+        })
+
+        if (pkgType?.startTrigger === 'FIRST_SESSION') {
+          const sessionDateObj = new Date(sessionDate)
+          packageUpdateData.effectiveStartDate = sessionDateObj
+
+          if (pkgType.expiryDurationValue && pkgType.expiryDurationUnit) {
+            packageUpdateData.expiresAt = calculateExpiryDate(
+              sessionDateObj,
+              pkgType.expiryDurationValue,
+              pkgType.expiryDurationUnit
+            )
+          }
+        }
+      }
+
+      if (Object.keys(packageUpdateData).length > 0) {
+        await tx.package.update({
+          where: { id: packageId },
+          data: packageUpdateData,
+        })
+      }
 
       return createdSession
     })

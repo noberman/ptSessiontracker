@@ -102,12 +102,15 @@ export default async function ClientDetailPage({
   const clientStateDisplay = getClientStateDisplay(clientState)
 
   // Helper function to determine package status
-  const getPackageStatus = (pkg: any): { label: string; variant: 'success' | 'error' | 'gray' | 'warning' } => {
+  const getPackageStatus = (pkg: any): { label: string; variant: 'success' | 'error' | 'gray' | 'warning' | 'default' } => {
     const now = new Date()
     const isExpired = pkg.expiresAt && new Date(pkg.expiresAt) < now
 
     if (!pkg.active) {
       return { label: 'Archived', variant: 'gray' }
+    }
+    if (pkg.packageTypeId && pkg.effectiveStartDate === null) {
+      return { label: 'Not Started', variant: 'default' }
     }
     if (isExpired) {
       return { label: 'Expired', variant: 'error' }

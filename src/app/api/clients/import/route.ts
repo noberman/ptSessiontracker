@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { parse } from 'csv-parse/sync'
 import { getUserAccessibleLocations } from '@/lib/user-locations'
 import { findBestMatch } from '@/lib/fuzzy-match'
+import { calculateExpiryDate } from '@/lib/package-expiry'
 
 interface ImportRow {
   name: string
@@ -43,6 +44,9 @@ interface ValidationResult {
     name: string
     defaultSessions: number | null
     defaultPrice: number | null
+    startTrigger: string
+    expiryDurationValue: number | null
+    expiryDurationUnit: string | null
   }
 }
 
@@ -703,6 +707,23 @@ export async function POST(request: Request) {
                 }
                 
                 // If package name matches a PackageType, use it; otherwise default to Custom
+                // Determine effective start date and expiry from package type settings
+                let effectiveStartDate: Date | null = new Date()
+                let importExpiresAt: Date | null = result.row.expiryDate || null
+
+                if (result.packageType) {
+                  if (result.packageType.startTrigger === 'FIRST_SESSION') {
+                    effectiveStartDate = null
+                    importExpiresAt = null // Will be calculated on first session
+                  } else if (result.packageType.expiryDurationValue && result.packageType.expiryDurationUnit && !result.row.expiryDate) {
+                    importExpiresAt = calculateExpiryDate(
+                      effectiveStartDate!,
+                      result.packageType.expiryDurationValue,
+                      result.packageType.expiryDurationUnit as import('@prisma/client').DurationUnit
+                    )
+                  }
+                }
+
                 const pkg = await tx.package.create({
                   data: {
                     clientId: client.id,
@@ -712,11 +733,12 @@ export async function POST(request: Request) {
                     totalSessions: totalSessions,
                     remainingSessions: result.row.remainingSessions,
                     totalValue: totalValue,
-                    sessionValue: sessionValue, // Always calculate, never use manual input
-                    organizationId: session.user.organizationId!, // Add organizationId
+                    sessionValue: sessionValue,
+                    organizationId: session.user.organizationId!,
                     active: true,
                     startDate: new Date(),
-                    expiresAt: result.row.expiryDate || null,
+                    expiresAt: importExpiresAt,
+                    effectiveStartDate,
                   }
                 })
                 console.log(`Created package: ${pkg.id} - ${pkg.name} for client ${client.name}`)

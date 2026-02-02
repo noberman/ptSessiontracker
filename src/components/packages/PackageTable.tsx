@@ -32,6 +32,8 @@ interface Package {
   active: boolean
   startDate: string | Date | null
   expiresAt: string | Date | null
+  effectiveStartDate?: string | Date | null
+  packageTypeId?: string | null
   client: {
     id: string
     name: string
@@ -124,16 +126,19 @@ export function PackageTable({
   }
 
   const getStatusBadge = (pkg: Package) => {
+    if (!pkg.active) {
+      return <Badge variant="gray" size="sm">Inactive</Badge>
+    }
+    if (pkg.packageTypeId && pkg.effectiveStartDate === null) {
+      return <Badge variant="default" size="sm">Not Started</Badge>
+    }
     if (pkg.expiresAt && new Date(pkg.expiresAt) < new Date()) {
       return <Badge variant="error" size="sm">Expired</Badge>
     }
     if (pkg.remainingSessions === 0) {
       return <Badge variant="gray" size="sm">Completed</Badge>
     }
-    if (pkg.active) {
-      return <Badge variant="success" size="sm">Active</Badge>
-    }
-    return <Badge variant="gray" size="sm">Inactive</Badge>
+    return <Badge variant="success" size="sm">Active</Badge>
   }
 
   const getPackageTypeBadge = (type: string) => {

@@ -33,6 +33,9 @@ interface PackageType {
   defaultPrice?: number | null
   isActive: boolean
   sortOrder: number
+  startTrigger?: string
+  expiryDurationValue?: number | null
+  expiryDurationUnit?: string | null
   _count?: {
     packages: number
   }
@@ -97,12 +100,22 @@ function SortablePackageTypeItem({
                   </Badge>
                 )}
               </div>
-              <div className="flex gap-4 mt-2 text-sm text-text-secondary">
+              <div className="flex flex-wrap gap-4 mt-2 text-sm text-text-secondary">
                 {type.defaultSessions && (
-                  <span>Default sessions: {type.defaultSessions}</span>
+                  <span>Sessions: {type.defaultSessions}</span>
                 )}
                 {type.defaultPrice && (
-                  <span>Default price: ${type.defaultPrice}</span>
+                  <span>Price: ${type.defaultPrice}</span>
+                )}
+                {type.startTrigger === 'FIRST_SESSION' && (
+                  <span>Starts: First session</span>
+                )}
+                {type.expiryDurationValue && type.expiryDurationUnit && (
+                  <span>
+                    Expires: {type.expiryDurationValue}{' '}
+                    {type.expiryDurationUnit.toLowerCase()}
+                    {type.startTrigger === 'FIRST_SESSION' ? ' after first session' : ' after purchase'}
+                  </span>
                 )}
               </div>
             </div>

@@ -170,19 +170,20 @@ Represents training packages purchased by clients.
 
 ```prisma
 model Package {
-  id            String   @id @default(cuid())
-  clientId      String
-  name          String
-  totalValue    Float
-  totalSessions Int
-  sessionValue  Float    // Calculated: totalValue / totalSessions
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  clientId           String
+  name               String
+  totalValue         Float
+  totalSessions      Int
+  sessionValue       Float     // Calculated: totalValue / totalSessions
+  active             Boolean   @default(true)
+  effectiveStartDate DateTime? // When the package actually started (null = Not Started)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   // Relations
-  client        Client    @relation(fields: [clientId], references: [id])
-  sessions      Session[]
+  client             Client    @relation(fields: [clientId], references: [id])
+  sessions           Session[]
 
   @@map("packages")
 }
@@ -193,6 +194,8 @@ model Package {
 - Multiple packages allowed per client
 - Sessions not blocked if package exceeded
 - Active flag for current vs historical packages
+- `effectiveStartDate`: set on creation for DATE_OF_PURCHASE trigger, set on first session for FIRST_SESSION trigger. Null means "Not Started."
+- When expired (`expiresAt < now`), no new sessions can be created (hard lock)
 
 ### Payment
 Tracks individual payment transactions against packages. Supports split payments (multiple installments per package) and explicit sales commission attribution.
@@ -300,23 +303,37 @@ Defines package types available for an organization (e.g., "12 Prime PT Sessions
 
 ```prisma
 model PackageType {
-  id              String        @id @default(cuid())
-  organizationId  String
-  name            String        // User-friendly name like "Elite 12 Sessions"
-  defaultSessions Int?          // Default session count for this type
-  defaultPrice    Float?        // Default price for this type
-  isActive        Boolean       @default(true)
-  sortOrder       Int           @default(0)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
+  id                  String        @id @default(cuid())
+  organizationId      String
+  name                String        // User-friendly name like "Elite 12 Sessions"
+  defaultSessions     Int?          // Default session count for this type
+  defaultPrice        Float?        // Default price for this type
+  isActive            Boolean       @default(true)
+  sortOrder           Int           @default(0)
+  startTrigger        StartTrigger  @default(DATE_OF_PURCHASE)
+  expiryDurationValue Int?          // e.g. 3, 6, 90 — null means no auto-expiry
+  expiryDurationUnit  DurationUnit? // e.g. MONTHS, WEEKS, DAYS
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
   // Relations
-  organization    Organization  @relation(fields: [organizationId], references: [id])
-  packages        Package[]     // Packages using this type
-  
+  organization        Organization  @relation(fields: [organizationId], references: [id])
+  packages            Package[]     // Packages using this type
+
   @@unique([organizationId, name])
   @@index([organizationId])
   @@map("package_types")
+}
+
+enum StartTrigger {
+  DATE_OF_PURCHASE  // Package starts immediately when assigned
+  FIRST_SESSION     // Package starts when first session is logged
+}
+
+enum DurationUnit {
+  DAYS
+  WEEKS
+  MONTHS
 }
 ```
 

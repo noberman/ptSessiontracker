@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { name, defaultSessions, defaultPrice } = await request.json()
+    const { name, defaultSessions, defaultPrice, startTrigger, expiryDurationValue, expiryDurationUnit } = await request.json()
 
     // Validate input
     if (!name || !defaultSessions || defaultPrice === undefined) {
@@ -102,7 +102,10 @@ export async function POST(request: Request) {
         name,
         defaultSessions: Number(defaultSessions),
         defaultPrice: Number(defaultPrice),
-        sortOrder: (maxSortOrder?.sortOrder ?? -1) + 1
+        sortOrder: (maxSortOrder?.sortOrder ?? -1) + 1,
+        startTrigger: startTrigger || 'DATE_OF_PURCHASE',
+        expiryDurationValue: expiryDurationValue ? Number(expiryDurationValue) : null,
+        expiryDurationUnit: expiryDurationValue ? (expiryDurationUnit || 'MONTHS') : null,
       }
     })
 

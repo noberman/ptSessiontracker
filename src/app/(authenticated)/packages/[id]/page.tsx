@@ -58,6 +58,13 @@ export default async function ViewPackagePage({
           },
         },
       },
+      packageTypeModel: {
+        select: {
+          startTrigger: true,
+          expiryDurationValue: true,
+          expiryDurationUnit: true,
+        },
+      },
       _count: {
         select: {
           sessions: true,
@@ -99,6 +106,19 @@ export default async function ViewPackagePage({
     ? Math.round((usedSessions / packageData.totalSessions) * 100)
     : 0
   const isExpired = packageData.expiresAt && new Date(packageData.expiresAt) < new Date()
+  const isNotStarted = packageData.packageTypeId && packageData.effectiveStartDate === null
+  const isFirstSessionTrigger = packageData.packageTypeModel?.startTrigger === 'FIRST_SESSION'
+  const hasDuration = packageData.packageTypeModel?.expiryDurationValue && packageData.packageTypeModel?.expiryDurationUnit
+
+  const formatDuration = (value: number, unit: string): string => {
+    const labels: Record<string, [string, string]> = {
+      DAYS: ['day', 'days'],
+      WEEKS: ['week', 'weeks'],
+      MONTHS: ['month', 'months'],
+    }
+    const [singular, plural] = labels[unit] || [unit.toLowerCase(), unit.toLowerCase()]
+    return `${value} ${value === 1 ? singular : plural}`
+  }
   
   const canEdit = session.user.role !== 'TRAINER'
   const canDelete = session.user.role === 'ADMIN'
@@ -158,11 +178,14 @@ export default async function ViewPackagePage({
                 <dt className="text-sm font-medium text-text-secondary">Status</dt>
                 <dd className="mt-1">
                   <div className="flex items-center space-x-2">
-                    <Badge variant={packageData.active ? 'success' : 'gray'}>
-                      {packageData.active ? 'Active' : 'Inactive'}
-                    </Badge>
-                    {isExpired && (
+                    {!packageData.active ? (
+                      <Badge variant="gray">Inactive</Badge>
+                    ) : isNotStarted ? (
+                      <Badge variant="default">Not Started</Badge>
+                    ) : isExpired ? (
                       <Badge variant="error">Expired</Badge>
+                    ) : (
+                      <Badge variant="success">Active</Badge>
                     )}
                   </div>
                 </dd>
@@ -180,19 +203,33 @@ export default async function ViewPackagePage({
                 </dd>
               </div>
               <div>
+                <dt className="text-sm font-medium text-text-secondary">Purchase Date</dt>
+                <dd className="mt-1 text-text-primary">
+                  {new Date(packageData.createdAt).toLocaleDateString()}
+                </dd>
+              </div>
+              <div>
                 <dt className="text-sm font-medium text-text-secondary">Start Date</dt>
                 <dd className="mt-1 text-text-primary">
-                  {packageData.startDate 
-                    ? new Date(packageData.startDate).toLocaleDateString()
-                    : 'Not set'}
+                  {isNotStarted
+                    ? <span className="text-text-tertiary italic">Pending first session</span>
+                    : packageData.effectiveStartDate
+                      ? new Date(packageData.effectiveStartDate).toLocaleDateString()
+                      : packageData.startDate
+                        ? new Date(packageData.startDate).toLocaleDateString()
+                        : 'Not set'}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-text-secondary">Expiration Date</dt>
                 <dd className="mt-1 text-text-primary">
-                  {packageData.expiresAt 
-                    ? new Date(packageData.expiresAt).toLocaleDateString()
-                    : 'No expiration'}
+                  {isNotStarted && hasDuration
+                    ? <span className="text-text-tertiary italic">
+                        {formatDuration(packageData.packageTypeModel!.expiryDurationValue!, packageData.packageTypeModel!.expiryDurationUnit!)} after first session
+                      </span>
+                    : packageData.expiresAt
+                      ? new Date(packageData.expiresAt).toLocaleDateString()
+                      : 'No expiration'}
                 </dd>
               </div>
             </dl>

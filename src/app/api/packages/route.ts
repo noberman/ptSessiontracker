@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getUserAccessibleLocations, userHasLocationAccess } from '@/lib/user-locations'
+import { calculateExpiryDate } from '@/lib/package-expiry'
 
 // GET /api/packages - List all packages with pagination and filters
 export async function GET(request: NextRequest) {
@@ -205,11 +206,42 @@ export async function POST(request: NextRequest) {
     // Calculate session value (0 if package is free)
     const sessionValue = totalSessions > 0 ? totalValue / totalSessions : 0
 
+    // Determine start trigger and expiry from package type settings
+    let effectiveStartDate: Date | null = null
+    let calculatedExpiresAt: Date | null = expiresAt ? new Date(expiresAt) : null
+    let resolvedPackageType = 'Custom'
+
+    if (packageTypeId) {
+      const pkgType = await prisma.packageType.findUnique({
+        where: { id: packageTypeId },
+        select: { name: true, startTrigger: true, expiryDurationValue: true, expiryDurationUnit: true },
+      })
+
+      if (pkgType) {
+        resolvedPackageType = pkgType.name
+        if (pkgType.startTrigger === 'DATE_OF_PURCHASE') {
+          effectiveStartDate = startDate ? new Date(startDate) : new Date()
+          // Auto-calculate expiry if duration is set and no manual expiresAt provided
+          if (pkgType.expiryDurationValue && pkgType.expiryDurationUnit && !expiresAt) {
+            calculatedExpiresAt = calculateExpiryDate(
+              effectiveStartDate,
+              pkgType.expiryDurationValue,
+              pkgType.expiryDurationUnit
+            )
+          }
+        }
+        // FIRST_SESSION: effectiveStartDate stays null, expiresAt stays null (set on first session)
+      }
+    } else {
+      // No package type — treat as date of purchase (legacy behavior)
+      effectiveStartDate = startDate ? new Date(startDate) : new Date()
+    }
+
     // Create package with organizationId for direct filtering
     const newPackage = await prisma.package.create({
       data: {
         clientId,
-        packageType: packageType || 'Custom',
+        packageType: resolvedPackageType,
         packageTypeId: packageTypeId || null,
         name,
         totalValue,
@@ -217,9 +249,10 @@ export async function POST(request: NextRequest) {
         remainingSessions: totalSessions, // Start with full sessions
         sessionValue,
         startDate: startDate ? new Date(startDate) : new Date(),
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-        organizationId: session.user.organizationId, // Set organizationId directly
-        isDemo, // Add isDemo flag
+        expiresAt: calculatedExpiresAt,
+        effectiveStartDate,
+        organizationId: session.user.organizationId,
+        isDemo,
       },
       select: {
         id: true,

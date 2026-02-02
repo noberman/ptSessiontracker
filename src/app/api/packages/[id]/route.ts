@@ -157,6 +157,14 @@ export async function PUT(
       if (totalSessions !== undefined) updateData.totalSessions = totalSessions
       // NOTE: sessionValue is NEVER updated after creation - it's immutable
       // This ensures commission calculations remain stable
+
+      // If core details were changed, mark as Custom (no longer matches original template)
+      const nameChanged = name !== undefined && name !== currentPackage.name
+      const valueChanged = totalValue !== undefined && totalValue !== currentPackage.totalValue
+      const sessionsChanged = totalSessions !== undefined && totalSessions !== currentPackage.totalSessions
+      if (nameChanged || valueChanged || sessionsChanged) {
+        updateData.packageType = 'Custom'
+      }
     } else {
       // Non-admins trying to change restricted fields
       if (name !== undefined || totalValue !== undefined || totalSessions !== undefined) {

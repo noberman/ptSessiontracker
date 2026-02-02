@@ -65,12 +65,15 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { 
-      name, 
-      defaultSessions, 
-      defaultPrice, 
+    const {
+      name,
+      defaultSessions,
+      defaultPrice,
       sortOrder,
-      isActive 
+      isActive,
+      startTrigger,
+      expiryDurationValue,
+      expiryDurationUnit,
     } = body
 
     // Get organization context
@@ -113,6 +116,9 @@ export async function PUT(
     if (defaultPrice !== undefined) updateData.defaultPrice = defaultPrice
     if (sortOrder !== undefined) updateData.sortOrder = sortOrder
     if (isActive !== undefined) updateData.isActive = isActive
+    if (startTrigger !== undefined) updateData.startTrigger = startTrigger
+    if (expiryDurationValue !== undefined) updateData.expiryDurationValue = expiryDurationValue
+    if (expiryDurationUnit !== undefined) updateData.expiryDurationUnit = expiryDurationUnit
     
     // Update package type
     const updatedType = await prisma.packageType.update({

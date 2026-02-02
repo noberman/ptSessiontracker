@@ -15,6 +15,9 @@ interface PackageType {
   defaultPrice?: number | null
   isActive: boolean
   sortOrder: number
+  startTrigger?: string
+  expiryDurationValue?: number | null
+  expiryDurationUnit?: string | null
 }
 
 interface PackageFormProps {
@@ -145,10 +148,52 @@ export function PackageForm({
     }
   }, [formData.totalValue, formData.totalSessions])
 
+  // Get selected package type's config
+  const selectedPackageType = useMemo(() => {
+    if (!formData.packageTypeId || formData.packageTypeId === 'custom') return null
+    return packageTypes.find(t => t.id === formData.packageTypeId) || null
+  }, [formData.packageTypeId, packageTypes])
+
+  const hasDurationConfig = selectedPackageType?.expiryDurationValue && selectedPackageType?.expiryDurationUnit
+  const isFirstSessionTrigger = selectedPackageType?.startTrigger === 'FIRST_SESSION'
+
+  // Calculate expiry date from start date + duration (client-side preview)
+  const calculateExpiryFromDuration = (startDate: string, durationValue: number, durationUnit: string): string => {
+    const date = new Date(startDate)
+    switch (durationUnit) {
+      case 'DAYS':
+        date.setDate(date.getDate() + durationValue)
+        break
+      case 'WEEKS':
+        date.setDate(date.getDate() + durationValue * 7)
+        break
+      case 'MONTHS': {
+        const dayOfMonth = date.getDate()
+        date.setDate(1)
+        date.setMonth(date.getMonth() + durationValue)
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+        date.setDate(Math.min(dayOfMonth, lastDay))
+        break
+      }
+    }
+    return date.toISOString().split('T')[0]
+  }
+
+  // Format duration for display
+  const formatDuration = (value: number, unit: string): string => {
+    const labels: Record<string, [string, string]> = {
+      DAYS: ['day', 'days'],
+      WEEKS: ['week', 'weeks'],
+      MONTHS: ['month', 'months'],
+    }
+    const [singular, plural] = labels[unit] || [unit.toLowerCase(), unit.toLowerCase()]
+    return `${value} ${value === 1 ? singular : plural}`
+  }
+
   // Handle package type selection
   const handlePackageTypeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const typeId = e.target.value
-    
+
     if (!typeId || typeId === 'custom') {
       setFormData({
         ...formData,
@@ -157,16 +202,27 @@ export function PackageForm({
         totalValue: 0,
         totalSessions: 0,
         remainingSessions: isEdit ? formData.remainingSessions : 0,
+        expiresAt: '',
       })
       return
     }
-    
+
     const packageType = packageTypes.find(t => t.id === typeId)
     if (packageType) {
       const defaultName = packageType.name || ''
       const defaultSessions = packageType.defaultSessions || 0
       const defaultPrice = packageType.defaultPrice || 0
-      
+
+      // Auto-calculate expiry for date_of_purchase with duration
+      let expiresAt = ''
+      if (packageType.startTrigger !== 'FIRST_SESSION' && packageType.expiryDurationValue && packageType.expiryDurationUnit) {
+        expiresAt = calculateExpiryFromDuration(
+          formData.startDate,
+          packageType.expiryDurationValue,
+          packageType.expiryDurationUnit
+        )
+      }
+
       setFormData({
         ...formData,
         packageTypeId: typeId,
@@ -174,9 +230,23 @@ export function PackageForm({
         totalValue: defaultPrice,
         totalSessions: defaultSessions,
         remainingSessions: isEdit ? formData.remainingSessions : defaultSessions,
+        expiresAt,
       })
     }
   }
+
+  // Recalculate expiry when start date changes (for date_of_purchase + duration)
+  useEffect(() => {
+    if (!isEdit && selectedPackageType && !isFirstSessionTrigger && hasDurationConfig && formData.startDate) {
+      const newExpiry = calculateExpiryFromDuration(
+        formData.startDate,
+        selectedPackageType.expiryDurationValue!,
+        selectedPackageType.expiryDurationUnit!
+      )
+      setFormData(prev => ({ ...prev, expiresAt: newExpiry }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.startDate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -543,29 +613,72 @@ export function PackageForm({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="startDate" className="block text-sm font-medium text-text-primary mb-1">
-                Start Date
-              </label>
-              <DatePicker
-                value={formData.startDate}
-                onChange={(value) => setFormData({ ...formData, startDate: value })}
-                placeholder="Select start date"
-              />
+          {/* Date fields — behavior depends on package type config */}
+          {!isEdit && isFirstSessionTrigger ? (
+            // FIRST_SESSION trigger during creation: no date fields, show info
+            <div className="bg-background-secondary rounded-lg p-3">
+              <p className="text-sm text-text-secondary">
+                <span className="font-medium text-text-primary">Start &amp; Expiry:</span>{' '}
+                This package starts when the first session is logged.
+                {hasDurationConfig && (
+                  <> It will expire{' '}
+                    <span className="font-semibold">
+                      {formatDuration(selectedPackageType!.expiryDurationValue!, selectedPackageType!.expiryDurationUnit!)}
+                    </span>{' '}
+                    after the first session.
+                  </>
+                )}
+              </p>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="startDate" className="block text-sm font-medium text-text-primary mb-1">
+                  Start Date
+                </label>
+                <DatePicker
+                  value={formData.startDate}
+                  onChange={(value) => setFormData({ ...formData, startDate: value })}
+                  placeholder="Select start date"
+                  disabled={isEdit && isFirstSessionTrigger}
+                />
+              </div>
 
-            <div>
-              <label htmlFor="expiresAt" className="block text-sm font-medium text-text-primary mb-1">
-                Expiration Date
-              </label>
-              <DatePicker
-                value={formData.expiresAt}
-                onChange={(value) => setFormData({ ...formData, expiresAt: value })}
-                placeholder="Select expiry date"
-              />
+              <div>
+                <label htmlFor="expiresAt" className="block text-sm font-medium text-text-primary mb-1">
+                  Expiration Date
+                </label>
+                {!isEdit && hasDurationConfig ? (
+                  // Creation + duration config: show calculated date as read-only
+                  <>
+                    <DatePicker
+                      value={formData.expiresAt}
+                      onChange={() => {}}
+                      placeholder="Auto-calculated"
+                      disabled
+                    />
+                    <p className="text-xs text-text-secondary mt-1">
+                      Auto-calculated: {formatDuration(selectedPackageType!.expiryDurationValue!, selectedPackageType!.expiryDurationUnit!)} after start date
+                    </p>
+                  </>
+                ) : (
+                  // Edit mode or no duration config: editable
+                  <>
+                    <DatePicker
+                      value={formData.expiresAt}
+                      onChange={(value) => setFormData({ ...formData, expiresAt: value })}
+                      placeholder="Select expiry date"
+                    />
+                    {isEdit && packageData?.expiresAt && new Date(packageData.expiresAt) < new Date() && (
+                      <p className="text-xs text-warning-600 mt-1">
+                        This package has expired. Set a future date to re-activate it.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {isEdit && (
             <div className="flex items-center">

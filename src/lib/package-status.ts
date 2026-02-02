@@ -9,6 +9,8 @@
 interface PackageForStatusCheck {
   remainingSessions: number
   expiresAt: Date | null
+  effectiveStartDate?: Date | null
+  packageTypeId?: string | null
 }
 
 interface PackageWithSessions extends PackageForStatusCheck {
@@ -24,9 +26,10 @@ interface PackageWithSessions extends PackageForStatusCheck {
 
 /**
  * Check if a package is currently active
- * Active = has remaining sessions AND not expired
+ * Active = has remaining sessions AND not expired AND not in "not started" state
  */
 export function isPackageActive(pkg: PackageForStatusCheck): boolean {
+  if (isPackageNotStarted(pkg)) return false
   const now = new Date()
   const hasRemainingSessions = pkg.remainingSessions > 0
   const notExpired = pkg.expiresAt === null || pkg.expiresAt > now
@@ -68,9 +71,20 @@ export function isPackageExpiringSoon(
 }
 
 /**
+ * Check if a package is in "not started" state.
+ * A package is not started when it was created with a FIRST_SESSION trigger
+ * and no session has been logged yet (effectiveStartDate is null).
+ * Only applies to packages linked to a package type (packageTypeId is set).
+ */
+export function isPackageNotStarted(pkg: PackageForStatusCheck): boolean {
+  return pkg.packageTypeId != null && pkg.effectiveStartDate === null && pkg.effectiveStartDate !== undefined
+}
+
+/**
  * Get the status of a package as a string
  */
-export function getPackageStatus(pkg: PackageForStatusCheck): 'active' | 'completed' | 'expired' | 'expiring_soon' {
+export function getPackageStatus(pkg: PackageForStatusCheck): 'not_started' | 'active' | 'completed' | 'expired' | 'expiring_soon' {
+  if (isPackageNotStarted(pkg)) return 'not_started'
   if (isPackageExpired(pkg)) return 'expired'
   if (isPackageCompleted(pkg)) return 'completed'
   if (isPackageExpiringSoon(pkg)) return 'expiring_soon'
@@ -125,6 +139,8 @@ interface PackageForClientState {
   id: string
   remainingSessions: number
   expiresAt: Date | null
+  effectiveStartDate?: Date | null
+  packageTypeId?: string | null
   _count?: {
     sessions: number
   }

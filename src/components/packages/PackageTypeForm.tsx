@@ -4,11 +4,18 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { toast } from 'react-hot-toast'
 
+type StartTrigger = 'DATE_OF_PURCHASE' | 'FIRST_SESSION'
+type DurationUnit = 'DAYS' | 'WEEKS' | 'MONTHS'
+
 interface PackageTypeFormData {
   name: string
   defaultSessions: string
   defaultPrice: string
   isActive: boolean
+  startTrigger: StartTrigger
+  hasExpiry: boolean
+  expiryDurationValue: string
+  expiryDurationUnit: DurationUnit
 }
 
 interface PackageTypeFormProps {
@@ -22,7 +29,11 @@ export function PackageTypeForm({ packageType, onSuccess, onCancel }: PackageTyp
     name: packageType?.name || '',
     defaultSessions: packageType?.defaultSessions?.toString() || '',
     defaultPrice: packageType?.defaultPrice?.toString() || '',
-    isActive: packageType?.isActive ?? true
+    isActive: packageType?.isActive ?? true,
+    startTrigger: packageType?.startTrigger || 'DATE_OF_PURCHASE',
+    hasExpiry: !!(packageType?.expiryDurationValue),
+    expiryDurationValue: packageType?.expiryDurationValue?.toString() || '',
+    expiryDurationUnit: packageType?.expiryDurationUnit || 'MONTHS',
   })
   const [submitting, setSubmitting] = useState(false)
 
@@ -53,7 +64,14 @@ export function PackageTypeForm({ packageType, onSuccess, onCancel }: PackageTyp
         name: formData.name.trim(),
         defaultSessions: formData.defaultSessions ? parseInt(formData.defaultSessions) : null,
         defaultPrice: formData.defaultPrice ? parseFloat(formData.defaultPrice) : null,
-        isActive: formData.isActive
+        isActive: formData.isActive,
+        startTrigger: formData.startTrigger,
+        expiryDurationValue: formData.hasExpiry && formData.expiryDurationValue
+          ? parseInt(formData.expiryDurationValue)
+          : null,
+        expiryDurationUnit: formData.hasExpiry && formData.expiryDurationValue
+          ? formData.expiryDurationUnit
+          : null,
       }
 
       const url = packageType 
@@ -136,26 +154,104 @@ export function PackageTypeForm({ packageType, onSuccess, onCancel }: PackageTyp
         </div>
       </div>
 
+      {/* Start Trigger */}
       <div>
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="isActive"
-            checked={formData.isActive}
-            onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-            className="mr-2"
-          />
-          <label htmlFor="isActive" className="text-sm text-text-primary">
-            Active (available for new packages)
+        <label className="block text-sm font-medium text-text-primary mb-2">
+          Package Starts
+        </label>
+        <div className="space-y-2">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="startTrigger"
+              value="DATE_OF_PURCHASE"
+              checked={formData.startTrigger === 'DATE_OF_PURCHASE'}
+              onChange={() => setFormData({ ...formData, startTrigger: 'DATE_OF_PURCHASE' })}
+              className="mt-0.5"
+            />
+            <div>
+              <span className="text-sm text-text-primary">Date of Purchase</span>
+              <p className="text-xs text-text-secondary">Package starts immediately when assigned to a client</p>
+            </div>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="startTrigger"
+              value="FIRST_SESSION"
+              checked={formData.startTrigger === 'FIRST_SESSION'}
+              onChange={() => setFormData({ ...formData, startTrigger: 'FIRST_SESSION' })}
+              className="mt-0.5"
+            />
+            <div>
+              <span className="text-sm text-text-primary">First Session</span>
+              <p className="text-xs text-text-secondary">Package starts when the first session is logged</p>
+            </div>
           </label>
         </div>
-        {packageType?._count?.packages > 0 && !formData.isActive && (
-          <p className="text-xs text-warning mt-1">
-            Warning: This type is used by {packageType._count.packages} package(s). 
-            Deactivating will prevent creating new packages with this type.
-          </p>
+      </div>
+
+      {/* Expiry Duration */}
+      <div>
+        <label className="block text-sm font-medium text-text-primary mb-2">
+          Expiry Duration
+        </label>
+        <label className="flex items-center gap-2 mb-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={formData.hasExpiry}
+            onChange={(e) => setFormData({ ...formData, hasExpiry: e.target.checked })}
+          />
+          <span className="text-sm text-text-primary">Package expires after a set duration</span>
+        </label>
+        {formData.hasExpiry && (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={formData.expiryDurationValue}
+              onChange={(e) => setFormData({ ...formData, expiryDurationValue: e.target.value })}
+              className="w-20 px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary"
+              min="1"
+              placeholder="e.g., 3"
+            />
+            <select
+              value={formData.expiryDurationUnit}
+              onChange={(e) => setFormData({ ...formData, expiryDurationUnit: e.target.value as DurationUnit })}
+              className="px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary"
+            >
+              <option value="DAYS">Days</option>
+              <option value="WEEKS">Weeks</option>
+              <option value="MONTHS">Months</option>
+            </select>
+            <span className="text-sm text-text-secondary">
+              after {formData.startTrigger === 'FIRST_SESSION' ? 'first session' : 'purchase'}
+            </span>
+          </div>
         )}
       </div>
+
+      {packageType && (
+        <div>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="isActive"
+              checked={formData.isActive}
+              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              className="mr-2"
+            />
+            <label htmlFor="isActive" className="text-sm text-text-primary">
+              Active (available for new packages)
+            </label>
+          </div>
+          {packageType?._count?.packages > 0 && !formData.isActive && (
+            <p className="text-xs text-warning mt-1">
+              Warning: This type is used by {packageType._count.packages} package(s).
+              Deactivating will prevent creating new packages with this type.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex justify-end gap-2 pt-4 border-t border-border">
         <Button
