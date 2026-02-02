@@ -94,7 +94,7 @@ export function SetupChecklist() {
           id: 'team',
           label: 'Invite team members',
           completed: invitations.length > 0,
-          href: '/settings/team'
+          href: '/users'
         },
       ]
 
