@@ -11,7 +11,6 @@ interface PackageTypeFormData {
   name: string
   defaultSessions: string
   defaultPrice: string
-  isActive: boolean
   startTrigger: StartTrigger
   hasExpiry: boolean
   expiryDurationValue: string
@@ -29,7 +28,6 @@ export function PackageTypeForm({ packageType, onSuccess, onCancel }: PackageTyp
     name: packageType?.name || '',
     defaultSessions: packageType?.defaultSessions?.toString() || '',
     defaultPrice: packageType?.defaultPrice?.toString() || '',
-    isActive: packageType?.isActive ?? true,
     startTrigger: packageType?.startTrigger || 'DATE_OF_PURCHASE',
     hasExpiry: !!(packageType?.expiryDurationValue),
     expiryDurationValue: packageType?.expiryDurationValue?.toString() || '',
@@ -64,7 +62,6 @@ export function PackageTypeForm({ packageType, onSuccess, onCancel }: PackageTyp
         name: formData.name.trim(),
         defaultSessions: formData.defaultSessions ? parseInt(formData.defaultSessions) : null,
         defaultPrice: formData.defaultPrice ? parseFloat(formData.defaultPrice) : null,
-        isActive: formData.isActive,
         startTrigger: formData.startTrigger,
         expiryDurationValue: formData.hasExpiry && formData.expiryDurationValue
           ? parseInt(formData.expiryDurationValue)
@@ -230,28 +227,6 @@ export function PackageTypeForm({ packageType, onSuccess, onCancel }: PackageTyp
         )}
       </div>
 
-      {packageType && (
-        <div>
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="isActive"
-              checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="mr-2"
-            />
-            <label htmlFor="isActive" className="text-sm text-text-primary">
-              Active (available for new packages)
-            </label>
-          </div>
-          {packageType?._count?.packages > 0 && !formData.isActive && (
-            <p className="text-xs text-warning mt-1">
-              Warning: This type is used by {packageType._count.packages} package(s).
-              Deactivating will prevent creating new packages with this type.
-            </p>
-          )}
-        </div>
-      )}
 
       <div className="flex justify-end gap-2 pt-4 border-t border-border">
         <Button
