@@ -235,8 +235,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
         setNeedsColumnMapping(true)
         setWizardStep('columnMapping')
       }
-    } catch (error: any) {
-      alert(error.message || 'Failed to process file')
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Failed to process file')
     } finally {
       setLoading(false)
     }
@@ -249,8 +249,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
       const mappedText = remapCsvHeaders(rawCsvText, mapping)
       setProcessedCsvText(mappedText)
       await checkPackageTypes(mappedText)
-    } catch (error: any) {
-      alert(error.message || 'Failed to process mapping')
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Failed to process mapping')
     } finally {
       setLoading(false)
     }
@@ -297,7 +297,7 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
         setProcessedCsvText(csvText)
         setWizardStep('packageSetup')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error checking package types:', error)
       // If package type check fails, proceed to validate anyway
       await runValidation(csvText)
@@ -330,8 +330,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
       const finalCsv = remapPackageNames(processedCsvText, nameMap)
       setProcessedCsvText(finalCsv)
       await runValidation(finalCsv)
-    } catch (error: any) {
-      alert(error.message || 'Failed to process package setup')
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Failed to process package setup')
     } finally {
       setLoading(false)
     }
@@ -379,8 +379,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
           })
         }
       }, 100)
-    } catch (error: any) {
-      alert(error.message || 'Failed to validate file')
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Failed to validate file')
       // Go back to upload on failure
       setWizardStep('upload')
     } finally {
@@ -424,8 +424,8 @@ export function ClientImportForm({ userRole }: ClientImportFormProps) {
 
       setImportResults(data)
       setShowResults(true)
-    } catch (error: any) {
-      alert(error.message || 'Failed to import file')
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Failed to import file')
     } finally {
       setLoading(false)
     }

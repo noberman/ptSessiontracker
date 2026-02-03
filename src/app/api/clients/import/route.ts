@@ -754,15 +754,15 @@ export async function POST(request: Request) {
               })
             }
           })
-        } catch (error: any) {
-          console.error(`Failed to import client ${email}:`, error.message)
+        } catch (error: unknown) {
+          console.error(`Failed to import client ${email}:`, error instanceof Error ? error.message : error)
           console.error('Full error:', error)
           // Add all rows for this client to failed list
           clientRows.forEach(result => {
             importResults.failed.push({
               row: result.row.rowNumber,
               email: result.row.email,
-              error: error.message
+              error: error instanceof Error ? error.message : String(error)
             })
           })
         }
@@ -789,13 +789,13 @@ export async function POST(request: Request) {
       { status: 400 }
     )
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Import error:', error)
-    console.error('Stack trace:', error.stack)
+    console.error('Stack trace:', error instanceof Error ? error.stack : undefined)
     return NextResponse.json(
-      { 
-        error: error.message || 'Failed to process import',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      {
+        error: error instanceof Error ? error.message : 'Failed to process import',
+        details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
       },
       { status: 500 }
     )

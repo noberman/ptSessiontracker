@@ -68,21 +68,21 @@ export class EmailService {
       })
 
       return { success: true, data: response }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Email send error:', error)
-      
+
       // Log the error
       if (options.metadata?.emailLogId) {
         await this.updateEmailLog(options.metadata.emailLogId, {
           status: 'failed',
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           responseTime: Date.now() - startTime,
         })
       }
 
-      return { 
-        success: false, 
-        error: error.message || 'Failed to send email' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send email'
       }
     }
   }

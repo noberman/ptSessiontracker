@@ -4,17 +4,17 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { SubscriptionTier, SubscriptionStatus } from '@prisma/client'
 
-// GET /api/organizations - List all organizations (admin only)
+// GET /api/organizations - List all organizations (super admin only)
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
-    // Only admins can list all organizations
-    if (session.user.role !== 'ADMIN') {
+
+    // Only super admins can list all organizations (prevents cross-org data leaks)
+    if (session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     })
     
     return NextResponse.json(organizations)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch organizations:', error)
     return NextResponse.json(
       { error: 'Failed to fetch organizations' },
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     })
     
     return NextResponse.json(organization, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to create organization:', error)
     return NextResponse.json(
       { error: 'Failed to create organization' },

@@ -73,7 +73,7 @@ export async function PUT(request: NextRequest) {
 
     // Hash new password if provided
     if (newPassword) {
-      updateData.password = await bcrypt.hash(newPassword, 10)
+      updateData.password = await bcrypt.hash(newPassword, 12)
     }
 
     // Update the user

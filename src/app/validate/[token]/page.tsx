@@ -78,7 +78,7 @@ export default function ValidateSessionPage() {
         validatedAt: data.validatedAt,
         help: data.help || null,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState({ 
         status: 'error', 
         error: 'Failed to load session information' 
@@ -108,7 +108,7 @@ export default function ValidateSessionPage() {
           session: state.session,
         })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState({
         status: 'error',
         error: 'Network error. Please try again.',

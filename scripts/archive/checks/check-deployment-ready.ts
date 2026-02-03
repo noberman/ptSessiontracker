@@ -55,12 +55,12 @@ async function checkLocalMigrations() {
     
     log('✅ All migrations applied locally', 'green')
     return true
-  } catch (error: any) {
-    if (error.stdout?.includes('Database schema is up to date')) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'stdout' in error && typeof (error as Record<string, unknown>).stdout === 'string' && ((error as Record<string, string>).stdout).includes('Database schema is up to date')) {
       log('✅ Local database is up to date', 'green')
       return true
     }
-    log(`❌ Error checking migration status: ${error.message}`, 'red')
+    log(`❌ Error checking migration status: ${error instanceof Error ? error.message : String(error)}`, 'red')
     return false
   }
 }
@@ -80,8 +80,8 @@ async function checkSchemaSync() {
     
     log('✅ Prisma schema is synchronized', 'green')
     return true
-  } catch (error: any) {
-    log(`❌ Error generating Prisma client: ${error.message}`, 'red')
+  } catch (error: unknown) {
+    log(`❌ Error generating Prisma client: ${error instanceof Error ? error.message : String(error)}`, 'red')
     return false
   }
 }
@@ -113,8 +113,8 @@ async function checkMigrationFiles() {
     
     log('✅ All migration files are valid', 'green')
     return true
-  } catch (error: any) {
-    log(`❌ Error checking migration files: ${error.message}`, 'red')
+  } catch (error: unknown) {
+    log(`❌ Error checking migration files: ${error instanceof Error ? error.message : String(error)}`, 'red')
     return false
   }
 }
@@ -138,14 +138,15 @@ async function checkProductionReadiness() {
     
     log('✅ Migration status checked', 'green')
     return true
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If the database is in sync, this is fine
-    if (error.stdout?.includes('up to date') || 
-        error.stdout?.includes('No pending migrations')) {
+    const stdout = error && typeof error === 'object' && 'stdout' in error ? (error as Record<string, unknown>).stdout : undefined
+    if (typeof stdout === 'string' && (stdout.includes('up to date') ||
+        stdout.includes('No pending migrations'))) {
       log('✅ Production database is up to date', 'green')
       return true
     }
-    
+
     log(`⚠️  Could not fully verify production readiness`, 'yellow')
     console.log('This is often normal for local development', 'yellow')
     return true // Non-critical for local checks
@@ -190,8 +191,8 @@ async function checkDatabaseColumns() {
     }
     
     return true
-  } catch (error: any) {
-    log(`❌ Error checking database structure: ${error.message}`, 'red')
+  } catch (error: unknown) {
+    log(`❌ Error checking database structure: ${error instanceof Error ? error.message : String(error)}`, 'red')
     return false
   }
 }
@@ -218,8 +219,8 @@ async function compareSchemaWithDatabase() {
     
     log('✅ Database matches Prisma schema', 'green')
     return true
-  } catch (error: any) {
-    log(`⚠️  Could not compare schema: ${error.message}`, 'yellow')
+  } catch (error: unknown) {
+    log(`⚠️  Could not compare schema: ${error instanceof Error ? error.message : String(error)}`, 'yellow')
     return true // Non-critical, continue
   }
 }
@@ -243,8 +244,8 @@ async function main() {
     try {
       const result = await check.fn()
       results.push(result)
-    } catch (error: any) {
-      log(`❌ ${check.name} failed: ${error.message}`, 'red')
+    } catch (error: unknown) {
+      log(`❌ ${check.name} failed: ${error instanceof Error ? error.message : String(error)}`, 'red')
       results.push(false)
     }
   }

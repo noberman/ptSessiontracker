@@ -68,10 +68,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       invitation: updatedInvitation,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Resend invitation error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to resend invitation' },
+      { error: error instanceof Error ? error.message : 'Failed to resend invitation' },
       { status: 400 }
     )
   }
@@ -123,10 +123,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       success: true,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Cancel invitation error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to cancel invitation' },
+      { error: error instanceof Error ? error.message : 'Failed to cancel invitation' },
       { status: 400 }
     )
   }

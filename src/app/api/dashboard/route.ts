@@ -646,34 +646,34 @@ export async function GET(request: Request) {
         })
       ])
 
-      // Get ALL trainers (not just those with sessions) with their locations
-      const allTrainers = await prisma.user.findMany({
-        where: trainersWhere,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          locations: {
-            select: {
-              locationId: true
-            }
-          }
-        },
-        orderBy: { name: 'asc' }
-      })
-      
-      // Get all locations for PT Managers and Admins
-      let allLocations = null
-      if (session.user.role === 'PT_MANAGER' || session.user.role === 'ADMIN') {
-        allLocations = await prisma.location.findMany({
-          where: { active: true, organizationId },
+      // Get ALL trainers and locations in parallel (independent queries)
+      const [allTrainers, allLocations] = await Promise.all([
+        prisma.user.findMany({
+          where: trainersWhere,
           select: {
             id: true,
-            name: true
+            name: true,
+            email: true,
+            locations: {
+              select: {
+                locationId: true
+              }
+            }
           },
           orderBy: { name: 'asc' }
-        })
-      }
+        }),
+        // Get all locations for PT Managers and Admins
+        (session.user.role === 'PT_MANAGER' || session.user.role === 'ADMIN')
+          ? prisma.location.findMany({
+              where: { active: true, organizationId },
+              select: {
+                id: true,
+                name: true
+              },
+              orderBy: { name: 'asc' }
+            })
+          : Promise.resolve(null)
+      ])
       
       // Get trainer details for those with sessions
       // const trainerIds = [...new Set(trainerStats.map(stat => stat.trainerId))]
@@ -756,30 +756,30 @@ export async function GET(request: Request) {
           const lookbackDate = new Date(pkg.createdAt)
           lookbackDate.setDate(lookbackDate.getDate() - CLIENT_METRICS_CONFIG.NEW_CLIENT_LOOKBACK_DAYS)
 
-          // Check for prior sessions (exclude sessions on the current package)
-          const priorSession = await prisma.session.findFirst({
-            where: {
-              clientId: pkg.clientId,
-              sessionDate: {
-                gte: lookbackDate,
-                lt: pkg.createdAt
-              },
-              packageId: { not: pkg.id }
-            }
-          })
-
-          // Check for other active packages at time of purchase (for resold)
-          const hadActivePackageAtPurchase = await prisma.package.findFirst({
-            where: {
-              clientId: pkg.clientId,
-              id: { not: pkg.id },
-              remainingSessions: { gt: 0 },
-              OR: [
-                { expiresAt: null },
-                { expiresAt: { gt: pkg.createdAt } }
-              ]
-            }
-          })
+          // Check for prior sessions and active packages at time of purchase in parallel (independent queries)
+          const [priorSession, hadActivePackageAtPurchase] = await Promise.all([
+            prisma.session.findFirst({
+              where: {
+                clientId: pkg.clientId,
+                sessionDate: {
+                  gte: lookbackDate,
+                  lt: pkg.createdAt
+                },
+                packageId: { not: pkg.id }
+              }
+            }),
+            prisma.package.findFirst({
+              where: {
+                clientId: pkg.clientId,
+                id: { not: pkg.id },
+                remainingSessions: { gt: 0 },
+                OR: [
+                  { expiresAt: null },
+                  { expiresAt: { gt: pkg.createdAt } }
+                ]
+              }
+            })
+          ])
 
           // New = no prior sessions AND no active packages at time of purchase
           // Resold = had active package OR had prior sessions

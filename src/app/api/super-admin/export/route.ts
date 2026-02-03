@@ -33,10 +33,10 @@ export async function GET(request: NextRequest) {
         'Content-Disposition': `attachment; filename="${organizationId}_export_${Date.now()}.json"`
       }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Export error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to export data' },
+      { error: error instanceof Error ? error.message : 'Failed to export data' },
       { status: 500 }
     )
   }

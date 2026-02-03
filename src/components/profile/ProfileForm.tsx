@@ -104,8 +104,8 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
       // Refresh the page to show updated data
       router.refresh()
-    } catch (error: any) {
-      setError(error.message || 'Failed to update profile')
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to update profile')
     } finally {
       setLoading(false)
     }

@@ -32,16 +32,16 @@ export async function POST(
         : 'Beta access granted indefinitely (until manually revoked)',
       organization: result
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error granting beta access:', error)
-    
-    if (error.message === 'Organization not found') {
+
+    if (error instanceof Error && error.message === 'Organization not found') {
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
-    if (error.message === 'Organization already has beta access') {
+    if (error instanceof Error && error.message === 'Organization already has beta access') {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
-    
+
     return NextResponse.json(
       { error: 'Failed to grant beta access' },
       { status: 500 }
@@ -73,13 +73,13 @@ export async function DELETE(
       message: 'Beta access revoked',
       organization: result
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error revoking beta access:', error)
-    
-    if (error.message === 'Organization not found') {
+
+    if (error instanceof Error && error.message === 'Organization not found') {
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
-    if (error.message === 'Organization does not have beta access') {
+    if (error instanceof Error && error.message === 'Organization does not have beta access') {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
     

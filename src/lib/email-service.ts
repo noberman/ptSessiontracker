@@ -161,9 +161,9 @@ The FitSync Team
     })
 
     return true
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error sending invitation email:', error)
-    
+
     // Log error
     await prisma.emailLog.create({
       data: {
@@ -176,7 +176,7 @@ The FitSync Team
           invitationId: invitation.id,
           organizationName: invitation.organization.name,
           invitedBy: invitation.invitedBy.name,
-          error: error.message || 'Unknown error',
+          error: error instanceof Error ? error.message : 'Unknown error',
         },
       },
     })
@@ -297,9 +297,9 @@ The FitSync Team
     })
 
     return true
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error sending welcome email:', error)
-    
+
     // Log error
     await prisma.emailLog.create({
       data: {
@@ -311,7 +311,7 @@ The FitSync Team
         metadata: {
           userName: user.name,
           organizationName: user.organization?.name,
-          error: error.message || 'Unknown error',
+          error: error instanceof Error ? error.message : 'Unknown error',
         },
       },
     })

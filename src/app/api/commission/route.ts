@@ -125,10 +125,10 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Commission calculation error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to calculate commissions' },
+      { error: error instanceof Error ? error.message : 'Failed to calculate commissions' },
       { status: 500 }
     )
   }

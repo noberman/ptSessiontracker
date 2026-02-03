@@ -18,10 +18,10 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ tiers })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch commission tiers:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch tiers' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch tiers' },
       { status: 500 }
     )
   }
@@ -82,10 +82,10 @@ export async function POST(request: NextRequest) {
       tiers: result 
     })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to set commission tiers:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to set tiers' },
+      { error: error instanceof Error ? error.message : 'Failed to set tiers' },
       { status: 500 }
     )
   }
@@ -151,10 +151,10 @@ export async function PUT(request: NextRequest) {
       tiers: result 
     })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update commission tiers:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to update tiers' },
+      { error: error instanceof Error ? error.message : 'Failed to update tiers' },
       { status: 500 }
     )
   }

@@ -286,7 +286,7 @@ export async function PUT(
 
     // Hash password if provided
     if (password) {
-      updateData.password = await bcrypt.hash(password, 10)
+      updateData.password = await bcrypt.hash(password, 12)
     }
 
     // Update user and manage location associations in a transaction

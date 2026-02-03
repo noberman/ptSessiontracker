@@ -143,15 +143,15 @@ export async function GET(
         organization: session.organization
       }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Validation check error:', error)
     console.error('❌ Error details:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      code: error instanceof Error && 'code' in error ? (error as Record<string, unknown>).code : undefined
     })
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }
@@ -189,11 +189,13 @@ export async function POST(
       )
     }
 
-    // Check if already validated
+    // Check if already validated - return immediately for idempotency
     if (session.validated) {
       return NextResponse.json({
+        success: true,
         message: 'Session already validated',
         validatedAt: session.validatedAt,
+        status: 'already_validated'
       })
     }
 
@@ -280,7 +282,7 @@ export async function POST(
         organization: updatedSession.organization
       }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Validation error:', error)
     return NextResponse.json(
       { error: 'Failed to validate session' },

@@ -148,7 +148,7 @@ export async function POST(
       message: `Validation email resent to ${sessionData.client.email}`,
       expiresAt: newValidationExpiry,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Resend validation error:', error)
     return NextResponse.json(
       { error: 'Failed to resend validation email' },

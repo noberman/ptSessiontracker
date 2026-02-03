@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, 12)
 
     // Create user with multi-location support in a transaction
     const user = await prisma.$transaction(async (tx) => {

@@ -124,10 +124,10 @@ export async function POST(request: Request) {
       organizationId: result.organization.id,
       locationId: result.location.id
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Organization setup error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to create organization' },
+      { error: error instanceof Error ? error.message : 'Failed to create organization' },
       { status: 500 }
     )
   }

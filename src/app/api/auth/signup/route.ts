@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       message: 'Account created successfully'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Signup error:', error)
     return NextResponse.json(
       { error: 'Failed to create account. Please try again.' },

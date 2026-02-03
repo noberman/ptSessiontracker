@@ -6,11 +6,19 @@ import { prisma } from '@/lib/prisma'
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user || !session.user.organizationId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      )
+    }
+
+    // Only admins can delete demo data
+    if (session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Only administrators can delete demo data' },
+        { status: 403 }
       )
     }
 
@@ -55,7 +63,7 @@ export async function DELETE(request: NextRequest) {
       deleted
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Demo cleanup error:', error)
     return NextResponse.json(
       { error: 'Failed to clean up demo data' },
@@ -112,7 +120,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Demo check error:', error)
     return NextResponse.json(
       { error: 'Failed to check demo data' },

@@ -29,8 +29,8 @@ async function main() {
           locationId: user.locationId!
         }
       })
-    } catch (error: any) {
-      if (error.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && (error as Record<string, unknown>).code === 'P2002') {
         console.log(`  (Already exists)`)
       } else {
         throw error

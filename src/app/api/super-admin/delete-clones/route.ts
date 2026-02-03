@@ -135,10 +135,10 @@ export async function DELETE(request: NextRequest) {
       count: deletedCount,
       message: `Successfully deleted ${deletedCount} clone organizations`
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Delete clones error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to delete clones' },
+      { error: error instanceof Error ? error.message : 'Failed to delete clones' },
       { status: 500 }
     )
   }

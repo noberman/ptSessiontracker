@@ -318,10 +318,10 @@ export async function POST(request: NextRequest) {
       
       throw importError
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Clone import error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to import clone' },
+      { error: error instanceof Error ? error.message : 'Failed to import clone' },
       { status: 500 }
     )
   }

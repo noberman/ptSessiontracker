@@ -12,7 +12,6 @@ import { BaseEmailTemplate } from './base'
 import type { SessionValidationEmailData } from '../types'
 import type { CSSProperties } from 'react'
 import { format } from 'date-fns'
-import { toZonedTime } from 'date-fns-tz'
 import { displaySessionTime } from '@/utils/timezone'
 
 export const SessionValidationEmail: React.FC<SessionValidationEmailData> = ({

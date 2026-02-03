@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json(tiers)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch commission tiers:', error)
     return NextResponse.json(
       { error: 'Failed to fetch commission tiers' },
@@ -84,7 +84,7 @@ export async function PUT(request: NextRequest) {
     })
 
     return NextResponse.json(newTiers)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update commission tiers:', error)
     return NextResponse.json(
       { error: 'Failed to update commission tiers' },

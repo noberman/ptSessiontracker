@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
       message: 'Commission settings saved successfully'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Commission save error:', error)
     return NextResponse.json(
       { error: 'Failed to save commission settings' },
@@ -278,7 +278,7 @@ export async function GET(request: NextRequest) {
       }))
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Commission fetch error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch commission settings' },

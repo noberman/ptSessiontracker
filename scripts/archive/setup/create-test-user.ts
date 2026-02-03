@@ -55,8 +55,8 @@ async function createTestUser() {
     console.log('='.repeat(40))
     console.log('\nYou can now log in with these credentials to test the upgrade flow!')
 
-  } catch (error: any) {
-    if (error.code === 'P2002') {
+  } catch (error: unknown) {
+    if (error instanceof Error && 'code' in error && (error as Record<string, unknown>).code === 'P2002') {
       console.log('ℹ️ User already exists!')
       console.log('\n📧 Login with:')
       console.log('Email: testadmin@testgym.com')

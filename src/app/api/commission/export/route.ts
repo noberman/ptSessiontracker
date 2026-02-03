@@ -116,15 +116,15 @@ export async function GET(request: NextRequest) {
       },
     })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Commission export error - Full error:', error)
     console.error('Commission export error - Details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
     })
     return NextResponse.json(
-      { error: error.message || 'Failed to export commissions' },
+      { error: error instanceof Error ? error.message : 'Failed to export commissions' },
       { status: 500 }
     )
   }

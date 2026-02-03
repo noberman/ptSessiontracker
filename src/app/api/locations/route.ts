@@ -79,42 +79,54 @@ export async function GET(request: Request) {
       }
     })
 
-    // Get trainer details for each location
-    const locationsWithDetails = await Promise.all(
-      locations.map(async (location) => {
-        // Get trainers with access to this location through UserLocation junction table
-        const trainers = await prisma.user.findMany({
-          where: {
-            locations: {
-              some: {
-                locationId: location.id
-              }
-            },
-            role: 'TRAINER',
-            active: true,
-            organizationId
-          },
-          select: {
-            id: true,
-            name: true,
-            email: true
+    // Batch fetch all trainers for all locations in ONE query (fixes N+1)
+    const locationIds = locations.map(l => l.id)
+    const allTrainers = await prisma.user.findMany({
+      where: {
+        locations: {
+          some: {
+            locationId: { in: locationIds }
           }
-        })
-
-        // Remove duplicates (users might match both conditions)
-        const uniqueTrainers = trainers.filter((trainer, index, self) =>
-          index === self.findIndex((t) => t.id === trainer.id)
-        )
-
-        return {
-          ...location,
-          trainers: uniqueTrainers,
-          trainerCount: uniqueTrainers.length,
-          clientCount: location._count.clients,
-          sessionsThisMonth: location._count.sessions
+        },
+        role: 'TRAINER',
+        active: true,
+        organizationId
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        locations: {
+          where: { locationId: { in: locationIds } },
+          select: { locationId: true }
         }
-      })
-    )
+      }
+    })
+
+    // Group trainers by location
+    const trainersByLocation = new Map<string, typeof allTrainers>()
+    for (const trainer of allTrainers) {
+      for (const loc of trainer.locations) {
+        const existing = trainersByLocation.get(loc.locationId) || []
+        existing.push(trainer)
+        trainersByLocation.set(loc.locationId, existing)
+      }
+    }
+
+    // Build response with trainer details
+    const locationsWithDetails = locations.map((location) => {
+      const trainers = trainersByLocation.get(location.id) || []
+      // Remove the locations field from trainer objects in response
+      const cleanTrainers = trainers.map(({ locations: _, ...rest }) => rest)
+
+      return {
+        ...location,
+        trainers: cleanTrainers,
+        trainerCount: cleanTrainers.length,
+        clientCount: location._count.clients,
+        sessionsThisMonth: location._count.sessions
+      }
+    })
 
     return NextResponse.json({ locations: locationsWithDetails })
   } catch (error) {

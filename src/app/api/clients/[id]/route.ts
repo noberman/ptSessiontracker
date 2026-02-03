@@ -18,8 +18,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const client = await prisma.client.findUnique({
-      where: { id },
+    const client = await prisma.client.findFirst({
+      where: {
+        id,
+        organizationId: session.user.organizationId  // Ensure client belongs to user's org
+      },
       include: {
         location: true,
         primaryTrainer: {

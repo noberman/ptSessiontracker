@@ -29,9 +29,9 @@ export function ManagePaymentButton() {
           window.location.href = data.url
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error opening billing portal:', error)
-      alert(error.message)
+      alert(error instanceof Error ? error.message : 'An error occurred')
     } finally {
       setLoading(false)
     }

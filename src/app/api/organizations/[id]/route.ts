@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, props: RouteParams) {
     }
     
     return NextResponse.json(organization)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch organization:', error)
     return NextResponse.json(
       { error: 'Failed to fetch organization' },
@@ -187,7 +187,7 @@ export async function PUT(request: NextRequest, props: RouteParams) {
     })
     
     return NextResponse.json(organization)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update organization:', error)
     return NextResponse.json(
       { error: 'Failed to update organization' },
@@ -233,7 +233,7 @@ export async function DELETE(request: NextRequest, props: RouteParams) {
       message: 'Organization canceled successfully',
       organization
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to delete organization:', error)
     return NextResponse.json(
       { error: 'Failed to delete organization' },

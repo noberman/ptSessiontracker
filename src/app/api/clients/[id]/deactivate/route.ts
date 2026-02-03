@@ -126,7 +126,7 @@ export async function POST(
         packagesDeactivated: hasActivePackages ? client.packages.length : 0
       }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Client deactivation error:', error)
     return NextResponse.json(
       { error: 'Failed to deactivate client' },
@@ -246,7 +246,7 @@ export async function PUT(
       message: 'Client reactivated successfully',
       packagesReactivated
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Client reactivation error:', error)
     return NextResponse.json(
       { error: 'Failed to reactivate client' },

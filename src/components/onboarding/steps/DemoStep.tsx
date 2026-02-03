@@ -117,9 +117,9 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
       console.log('🔵 Created demo package:', pkg)
       
       setDemoStage('create-session')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create demo client:', error)
-      setError(error.message || 'Failed to create demo data')
+      setError(error instanceof Error ? error.message : 'Failed to create demo data')
     } finally {
       setIsCreating(false)
     }
@@ -191,9 +191,9 @@ export function DemoStep({ onComplete, isLoading = false }: DemoStepProps) {
       
       setAllSessions([...allSessions, newSession])
       setDemoStage('email-sent')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create demo session:', error)
-      setError(error.message || 'Failed to create session')
+      setError(error instanceof Error ? error.message : 'Failed to create session')
     } finally {
       setIsCreating(false)
     }

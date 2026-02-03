@@ -20,9 +20,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    })
+    const [user, invitation] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: session.user.id },
+      }),
+      prisma.invitation.findUnique({
+        where: { id },
+      })
+    ])
 
     if (!user?.organizationId) {
       return NextResponse.json(
@@ -38,11 +43,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 403 }
       )
     }
-
-    // Check if invitation belongs to user's organization
-    const invitation = await prisma.invitation.findUnique({
-      where: { id },
-    })
 
     if (!invitation || invitation.organizationId !== user.organizationId) {
       return NextResponse.json(
@@ -89,10 +89,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       invitation: updatedInvitation,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Resend invitation error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to resend invitation' },
+      { error: error instanceof Error ? error.message : 'Failed to resend invitation' },
       { status: 400 }
     )
   }

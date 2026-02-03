@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
 
       console.log(`🆕 Creating new user account for ${invitation.email} in org ${invitation.organizationId}`)
       
-      const hashedPassword = await bcrypt.hash(password, 10)
+      const hashedPassword = await bcrypt.hash(password, 12)
       
       const newUser = await prisma.user.create({
         data: {
@@ -221,10 +221,10 @@ export async function POST(request: NextRequest) {
         message: 'Account created and invitation accepted successfully',
       })
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Accept invitation error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to accept invitation' },
+      { error: error instanceof Error ? error.message : 'Failed to accept invitation' },
       { status: 400 }
     )
   }
@@ -282,10 +282,10 @@ export async function GET(request: NextRequest) {
       isLoggedIn: !!session,
       userEmail: session?.user?.email || null,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get invitation error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to get invitation' },
+      { error: error instanceof Error ? error.message : 'Failed to get invitation' },
       { status: 500 }
     )
   }

@@ -110,10 +110,10 @@ export async function POST(request: NextRequest) {
         expiresAt: invitation.expiresAt,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Invitation error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to send invitation' },
+      { error: error instanceof Error ? error.message : 'Failed to send invitation' },
       { status: 400 }
     )
   }
@@ -155,10 +155,10 @@ export async function GET(request: NextRequest) {
       invitations,
       limits: limitInfo,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get invitations error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to get invitations' },
+      { error: error instanceof Error ? error.message : 'Failed to get invitations' },
       { status: 500 }
     )
   }

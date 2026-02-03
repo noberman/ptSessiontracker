@@ -102,10 +102,10 @@ export async function POST(request: NextRequest) {
         role: userToImpersonate.role
       }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Login As error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to create login session' },
+      { error: error instanceof Error ? error.message : 'Failed to create login session' },
       { status: 500 }
     )
   }

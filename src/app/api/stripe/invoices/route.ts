@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       invoices: formattedInvoices,
       hasMore: invoices.has_more,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching invoices:', error)
     return NextResponse.json(
       { error: 'Failed to fetch invoices' },

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const method = organization?.commissionMethod || 'PROGRESSIVE'
 
     return NextResponse.json({ method })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch commission method:', error)
     return NextResponse.json(
       { error: 'Failed to fetch commission method' },
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ method, defaultRate, message: 'Commission method set successfully' })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to set commission method:', error)
     return NextResponse.json(
       { error: 'Failed to set commission method' },
@@ -113,7 +113,7 @@ export async function PUT(request: NextRequest) {
     })
 
     return NextResponse.json({ method, defaultRate, message: 'Commission method updated successfully' })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update commission method:', error)
     return NextResponse.json(
       { error: 'Failed to update commission method' },

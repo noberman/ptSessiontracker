@@ -45,9 +45,9 @@ function TempLoginContent() {
         setStatus('error')
         setErrorMessage('Login failed')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setStatus('error')
-      setErrorMessage(error.message || 'An error occurred during login')
+      setErrorMessage(error instanceof Error ? error.message : 'An error occurred during login')
     }
   }
 

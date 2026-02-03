@@ -33,8 +33,8 @@ export default function EmailTestPage() {
       } else {
         setResult({ error: data.error || 'Failed to send test email' })
       }
-    } catch (error: any) {
-      setResult({ error: error.message || 'Network error' })
+    } catch (error: unknown) {
+      setResult({ error: error instanceof Error ? error.message : 'Network error' })
     } finally {
       setLoading(false)
     }
