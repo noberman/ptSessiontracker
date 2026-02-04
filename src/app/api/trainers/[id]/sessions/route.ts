@@ -65,14 +65,11 @@ export async function GET(
       }
     }
 
-    // Only return sessions that count toward commission:
-    // - validated sessions only
-    // - non-cancelled sessions only
-    // - from active packages only
+    // Return all non-cancelled sessions from active packages
+    // Include both validated and pending so we can show validation rate
     const sessions = await prisma.session.findMany({
       where: {
         trainerId: params.id,
-        validated: true,
         cancelled: false,
         package: { active: true },
         ...(startDate || endDate ? { sessionDate: dateFilter } : {}),
@@ -102,21 +99,25 @@ export async function GET(
       }
     })
 
-    // Group sessions by value
+    // Group sessions by value, tracking validated vs total counts
     const sessionsByValue = sessions.reduce((acc, session) => {
       const value = session.sessionValue || 0
-      
+
       if (!acc[value]) {
         acc[value] = {
           sessionValue: value,
-          count: 0,
-          totalValue: 0,
+          count: 0,           // Total sessions (validated + pending)
+          validatedCount: 0,  // Only validated sessions
+          totalValue: 0,      // Value from validated sessions only (for commission)
           sessions: []
         }
       }
-      
+
       acc[value].count++
-      acc[value].totalValue += value
+      if (session.validated) {
+        acc[value].validatedCount++
+        acc[value].totalValue += value  // Only add to totalValue if validated
+      }
       acc[value].sessions.push({
         id: session.id,
         clientName: session.client.name,
@@ -126,7 +127,7 @@ export async function GET(
         packageName: session.package?.name,
         locationName: session.location?.name
       })
-      
+
       return acc
     }, {} as Record<number, any>)
 

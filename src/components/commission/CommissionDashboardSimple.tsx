@@ -25,6 +25,7 @@ interface Session {
 interface SessionGroup {
   sessionValue: number
   count: number
+  validatedCount?: number  // Number of validated sessions (for validation rate)
   totalValue: number
   sessions: Session[]
 }
@@ -390,7 +391,8 @@ export function CommissionDashboard({
                                             <tr className="text-left text-xs text-text-secondary border-b border-border">
                                               <th className="pb-2 font-medium">Session Rate</th>
                                               <th className="pb-2 font-medium text-center">Count</th>
-                                              <th className="pb-2 font-medium text-right">Total Value</th>
+                                              <th className="pb-2 font-medium text-center">Validation Rate</th>
+                                              <th className="pb-2 font-medium text-right">Validated Value</th>
                                               <th className="pb-2 font-medium text-right">Commission</th>
                                               <th className="pb-2 font-medium text-right">Action</th>
                                             </tr>
@@ -398,6 +400,8 @@ export function CommissionDashboard({
                                           <tbody>
                                             {details.map((group) => {
                                               const groupCommission = calculateGroupCommission(commission, group.totalValue)
+                                              const validatedCount = group.validatedCount ?? group.count
+                                              const validationRate = group.count > 0 ? Math.round((validatedCount / group.count) * 100) : 0
                                               return (
                                                 <tr key={group.sessionValue} className="border-b border-border/50">
                                                   <td className="py-3">
@@ -409,6 +413,11 @@ export function CommissionDashboard({
                                                     <Badge variant="default" size="sm">
                                                       {group.count}
                                                     </Badge>
+                                                  </td>
+                                                  <td className="py-3 text-center">
+                                                    <span className={`text-sm font-medium ${validationRate === 100 ? 'text-success-600' : validationRate >= 50 ? 'text-warning-600' : 'text-error-600'}`}>
+                                                      {validationRate}%
+                                                    </span>
                                                   </td>
                                                   <td className="py-3 text-right text-text-primary">
                                                     {formatCurrency(group.totalValue)}
