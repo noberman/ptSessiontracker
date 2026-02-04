@@ -68,9 +68,9 @@ export class CommissionCalculatorV2 {
       throw new Error(`User ${userId} has no commission profile assigned`)
     }
     
-    // Get validated sessions for the period (optionally filtered by locations)
-    // Only include sessions from active packages (exclude deleted/deactivated packages)
-    const sessions = await prisma.session.findMany({
+    // Get ALL validated sessions for the period (no location filter) - used for tier calculation
+    // Tier is always calculated across all locations
+    const allSessions = await prisma.session.findMany({
       where: {
         trainerId: userId,
         sessionDate: {
@@ -81,13 +81,18 @@ export class CommissionCalculatorV2 {
         cancelled: false,
         package: {
           active: true
-        },
-        ...(options.locationIds && options.locationIds.length > 0 ? { locationId: { in: options.locationIds } } : {})
+        }
       },
       orderBy: {
         sessionDate: 'asc'
       }
     })
+
+    // If location filter is applied, get filtered sessions for commission calculation
+    // Otherwise use all sessions
+    const sessions = (options.locationIds && options.locationIds.length > 0)
+      ? allSessions.filter(s => options.locationIds!.includes(s.locationId))
+      : allSessions
     
     // Get payments attributed to this user for the period
     // Sales commission is based on explicit salesAttributedToId/salesAttributedTo2Id
@@ -126,12 +131,14 @@ export class CommissionCalculatorV2 {
 
     // Calculate commission based on the profile's calculation method
     // Pass attributed total instead of raw payment total for sales volume
+    // Pass allSessions count for tier determination (tier is always based on all locations)
     const result = this.calculateByMethod(
       user.commissionProfile,
       sessions,
       payments,
       uniquePackageIds.size,
-      attributedPaymentTotal
+      attributedPaymentTotal,
+      allSessions.length  // Global session count for tier calculation
     )
     
     // Save calculation to database if requested
@@ -181,21 +188,23 @@ export class CommissionCalculatorV2 {
   
   /**
    * Calculate commission based on the profile's method
+   * @param globalSessionCount - Total sessions across all locations (for tier determination)
    */
   private calculateByMethod(
     profile: ProfileWithTiers,
     sessions: Session[],
     payments: PaymentWithPackage[],
     uniquePackageCount: number,
-    attributedPaymentTotal: number
+    attributedPaymentTotal: number,
+    globalSessionCount: number
   ): CalculationResult {
     switch (profile.calculationMethod) {
       case CalculationMethod.PROGRESSIVE:
-        return this.calculateProgressive(profile, sessions, payments, uniquePackageCount, attributedPaymentTotal)
+        return this.calculateProgressive(profile, sessions, payments, uniquePackageCount, attributedPaymentTotal, globalSessionCount)
       case CalculationMethod.GRADUATED:
-        return this.calculateGraduated(profile, sessions, payments, uniquePackageCount, attributedPaymentTotal)
+        return this.calculateGraduated(profile, sessions, payments, uniquePackageCount, attributedPaymentTotal, globalSessionCount)
       case CalculationMethod.FLAT:
-        return this.calculateFlat(profile, sessions, payments, uniquePackageCount, attributedPaymentTotal)
+        return this.calculateFlat(profile, sessions, payments, uniquePackageCount, attributedPaymentTotal, globalSessionCount)
       default:
         throw new Error(`Unknown calculation method: ${profile.calculationMethod}`)
     }
@@ -203,21 +212,24 @@ export class CommissionCalculatorV2 {
   
   /**
    * PROGRESSIVE: All sessions at the highest tier rate achieved
+   * @param globalSessionCount - Total sessions across all locations (for tier determination)
    */
   private calculateProgressive(
     profile: ProfileWithTiers,
     sessions: Session[],
     payments: PaymentWithPackage[],
     uniquePackageCount: number,
-    attributedPaymentTotal: number
+    attributedPaymentTotal: number,
+    globalSessionCount: number
   ): CalculationResult {
     // Use attributed payment total (accounts for 50/50 splits)
     const totalPaymentAmount = attributedPaymentTotal
 
-    // Find the highest tier achieved
+    // Find the highest tier achieved based on GLOBAL session count (all locations)
+    // Tier is always determined across all locations, not filtered
     const currentTier = this.determineCurrentTier(
       profile,
-      sessions.length,
+      globalSessionCount,
       totalPaymentAmount
     )
 
@@ -273,13 +285,15 @@ export class CommissionCalculatorV2 {
   
   /**
    * GRADUATED: Each tier applies to its range of sessions
+   * @param globalSessionCount - Total sessions across all locations (for tier determination)
    */
   private calculateGraduated(
     profile: ProfileWithTiers,
     sessions: Session[],
     payments: PaymentWithPackage[],
     uniquePackageCount: number,
-    attributedPaymentTotal: number
+    attributedPaymentTotal: number,
+    globalSessionCount: number
   ): CalculationResult {
     let sessionCommission = 0
     let remainingSessions = sessions.length
@@ -322,10 +336,11 @@ export class CommissionCalculatorV2 {
     // Use attributed payment total (accounts for 50/50 splits)
     const totalPaymentAmount = attributedPaymentTotal
 
-    // Sales commission uses the highest tier achieved
+    // Sales commission uses the highest tier achieved based on GLOBAL session count
+    // Tier is always determined across all locations
     const currentTier = this.determineCurrentTier(
       profile,
-      sessions.length,
+      globalSessionCount,
       totalPaymentAmount
     )
 
@@ -368,13 +383,15 @@ export class CommissionCalculatorV2 {
   
   /**
    * FLAT: Same rate for all sessions (uses tier 1 only)
+   * @param globalSessionCount - Not used for flat, but included for interface consistency
    */
   private calculateFlat(
     profile: ProfileWithTiers,
     sessions: Session[],
     payments: PaymentWithPackage[],
     uniquePackageCount: number,
-    attributedPaymentTotal: number
+    attributedPaymentTotal: number,
+    globalSessionCount: number
   ): CalculationResult {
     // For flat method, use the first tier's rates for everything
     const flatTier = profile.tiers.find(t => t.tierLevel === 1) || profile.tiers[0]
