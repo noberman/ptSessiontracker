@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -86,6 +86,20 @@ export function CommissionDashboard({
   const [selectedTrainerName, setSelectedTrainerName] = useState('')
   const [selectedSessionValue, setSelectedSessionValue] = useState(0)
   const [selectedSessions, setSelectedSessions] = useState<Session[]>([])
+
+  // Sync selectedLocations with prop and clear cache when filters change
+  useEffect(() => {
+    setSelectedLocations(selectedLocationIds)
+    // Clear cached trainer details when location filter changes
+    setTrainerDetails(new Map())
+    setExpandedTrainer(null)
+  }, [selectedLocationIds.join(',')])
+
+  // Clear cache when month changes
+  useEffect(() => {
+    setTrainerDetails(new Map())
+    setExpandedTrainer(null)
+  }, [month])
 
   const handleMonthChange = (newMonth: string) => {
     const params = new URLSearchParams()

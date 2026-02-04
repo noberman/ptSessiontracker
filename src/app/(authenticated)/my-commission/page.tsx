@@ -71,6 +71,7 @@ export default async function MyCommissionPage({
   )
   
   // Get all sessions to calculate total value
+  // Only include sessions from active packages
   const allSessions = await prisma.session.findMany({
     where: {
       trainerId: session.user.id,
@@ -79,7 +80,8 @@ export default async function MyCommissionPage({
         lte: endOfMonth
       },
       validated: true,
-      cancelled: false
+      cancelled: false,
+      package: { active: true }
     },
     select: { sessionValue: true }
   })
@@ -114,6 +116,7 @@ export default async function MyCommissionPage({
   }))
   
   // Get recent validated sessions for this month
+  // Only include sessions from active packages
   const recentSessions = await prisma.session.findMany({
     where: {
       trainerId: session.user.id,
@@ -122,7 +125,8 @@ export default async function MyCommissionPage({
         lte: endOfMonth
       },
       validated: true,
-      cancelled: false
+      cancelled: false,
+      package: { active: true }
     },
     include: {
       client: {

@@ -23,6 +23,7 @@ export async function GET(
   const { searchParams } = new URL(request.url)
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
+  const locationIds = searchParams.get('locationIds')
 
   try {
     // Build date filter
@@ -34,10 +35,27 @@ export async function GET(
       dateFilter.lte = new Date(endDate)
     }
 
-    // Get all sessions for the trainer
-    // Get location filter for Club Managers and PT Managers
+    // Get location filter - either from query param or from user access
     let locationFilter: any = {}
-    if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+
+    // If locationIds provided in query, use those (respecting user access for managers)
+    if (locationIds) {
+      const requestedLocationIds = locationIds.split(',').filter(Boolean)
+      if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+        // Filter to only locations the manager has access to
+        const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
+        const allowedLocationIds = requestedLocationIds.filter(id => accessibleLocations?.includes(id))
+        if (allowedLocationIds.length > 0) {
+          locationFilter = { locationId: { in: allowedLocationIds } }
+        } else {
+          return NextResponse.json([])
+        }
+      } else {
+        // Admin can use any location
+        locationFilter = { locationId: { in: requestedLocationIds } }
+      }
+    } else if (session.user.role === 'CLUB_MANAGER' || session.user.role === 'PT_MANAGER') {
+      // No locationIds provided - use all accessible locations for managers
       const accessibleLocations = await getUserAccessibleLocations(session.user.id, session.user.role)
       if (accessibleLocations && accessibleLocations.length > 0) {
         locationFilter = { locationId: { in: accessibleLocations } }
@@ -46,10 +64,17 @@ export async function GET(
         return NextResponse.json([])
       }
     }
-    
+
+    // Only return sessions that count toward commission:
+    // - validated sessions only
+    // - non-cancelled sessions only
+    // - from active packages only
     const sessions = await prisma.session.findMany({
       where: {
         trainerId: params.id,
+        validated: true,
+        cancelled: false,
+        package: { active: true },
         ...(startDate || endDate ? { sessionDate: dateFilter } : {}),
         ...locationFilter
       },

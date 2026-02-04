@@ -93,7 +93,8 @@ export default async function CommissionPage({
               lte: endOfMonth
             },
             validated: true,
-            cancelled: false
+            cancelled: false,
+            package: { active: true }
           }
         }
       } : {})
@@ -131,6 +132,7 @@ export default async function CommissionPage({
       )
 
       // Get trainer's sessions for the period to show details (filtered by locations if specified)
+      // Only include sessions from active packages
       const sessions = await prisma.session.findMany({
         where: {
           trainerId: trainer.id,
@@ -140,6 +142,7 @@ export default async function CommissionPage({
           },
           validated: true,
           cancelled: false,
+          package: { active: true },
           ...(locationIds.length > 0 ? { locationId: { in: locationIds } } : {})
         },
         select: {
@@ -176,6 +179,7 @@ export default async function CommissionPage({
 
       // Still include the trainer with error indication so they're visible
       // Get their sessions count at least (filtered by locations if specified)
+      // Only include sessions from active packages
       const sessions = await prisma.session.findMany({
         where: {
           trainerId: trainer.id,
@@ -185,6 +189,7 @@ export default async function CommissionPage({
           },
           validated: true,
           cancelled: false,
+          package: { active: true },
           ...(locationIds.length > 0 ? { locationId: { in: locationIds } } : {})
         },
         select: {

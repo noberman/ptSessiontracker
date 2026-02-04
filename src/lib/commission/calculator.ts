@@ -172,6 +172,7 @@ export async function calculateTrainerCommission(
   if (!trainer) return null
   
   // Get validated sessions for the month with location info
+  // Only include sessions from active packages (exclude deleted/deactivated packages)
   const sessions = await prisma.session.findMany({
     where: {
       trainerId,
@@ -180,7 +181,8 @@ export async function calculateTrainerCommission(
         lte: endDate
       },
       validated: true,
-      cancelled: false
+      cancelled: false,
+      package: { active: true }
     },
     include: {
       location: {

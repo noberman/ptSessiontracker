@@ -69,6 +69,7 @@ export class CommissionCalculatorV2 {
     }
     
     // Get validated sessions for the period (optionally filtered by locations)
+    // Only include sessions from active packages (exclude deleted/deactivated packages)
     const sessions = await prisma.session.findMany({
       where: {
         trainerId: userId,
@@ -78,6 +79,9 @@ export class CommissionCalculatorV2 {
         },
         validated: true,
         cancelled: false,
+        package: {
+          active: true
+        },
         ...(options.locationIds && options.locationIds.length > 0 ? { locationId: { in: options.locationIds } } : {})
       },
       orderBy: {
@@ -88,11 +92,15 @@ export class CommissionCalculatorV2 {
     // Get payments attributed to this user for the period
     // Sales commission is based on explicit salesAttributedToId/salesAttributedTo2Id
     // Payments with null attribution have NO sales commission (no fallback to primaryTrainerId)
+    // Only include payments for active packages (exclude deleted/deactivated packages)
     const payments = await prisma.payment.findMany({
       where: {
         paymentDate: {
           gte: period.start,
           lte: period.end
+        },
+        package: {
+          active: true
         },
         OR: [
           { salesAttributedToId: userId },
