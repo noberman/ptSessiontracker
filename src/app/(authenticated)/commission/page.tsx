@@ -242,12 +242,13 @@ export default async function CommissionPage({
     }
   })
 
-  // Calculate actual sales from payments received in the period
+  // Calculate actual sales from payments received in the period (active packages only)
   const paymentsInPeriod = await prisma.payment.aggregate({
     where: {
       paymentDate: { gte: startOfMonth, lte: endOfMonth },
       package: {
         organizationId,
+        active: true,
         ...(locationIds.length > 0 ? {
           client: { locationId: { in: locationIds } }
         } : {})
