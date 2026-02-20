@@ -96,10 +96,10 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Only admins and PT managers can record payments
-  if (!['ADMIN', 'PT_MANAGER'].includes(session.user.role)) {
+  // Only admins, PT managers, and club managers can record payments
+  if (!['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(session.user.role)) {
     return NextResponse.json(
-      { error: 'Only admins and PT managers can record payments' },
+      { error: 'Only managers and admins can record payments' },
       { status: 403 }
     )
   }

@@ -18,10 +18,10 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Only admins can delete payments
-  if (session.user.role !== 'ADMIN') {
+  // Only admins, PT managers, and club managers can delete payments
+  if (!['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(session.user.role)) {
     return NextResponse.json(
-      { error: 'Only admins can delete payments' },
+      { error: 'Only managers and admins can delete payments' },
       { status: 403 }
     )
   }
