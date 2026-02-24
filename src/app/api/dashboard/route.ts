@@ -420,6 +420,7 @@ export async function GET(request: Request) {
         totalClients,
         activeClientsWithPackages,
         notStartedClients,
+        fadingClients,
         atRiskClients,
         lostClients,
         unassignedClients,
@@ -549,6 +550,31 @@ export async function GET(request: Request) {
               sessions: {
                 some: {
                   package: getActivePackageWhereClause()
+                }
+              }
+            }
+          }
+        }),
+
+        // Fading clients (active package, has started sessions, but no session in last 30 days)
+        prisma.client.count({
+          where: {
+            ...clientsWhere,
+            // Has at least one active package
+            packages: {
+              some: getActivePackageWhereClause()
+            },
+            // Has logged at least one session against an active package (i.e. started)
+            sessions: {
+              some: {
+                package: getActivePackageWhereClause()
+              }
+            },
+            // But no session in the last 30 days
+            NOT: {
+              sessions: {
+                some: {
+                  sessionDate: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
                 }
               }
             }
@@ -866,7 +892,7 @@ export async function GET(request: Request) {
           }
 
           // Snapshot metrics
-          const [total, active, notStarted, atRiskClientsRaw] = await Promise.all([
+          const [total, active, notStarted, fading, atRiskClientsRaw] = await Promise.all([
             // Total clients assigned to this trainer
             prisma.client.count({ where: trainerClientsWhere }),
 
@@ -886,6 +912,24 @@ export async function GET(request: Request) {
                 NOT: {
                   sessions: {
                     some: { package: getActivePackageWhereClause() }
+                  }
+                }
+              }
+            }),
+
+            // Fading (active package, has started, but no session in last 30 days)
+            prisma.client.count({
+              where: {
+                ...trainerClientsWhere,
+                packages: { some: getActivePackageWhereClause() },
+                sessions: {
+                  some: { package: getActivePackageWhereClause() }
+                },
+                NOT: {
+                  sessions: {
+                    some: {
+                      sessionDate: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+                    }
                   }
                 }
               }
@@ -996,6 +1040,7 @@ export async function GET(request: Request) {
             total,
             active,
             notStarted,
+            fading,
             atRisk,
             // Period-based metrics
             newClients: trainerNewClientIds.size,
@@ -1022,6 +1067,7 @@ export async function GET(request: Request) {
         unassignedTotal,
         unassignedActive,
         unassignedNotStarted,
+        unassignedFading,
         unassignedAtRiskRaw
       ] = await Promise.all([
         prisma.client.count({ where: unassignedClientsWhere }),
@@ -1033,6 +1079,23 @@ export async function GET(request: Request) {
             ...unassignedClientsWhere,
             packages: { some: getActivePackageWhereClause() },
             NOT: { sessions: { some: { package: getActivePackageWhereClause() } } }
+          }
+        }),
+        // Fading (active package, has started, but no session in last 30 days)
+        prisma.client.count({
+          where: {
+            ...unassignedClientsWhere,
+            packages: { some: getActivePackageWhereClause() },
+            sessions: {
+              some: { package: getActivePackageWhereClause() }
+            },
+            NOT: {
+              sessions: {
+                some: {
+                  sessionDate: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+                }
+              }
+            }
           }
         }),
         prisma.client.findMany({
@@ -1115,6 +1178,7 @@ export async function GET(request: Request) {
         total: unassignedTotal,
         active: unassignedActive,
         notStarted: unassignedNotStarted,
+        fading: unassignedFading,
         atRisk: unassignedAtRisk,
         newClients: unassignedNewClientIds.size,
         resold: unassignedResoldClientIds.size,
@@ -1139,6 +1203,7 @@ export async function GET(request: Request) {
             total: totalClients,
             active: activeClientsWithPackages,
             notStarted: notStartedClients,
+            fading: fadingClients,
             atRisk: filteredAtRiskCount,
             lost: lostClients
           },

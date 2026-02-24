@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const trainerId = searchParams.get('trainerId') // 'unassigned' for unassigned clients
-  const metric = searchParams.get('metric') // total, active, notStarted, atRisk, new, resold, lost
+  const metric = searchParams.get('metric') // total, active, notStarted, fading, atRisk, new, resold, lost
   const dateFrom = searchParams.get('dateFrom')
   const dateTo = searchParams.get('dateTo')
 
@@ -106,6 +106,44 @@ export async function GET(request: Request) {
             NOT: {
               sessions: {
                 some: { package: getActivePackageWhereClause() }
+              }
+            }
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            packages: {
+              where: getActivePackageWhereClause(),
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                id: true,
+                name: true,
+                remainingSessions: true,
+                totalSessions: true,
+                expiresAt: true
+              }
+            }
+          },
+          orderBy: { name: 'asc' }
+        })
+        break
+
+      case 'fading':
+        // Active clients who started their package but had no session in the last 30 days
+        clients = await prisma.client.findMany({
+          where: {
+            ...baseWhere,
+            packages: { some: getActivePackageWhereClause() },
+            sessions: {
+              some: { package: getActivePackageWhereClause() }
+            },
+            NOT: {
+              sessions: {
+                some: {
+                  sessionDate: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+                }
               }
             }
           },

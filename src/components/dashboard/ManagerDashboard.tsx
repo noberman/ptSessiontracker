@@ -45,6 +45,7 @@ interface DashboardData {
       total: number
       active: number
       notStarted: number
+      fading: number
       atRisk: number
       lost: number
     }
@@ -111,6 +112,7 @@ interface DashboardData {
     total: number
     active: number
     notStarted: number
+    fading: number
     atRisk: number
     // Period-based metrics
     newClients: number
@@ -216,6 +218,7 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
     total: 'Total Clients',
     active: 'Active Clients',
     notStarted: 'Not Started Clients',
+    fading: 'Fading Clients',
     atRisk: 'At Risk Clients',
     newClients: 'New Clients',
     resold: 'Resold Clients',
@@ -853,8 +856,14 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
                       <div className="flex items-center justify-center gap-1">
+                        Fading
+                        <InfoTooltip id="fading" text="Started package but no session in 30+ days - re-engage" />
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">
+                      <div className="flex items-center justify-center gap-1">
                         At Risk
-                        <InfoTooltip id="atRisk" text="Clients with package expiring within 14 days - follow up for renewal" />
+                        <InfoTooltip id="atRisk" text="Expiring within 14 days or 2 or fewer sessions left - follow up for renewal" />
                       </div>
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider border-l border-border">
@@ -926,6 +935,15 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                       </td>
                       <td className="px-4 py-3 text-center">
                         <MetricNumber
+                          value={trainer.fading}
+                          trainerId={trainer.trainerId}
+                          trainerName={trainer.trainerName}
+                          metric="fading"
+                          colorClass={trainer.fading > 0 ? 'text-yellow-600' : 'text-text-secondary'}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <MetricNumber
                           value={trainer.atRisk}
                           trainerId={trainer.trainerId}
                           trainerName={trainer.trainerName}
@@ -976,6 +994,9 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-amber-600">
                       {data.stats.clientMetrics?.notStarted ?? 0}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-yellow-600">
+                      {data.stats.clientMetrics?.fading ?? 0}
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-orange-600">
                       {data.stats.clientMetrics?.atRisk ?? 0}
