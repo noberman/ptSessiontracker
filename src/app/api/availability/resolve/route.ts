@@ -23,25 +23,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Validate dates
-    const startDate = new Date(startDateStr + 'T00:00:00')
-    const endDate = new Date(endDateStr + 'T00:00:00')
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(startDateStr) || !dateRegex.test(endDateStr)) {
       return NextResponse.json(
-        { error: 'startDate and endDate must be valid YYYY-MM-DD dates' },
+        { error: 'startDate and endDate must be YYYY-MM-DD format' },
         { status: 400 }
       )
     }
-    if (startDate > endDate) {
+
+    if (startDateStr > endDateStr) {
       return NextResponse.json(
         { error: 'startDate must be before or equal to endDate' },
         { status: 400 }
       )
     }
 
-    // Limit range to 60 days to prevent abuse
-    const diffMs = endDate.getTime() - startDate.getTime()
-    const diffDays = diffMs / (1000 * 60 * 60 * 24)
+    // Limit range to 60 days
+    const s = new Date(startDateStr)
+    const e = new Date(endDateStr)
+    const diffDays = (e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)
     if (diffDays > 60) {
       return NextResponse.json(
         { error: 'Date range cannot exceed 60 days' },
@@ -57,6 +58,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Trainer not found' }, { status: 404 })
     }
 
+    // Fetch org timezone
+    const org = await prisma.organization.findUnique({
+      where: { id: session.user.organizationId! },
+      select: { timezone: true },
+    })
+    const orgTimezone = org?.timezone || 'Asia/Singapore'
+
     // Fetch all availability entries for this trainer
     const entries = await prisma.trainerAvailability.findMany({
       where: {
@@ -65,7 +73,8 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const resolved = resolveAvailability(entries, startDate, endDate)
+    // Resolve using org timezone — dates are plain YYYY-MM-DD strings representing calendar dates
+    const resolved = resolveAvailability(entries, startDateStr, endDateStr, orgTimezone)
 
     // Convert Map to plain object for JSON serialization
     const result: Record<string, { isAvailable: boolean; blocks: { startTime: string; endTime: string }[] }> = {}

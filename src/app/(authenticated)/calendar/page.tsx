@@ -16,6 +16,7 @@ export default async function CalendarPage() {
     select: {
       calendarEnabled: true,
       availabilityEditableBy: true,
+      timezone: true,
     },
   })
 
@@ -71,6 +72,7 @@ export default async function CalendarPage() {
           currentUserId={session.user.id}
           isManager={isManager}
           canEdit={canEdit}
+          orgTimezone={organization.timezone || 'Asia/Singapore'}
         />
       )}
     </div>

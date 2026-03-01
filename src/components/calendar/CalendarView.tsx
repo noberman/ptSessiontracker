@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { AvailabilityEditor } from './AvailabilityEditor'
@@ -22,32 +22,85 @@ interface CalendarViewProps {
   currentUserId: string
   isManager: boolean
   canEdit: boolean
+  orgTimezone: string
 }
 
-function getWeekDates(baseDate: Date): Date[] {
-  const start = new Date(baseDate)
-  const day = start.getDay()
-  // Adjust to Monday
-  start.setDate(start.getDate() - ((day + 6) % 7))
-  const dates: Date[] = []
+/**
+ * Get today's date as YYYY-MM-DD in the org's timezone.
+ * Uses Intl.DateTimeFormat to get the correct calendar date regardless of browser tz.
+ */
+function getTodayInOrgTz(orgTimezone: string): string {
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: orgTimezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+  const y = parts.find((p) => p.type === 'year')!.value
+  const m = parts.find((p) => p.type === 'month')!.value
+  const d = parts.find((p) => p.type === 'day')!.value
+  return `${y}-${m}-${d}`
+}
+
+/**
+ * Get a week of YYYY-MM-DD date strings (Mon–Sun) starting from a base date string.
+ */
+function getWeekDateStrings(baseDateStr: string): string[] {
+  const [y, m, d] = baseDateStr.split('-').map(Number)
+  const base = new Date(y, m - 1, d)
+  const dayOfWeek = base.getDay() // 0=Sun
+  // Adjust to Monday (Mon=0 offset)
+  const mondayOffset = (dayOfWeek + 6) % 7
+  const monday = new Date(y, m - 1, d - mondayOffset)
+
+  const dates: string[] = []
   for (let i = 0; i < 7; i++) {
-    const d = new Date(start)
-    d.setDate(start.getDate() + i)
-    dates.push(d)
+    const cur = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)
+    dates.push(formatDateStr(cur))
   }
   return dates
 }
 
-function formatDateKey(date: Date): string {
+function formatDateStr(date: Date): string {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
 
-const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+/** Offset a YYYY-MM-DD string by N days */
+function offsetDateStr(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const result = new Date(y, m - 1, d + days)
+  return formatDateStr(result)
+}
 
-export function CalendarView({ trainers, currentUserId, isManager, canEdit }: CalendarViewProps) {
+/** Parse YYYY-MM-DD to get display info */
+function parseDateStr(dateStr: string): { year: number; month: number; day: number; dayOfWeek: number } {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  return { year: y, month: m, day: d, dayOfWeek: date.getDay() }
+}
+
+/** Convert "HH:mm" to minutes since midnight */
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
+}
+
+// Display hours from 6am to 10pm
+const START_HOUR = 6
+const END_HOUR = 22
+const TOTAL_HOURS = END_HOUR - START_HOUR
+const HOUR_HEIGHT = 48 // px per hour row
+
+const HOURS = Array.from({ length: TOTAL_HOURS }, (_, i) => START_HOUR + i)
+
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+export function CalendarView({ trainers, currentUserId, isManager, canEdit, orgTimezone }: CalendarViewProps) {
   const [selectedTrainerId, setSelectedTrainerId] = useState(
     isManager ? (trainers[0]?.id ?? '') : currentUserId
   )
@@ -56,12 +109,12 @@ export function CalendarView({ trainers, currentUserId, isManager, canEdit }: Ca
   const [loading, setLoading] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
 
-  const today = new Date()
-  const baseDate = new Date(today)
-  baseDate.setDate(baseDate.getDate() + weekOffset * 7)
-  const weekDates = getWeekDates(baseDate)
-  const startDate = formatDateKey(weekDates[0])
-  const endDate = formatDateKey(weekDates[6])
+  // Calculate today and week dates in the org's timezone
+  const todayStr = useMemo(() => getTodayInOrgTz(orgTimezone), [orgTimezone])
+  const baseDateStr = useMemo(() => offsetDateStr(todayStr, weekOffset * 7), [todayStr, weekOffset])
+  const weekDateStrings = useMemo(() => getWeekDateStrings(baseDateStr), [baseDateStr])
+  const startDate = weekDateStrings[0]
+  const endDate = weekDateStrings[6]
 
   const selectedTrainer = trainers.find((t) => t.id === selectedTrainerId)
 
@@ -86,7 +139,10 @@ export function CalendarView({ trainers, currentUserId, isManager, canEdit }: Ca
     fetchAvailability()
   }, [fetchAvailability])
 
-  const weekLabel = `${weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+  // Week label
+  const startParsed = parseDateStr(startDate)
+  const endParsed = parseDateStr(endDate)
+  const weekLabel = `${MONTH_NAMES[startParsed.month - 1]} ${startParsed.day} — ${MONTH_NAMES[endParsed.month - 1]} ${endParsed.day}, ${endParsed.year}`
 
   return (
     <div className="space-y-4">
@@ -147,22 +203,23 @@ export function CalendarView({ trainers, currentUserId, isManager, canEdit }: Ca
         )}
       </div>
 
-      {/* Weekly availability grid */}
+      {/* Weekly calendar grid with time axis */}
       <Card className="p-0 overflow-hidden">
         {loading ? (
           <div className="text-center py-12 text-text-secondary">Loading availability...</div>
         ) : (
-          <div className="grid grid-cols-7 divide-x divide-border">
-            {weekDates.map((date, i) => {
-              const key = formatDateKey(date)
-              const day = availability[key]
-              const isToday = formatDateKey(today) === key
-
-              return (
-                <div key={key} className="min-h-[180px]">
-                  {/* Day header */}
+          <div className="overflow-x-auto">
+            {/* Header row: time gutter + day columns */}
+            <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-border">
+              {/* Empty corner for time gutter */}
+              <div className="border-r border-border" />
+              {weekDateStrings.map((dateStr, i) => {
+                const parsed = parseDateStr(dateStr)
+                const isToday = dateStr === todayStr
+                return (
                   <div
-                    className={`px-3 py-2 border-b border-border text-center ${
+                    key={dateStr}
+                    className={`px-2 py-2 text-center border-r border-border last:border-r-0 ${
                       isToday ? 'bg-primary/10' : 'bg-background-secondary'
                     }`}
                   >
@@ -172,34 +229,102 @@ export function CalendarView({ trainers, currentUserId, isManager, canEdit }: Ca
                         isToday ? 'text-primary' : 'text-text-primary'
                       }`}
                     >
-                      {date.getDate()}
+                      {parsed.day}
                     </div>
                   </div>
+                )
+              })}
+            </div>
 
-                  {/* Availability blocks */}
-                  <div className="p-2 space-y-1">
-                    {day?.isAvailable && day.blocks.length > 0 ? (
-                      day.blocks.map((block, bi) => (
-                        <div
-                          key={bi}
-                          className="bg-green-50 border border-green-200 text-green-700 rounded px-2 py-1 text-xs"
-                        >
-                          {block.startTime} - {block.endTime}
-                        </div>
-                      ))
-                    ) : day && !day.isAvailable ? (
-                      <div className="text-xs text-text-tertiary text-center pt-4">
-                        Not available
-                      </div>
-                    ) : (
-                      <div className="text-xs text-text-tertiary text-center pt-4">
-                        No schedule
+            {/* Body: time labels + day columns with positioned blocks */}
+            <div
+              className="grid grid-cols-[56px_repeat(7,1fr)] relative"
+              style={{ height: TOTAL_HOURS * HOUR_HEIGHT }}
+            >
+              {/* Time gutter */}
+              <div className="border-r border-border relative">
+                {HOURS.map((hour) => (
+                  <div
+                    key={hour}
+                    className="absolute right-0 left-0 flex items-start justify-end pr-2"
+                    style={{ top: (hour - START_HOUR) * HOUR_HEIGHT }}
+                  >
+                    <span className="text-[11px] text-text-tertiary -mt-[7px] select-none">
+                      {hour === 0
+                        ? '12 AM'
+                        : hour < 12
+                        ? `${hour} AM`
+                        : hour === 12
+                        ? '12 PM'
+                        : `${hour - 12} PM`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Day columns */}
+              {weekDateStrings.map((dateStr) => {
+                const day = availability[dateStr]
+
+                return (
+                  <div
+                    key={dateStr}
+                    className="relative border-r border-border last:border-r-0"
+                  >
+                    {/* Hour grid lines */}
+                    {HOURS.map((hour) => (
+                      <div
+                        key={hour}
+                        className="absolute left-0 right-0 border-t border-border/50"
+                        style={{ top: (hour - START_HOUR) * HOUR_HEIGHT }}
+                      />
+                    ))}
+
+                    {/* Availability blocks */}
+                    {day?.isAvailable &&
+                      day.blocks.map((block, bi) => {
+                        const startMin = timeToMinutes(block.startTime)
+                        const endMin = timeToMinutes(block.endTime)
+                        const topPx =
+                          ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT
+                        const heightPx = ((endMin - startMin) / 60) * HOUR_HEIGHT
+
+                        // Skip blocks entirely outside visible range
+                        if (endMin <= START_HOUR * 60 || startMin >= END_HOUR * 60) return null
+
+                        return (
+                          <div
+                            key={bi}
+                            className="absolute left-1 right-1 bg-green-100 border border-green-300 rounded-md px-1.5 py-1 overflow-hidden z-10"
+                            style={{
+                              top: Math.max(topPx, 0),
+                              height: Math.max(heightPx, 16),
+                            }}
+                          >
+                            <div className="text-[11px] font-medium text-green-800 leading-tight">
+                              {block.startTime} - {block.endTime}
+                            </div>
+                            {heightPx > 32 && (
+                              <div className="text-[10px] text-green-600 mt-0.5">
+                                Available
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+
+                    {/* "Not available" indicator if day is explicitly blocked */}
+                    {day && !day.isAvailable && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-xs text-text-tertiary bg-background-secondary/80 px-2 py-1 rounded">
+                          Not available
+                        </span>
                       </div>
                     )}
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         )}
       </Card>

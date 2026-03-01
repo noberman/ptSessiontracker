@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { checkAvailabilityPermission, validateTimes } from '@/lib/availability'
+import { orgTimeToUtc } from '@/utils/timezone'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -49,19 +50,26 @@ export async function PUT(request: NextRequest, props: RouteParams) {
       }
     }
 
-    // Validate specificDate if provided
+    // Validate and convert specificDate using org timezone
     let parsedDate: Date | null | undefined = undefined
     if (specificDate !== undefined) {
       if (specificDate === null) {
         parsedDate = null
       } else {
-        parsedDate = new Date(specificDate)
-        if (isNaN(parsedDate.getTime())) {
+        const testDate = new Date(specificDate)
+        if (isNaN(testDate.getTime())) {
           return NextResponse.json(
             { error: 'specificDate must be a valid date' },
             { status: 400 }
           )
         }
+        // Fetch org timezone and convert to UTC
+        const org = await prisma.organization.findUnique({
+          where: { id: session.user.organizationId! },
+          select: { timezone: true },
+        })
+        const orgTimezone = org?.timezone || 'Asia/Singapore'
+        parsedDate = orgTimeToUtc(`${specificDate} 00:00:00`, orgTimezone)
       }
     }
 

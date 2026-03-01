@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { checkAvailabilityPermission, validateTimes } from '@/lib/availability'
+import { orgTimeToUtc } from '@/utils/timezone'
 
 // GET /api/availability?trainerId=xxx — List availability entries for a trainer
 export async function GET(request: NextRequest) {
@@ -93,16 +94,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate specificDate
+    // Validate and convert specificDate using org timezone
     let parsedDate: Date | null = null
     if (specificDate) {
-      parsedDate = new Date(specificDate)
-      if (isNaN(parsedDate.getTime())) {
+      // Fetch org timezone
+      const org = await prisma.organization.findUnique({
+        where: { id: session.user.organizationId! },
+        select: { timezone: true },
+      })
+      const orgTimezone = org?.timezone || 'Asia/Singapore'
+
+      // specificDate comes as "YYYY-MM-DD" — interpret as midnight in org timezone, store as UTC
+      const testDate = new Date(specificDate)
+      if (isNaN(testDate.getTime())) {
         return NextResponse.json(
           { error: 'specificDate must be a valid date' },
           { status: 400 }
         )
       }
+      parsedDate = orgTimeToUtc(`${specificDate} 00:00:00`, orgTimezone)
     }
 
     const entry = await prisma.trainerAvailability.create({

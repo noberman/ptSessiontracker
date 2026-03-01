@@ -7,18 +7,15 @@ import { toast } from 'react-hot-toast'
 
 interface CalendarSettingsFormProps {
   organizationId: string
-  calendarEnabled: boolean
   availabilityEditableBy: string
 }
 
 export function CalendarSettingsForm({
   organizationId,
-  calendarEnabled: initialEnabled,
   availabilityEditableBy: initialEditableBy,
 }: CalendarSettingsFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [calendarEnabled, setCalendarEnabled] = useState(initialEnabled)
   const [availabilityEditableBy, setAvailabilityEditableBy] = useState(initialEditableBy)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,7 +26,7 @@ export function CalendarSettingsForm({
       const response = await fetch(`/api/organizations/${organizationId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ calendarEnabled, availabilityEditableBy }),
+        body: JSON.stringify({ availabilityEditableBy }),
       })
 
       if (!response.ok) {
@@ -49,33 +46,6 @@ export function CalendarSettingsForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Calendar Enable Toggle */}
-      <div className="flex items-center justify-between">
-        <div>
-          <label htmlFor="calendarEnabled" className="block text-sm font-medium text-text-primary">
-            Enable Calendar
-          </label>
-          <p className="text-sm text-text-secondary mt-0.5">
-            Allow trainers and managers to view and manage availability through the calendar
-          </p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={calendarEnabled}
-          onClick={() => setCalendarEnabled(!calendarEnabled)}
-          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-            calendarEnabled ? 'bg-primary' : 'bg-gray-200'
-          }`}
-        >
-          <span
-            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-              calendarEnabled ? 'translate-x-5' : 'translate-x-0'
-            }`}
-          />
-        </button>
-      </div>
-
       {/* Availability Editable By */}
       <div>
         <label htmlFor="availabilityEditableBy" className="block text-sm font-medium text-text-primary mb-1">

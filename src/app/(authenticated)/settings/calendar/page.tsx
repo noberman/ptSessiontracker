@@ -16,7 +16,6 @@ export default async function CalendarSettingsPage() {
     where: { id: session.user.organizationId },
     select: {
       id: true,
-      calendarEnabled: true,
       availabilityEditableBy: true,
     },
   })
@@ -40,7 +39,6 @@ export default async function CalendarSettingsPage() {
         </h2>
         <CalendarSettingsForm
           organizationId={organization.id}
-          calendarEnabled={organization.calendarEnabled}
           availabilityEditableBy={organization.availabilityEditableBy}
         />
       </Card>
