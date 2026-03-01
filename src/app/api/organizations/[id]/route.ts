@@ -182,7 +182,9 @@ export async function PUT(request: NextRequest, props: RouteParams) {
         ...(body.subscriptionTier && { subscriptionTier: body.subscriptionTier }),
         ...(body.subscriptionStatus && { subscriptionStatus: body.subscriptionStatus }),
         ...(body.stripeCustomerId !== undefined && { stripeCustomerId: body.stripeCustomerId }),
-        ...(body.stripeSubscriptionId !== undefined && { stripeSubscriptionId: body.stripeSubscriptionId })
+        ...(body.stripeSubscriptionId !== undefined && { stripeSubscriptionId: body.stripeSubscriptionId }),
+        ...(body.calendarEnabled !== undefined && { calendarEnabled: Boolean(body.calendarEnabled) }),
+        ...(body.availabilityEditableBy && ['MANAGER_ONLY', 'MANAGER_AND_TRAINER'].includes(body.availabilityEditableBy) && { availabilityEditableBy: body.availabilityEditableBy })
       }
     })
     

@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { 
-  Package, 
-  DollarSign, 
-  MapPin, 
-  Users, 
+import {
+  Package,
+  DollarSign,
+  MapPin,
+  Users,
   CreditCard,
-  Building2
+  Building2,
+  CalendarDays
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -36,6 +37,12 @@ const settingsLinks = [
     label: 'Locations',
     icon: MapPin,
     description: 'Manage gym locations'
+  },
+  {
+    href: '/settings/calendar',
+    label: 'Calendar',
+    icon: CalendarDays,
+    description: 'Calendar and availability settings'
   },
   {
     href: '/settings/team',

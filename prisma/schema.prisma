@@ -30,6 +30,9 @@ model Organization {
   betaExpiresAt         DateTime?          @db.Timestamptz(6)
   betaPreviousTier      SubscriptionTier?
   timezone              String             @default("Asia/Singapore")
+  // Calendar settings
+  calendarEnabled       Boolean            @default(false)
+  availabilityEditableBy String            @default("MANAGER_ONLY") // "MANAGER_ONLY" or "MANAGER_AND_TRAINER"
   clients               Client[]
   // Commission v1 (to be removed after migration)
   commissionTiers       CommissionTier[]
@@ -42,6 +45,8 @@ model Organization {
   packages              Package[]
   sessions              Session[]
   users                 User[]
+  trainerAvailability   TrainerAvailability[]
+  appointments          Appointment[]
 
   @@index([betaAccess, betaExpiresAt], map: "idx_organizations_beta")
   @@map("organizations")
@@ -148,6 +153,7 @@ model Location {
   organization   Organization?  @relation(fields: [organizationId], references: [id])
   sessions       Session[]
   userAccess     UserLocation[]
+  appointments   Appointment[]
 
   @@index([active])
   @@index([archivedAt])
@@ -180,6 +186,9 @@ model User {
   salesAttributedPayments  Payment[]   @relation("SalesAttributedTo")
   salesAttributedPayments2 Payment[]   @relation("SalesAttributedTo2")
   organization          Organization?   @relation(fields: [organizationId], references: [id])
+  trainerAvailability   TrainerAvailability[]
+  trainerAppointments   Appointment[]   @relation("TrainerAppointments")
+  bookedAppointments    Appointment[]   @relation("BookedByAppointments")
 
   @@unique([email, organizationId])
   @@map("users")
@@ -202,6 +211,7 @@ model Client {
   primaryTrainer   User?         @relation("ClientPrimaryTrainer", fields: [primaryTrainerId], references: [id])
   packages         Package[]
   sessions         Session[]
+  appointments     Appointment[]
 
   @@unique([email, organizationId])
   @@index([organizationId])
@@ -231,6 +241,7 @@ model Package {
   packageTypeModel  PackageType?  @relation(fields: [packageTypeId], references: [id])
   sessions          Session[]
   payments          Payment[]
+  appointments      Appointment[]
 
   @@index([organizationId])
   @@map("packages")
@@ -284,6 +295,8 @@ model Session {
   organization     Organization? @relation(fields: [organizationId], references: [id])
   package          Package?      @relation(fields: [packageId], references: [id])
   trainer          User          @relation(fields: [trainerId], references: [id])
+  appointment      Appointment?
+  feedback         SessionFeedback?
 
   @@index([trainerId, sessionDate])
   @@index([validationToken])
@@ -486,4 +499,100 @@ enum DurationUnit {
   DAYS
   WEEKS
   MONTHS
+}
+
+enum AppointmentType {
+  SESSION             // Regular training session — links to package, deducts credit
+  FITNESS_ASSESSMENT  // Sales appointment — no package, no credit deduction
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+model TrainerAvailability {
+  id              String       @id @default(cuid())
+  trainerId       String
+  organizationId  String
+
+  // Recurring weekly schedule
+  dayOfWeek       Int?         // 0=Sunday, 1=Monday, ... 6=Saturday (null for one-off)
+  startTime       String       // "09:00" (HH:mm format, 15-min increments)
+  endTime         String       // "17:00" (HH:mm format, 15-min increments)
+
+  // One-off override for a specific date
+  specificDate    DateTime?    // Set for date-specific overrides, null for recurring
+  isAvailable     Boolean      @default(true) // false = blocked off (e.g., day off override)
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  trainer         User         @relation(fields: [trainerId], references: [id])
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([trainerId, dayOfWeek])
+  @@index([trainerId, specificDate])
+  @@map("trainer_availability")
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  trainerId       String
+  clientId        String?           // Nullable for FITNESS_ASSESSMENT with prospects
+  locationId      String
+  packageId       String?           // Optional link to package (null for FITNESS_ASSESSMENT)
+  organizationId  String
+
+  type            AppointmentType   @default(SESSION)
+  scheduledAt     DateTime          // Date and time of appointment
+  duration        Int               @default(60) // Duration in minutes
+
+  status          AppointmentStatus @default(SCHEDULED)
+
+  // Prospect info (for FITNESS_ASSESSMENT when client doesn't exist yet)
+  prospectName    String?
+  prospectEmail   String?
+
+  reminderSentAt  DateTime?
+  bookedById      String?           // Who created the appointment (trainer or manager)
+
+  // Links to session when completed (SESSION type only)
+  sessionId       String?           @unique
+
+  notes           String?
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  trainer         User              @relation("TrainerAppointments", fields: [trainerId], references: [id])
+  client          Client?           @relation(fields: [clientId], references: [id])
+  location        Location          @relation(fields: [locationId], references: [id])
+  package         Package?          @relation(fields: [packageId], references: [id])
+  session         Session?          @relation(fields: [sessionId], references: [id])
+  bookedBy        User?             @relation("BookedByAppointments", fields: [bookedById], references: [id])
+  organization    Organization      @relation(fields: [organizationId], references: [id])
+
+  @@index([trainerId, scheduledAt])
+  @@index([organizationId, scheduledAt])
+  @@map("appointments")
+}
+
+model SessionFeedback {
+  id              String   @id @default(cuid())
+  sessionId       String   @unique
+
+  sessionRating   Int?     // 1-5 stars
+  trainerRating   Int?     // 1-5 stars (collected less frequently)
+  energyLevel     Int?     // 1-5
+  sorenessLevel   Int?     // 1-5
+  comments        String?
+
+  collectedAt     DateTime @default(now())
+
+  session         Session  @relation(fields: [sessionId], references: [id])
+
+  @@map("session_feedback")
 }

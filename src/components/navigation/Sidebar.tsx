@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
   Calendar,
+  CalendarDays,
   Users,
   Package,
   UserPlus,
@@ -48,6 +49,11 @@ const navItems: NavItem[] = [
     title: 'Sessions',
     href: '/sessions',
     icon: Calendar,
+  },
+  {
+    title: 'Calendar',
+    href: '/calendar',
+    icon: CalendarDays,
   },
   {
     title: 'Clients',

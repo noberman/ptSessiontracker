@@ -38,6 +38,10 @@ model Organization {
   subscriptionTier      SubscriptionTier?
   timezone              String             @default("Asia/Singapore")
 
+  // Calendar settings
+  calendarEnabled       Boolean            @default(false)
+  availabilityEditableBy String            @default("MANAGER_ONLY") // "MANAGER_ONLY" or "MANAGER_AND_TRAINER"
+
   // Beta Access
   betaAccess            Boolean?           @default(false)
   betaExpiresAt         DateTime?          @db.Timestamptz(6)
@@ -54,6 +58,8 @@ model Organization {
   packages              Package[]
   sessions              Session[]
   users                 User[]
+  trainerAvailability   TrainerAvailability[]
+  appointments          Appointment[]
 
   @@index([betaAccess, betaExpiresAt], map: "idx_organizations_beta")
   @@map("organizations")
@@ -68,6 +74,8 @@ model Organization {
 - onboardingCompletedAt is set when first admin completes onboarding wizard
 - Subsequent admins skip onboarding if organization already completed it
 - timezone defaults to "Asia/Singapore" for date-based calculations
+- `calendarEnabled` feature flag controls access to calendar/scheduling features
+- `availabilityEditableBy` controls who can set trainer availability: "MANAGER_ONLY" or "MANAGER_AND_TRAINER"
 
 ### CommissionProfile
 Defines a commission profile with a calculation method and trigger type. Organizations can have multiple profiles and assign them to individual users.
@@ -209,6 +217,7 @@ model Location {
   organization   Organization?  @relation(fields: [organizationId], references: [id])
   sessions       Session[]
   userAccess     UserLocation[]
+  appointments   Appointment[]
 
   @@index([active])
   @@index([archivedAt])
@@ -255,6 +264,9 @@ model User {
   salesAttributedPayments  Payment[]    @relation("SalesAttributedTo")
   salesAttributedPayments2 Payment[]    @relation("SalesAttributedTo2")
   organization          Organization?   @relation(fields: [organizationId], references: [id])
+  trainerAvailability   TrainerAvailability[]
+  trainerAppointments   Appointment[]   @relation("TrainerAppointments")
+  bookedAppointments    Appointment[]   @relation("BookedByAppointments")
 
   @@unique([email, organizationId])
   @@map("users")
@@ -292,6 +304,7 @@ model Client {
   primaryTrainer   User?         @relation("ClientPrimaryTrainer", fields: [primaryTrainerId], references: [id])
   packages         Package[]
   sessions         Session[]
+  appointments     Appointment[]
 
   @@unique([email, organizationId])
   @@index([organizationId])
@@ -336,6 +349,7 @@ model Package {
   packageTypeModel   PackageType?  @relation(fields: [packageTypeId], references: [id])
   sessions           Session[]
   payments           Payment[]
+  appointments       Appointment[]
 
   @@index([organizationId])
   @@map("packages")
@@ -424,6 +438,8 @@ model Session {
   organization     Organization? @relation(fields: [organizationId], references: [id])
   package          Package?      @relation(fields: [packageId], references: [id])
   trainer          User          @relation(fields: [trainerId], references: [id])
+  appointment      Appointment?
+  feedback         SessionFeedback?
 
   @@index([trainerId, sessionDate])
   @@index([validationToken])
@@ -683,6 +699,132 @@ model UserLocation {
 - A user can have access to multiple locations
 - A location can have multiple users
 
+### TrainerAvailability
+Defines when trainers are available for appointments. Supports recurring weekly schedules and one-off date overrides.
+
+```prisma
+model TrainerAvailability {
+  id              String       @id @default(cuid())
+  trainerId       String
+  organizationId  String
+
+  // Recurring weekly schedule
+  dayOfWeek       Int?         // 0=Sunday, 1=Monday, ... 6=Saturday (null for one-off)
+  startTime       String       // "09:00" (HH:mm format, 15-min increments)
+  endTime         String       // "17:00" (HH:mm format, 15-min increments)
+
+  // One-off override for a specific date
+  specificDate    DateTime?    // Set for date-specific overrides, null for recurring
+  isAvailable     Boolean      @default(true) // false = blocked off (e.g., day off override)
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  trainer         User         @relation(fields: [trainerId], references: [id])
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([trainerId, dayOfWeek])
+  @@index([trainerId, specificDate])
+  @@map("trainer_availability")
+}
+```
+
+**Business Rules:**
+- Recurring entries: `dayOfWeek` set, `specificDate` null — applies every week
+- One-off entries: `specificDate` set, `dayOfWeek` null — applies to that date only
+- Day-off override: `specificDate` set, `isAvailable = false` — blocks a recurring day
+- Multiple blocks per day supported (e.g., 9:00-12:00 + 13:00-17:00 for lunch break)
+- Specific date entries always override recurring entries for that day
+- Who can edit is controlled by Organization.availabilityEditableBy setting
+- Time values use 15-minute increments (e.g., "09:00", "09:15", "09:30", "09:45")
+
+### Appointment
+Represents a scheduled appointment between a trainer and a client (or prospect).
+
+```prisma
+model Appointment {
+  id              String            @id @default(cuid())
+  trainerId       String
+  clientId        String?           // Nullable for FITNESS_ASSESSMENT with prospects
+  locationId      String
+  packageId       String?           // Optional link to package (null for FITNESS_ASSESSMENT)
+  organizationId  String
+
+  type            AppointmentType   @default(SESSION)
+  scheduledAt     DateTime          // Date and time of appointment
+  duration        Int               @default(60) // Duration in minutes
+
+  status          AppointmentStatus @default(SCHEDULED)
+
+  // Prospect info (for FITNESS_ASSESSMENT when client doesn't exist yet)
+  prospectName    String?
+  prospectEmail   String?
+
+  reminderSentAt  DateTime?
+  bookedById      String?           // Who created the appointment (trainer or manager)
+
+  // Links to session when completed (SESSION type only)
+  sessionId       String?           @unique
+
+  notes           String?
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  trainer         User              @relation("TrainerAppointments", fields: [trainerId], references: [id])
+  client          Client?           @relation(fields: [clientId], references: [id])
+  location        Location          @relation(fields: [locationId], references: [id])
+  package         Package?          @relation(fields: [packageId], references: [id])
+  session         Session?          @relation(fields: [sessionId], references: [id])
+  bookedBy        User?             @relation("BookedByAppointments", fields: [bookedById], references: [id])
+  organization    Organization      @relation(fields: [organizationId], references: [id])
+
+  @@index([trainerId, scheduledAt])
+  @@index([organizationId, scheduledAt])
+  @@map("appointments")
+}
+```
+
+**Business Rules:**
+- SESSION type: requires clientId and packageId, deducts a package credit on completion
+- FITNESS_ASSESSMENT type: no package link, no credit deduction. Can use prospectName/prospectEmail when clientId is null
+- Appointments must fall within trainer's available hours
+- Status transitions: SCHEDULED → COMPLETED / NO_SHOW / CANCELLED
+- sessionId links to the Session record when a SESSION-type appointment is logged
+- bookedById tracks who created the appointment (for audit)
+- Booking permissions: Admin, PT Manager, Club Manager can book on behalf of trainers. Trainers book their own.
+
+### SessionFeedback
+Captures client feedback after a training session. Linked 1:1 with Session.
+
+```prisma
+model SessionFeedback {
+  id              String   @id @default(cuid())
+  sessionId       String   @unique
+
+  sessionRating   Int?     // 1-5 stars
+  trainerRating   Int?     // 1-5 stars (collected less frequently)
+  energyLevel     Int?     // 1-5
+  sorenessLevel   Int?     // 1-5
+  comments        String?
+
+  collectedAt     DateTime @default(now())
+
+  // Relations
+  session         Session  @relation(fields: [sessionId], references: [id])
+
+  @@map("session_feedback")
+}
+```
+
+**Business Rules:**
+- One feedback record per session (unique sessionId)
+- sessionRating collected every session, trainerRating collected less frequently
+- All rating fields are optional (client can skip)
+- Collected via the validation confirmation page after client validates a session
+
 ## Enums
 
 ### Role
@@ -788,6 +930,28 @@ enum DurationUnit {
 }
 ```
 
+### AppointmentType
+Defines the type of appointment.
+
+```prisma
+enum AppointmentType {
+  SESSION             // Regular training session — links to package, deducts credit
+  FITNESS_ASSESSMENT  // Sales appointment — no package, no credit deduction
+}
+```
+
+### AppointmentStatus
+Defines the lifecycle status of an appointment.
+
+```prisma
+enum AppointmentStatus {
+  SCHEDULED   // Upcoming appointment
+  COMPLETED   // Appointment finished successfully
+  NO_SHOW     // Client did not attend
+  CANCELLED   // Appointment was cancelled
+}
+```
+
 ## Relationships
 
 ### Primary Relationships
@@ -823,6 +987,23 @@ enum DurationUnit {
 8. **Payment -> User** (Many-to-One, multiple relations)
    - createdBy: who created the payment record
    - salesAttributedTo / salesAttributedTo2: sales commission attribution
+
+9. **TrainerAvailability -> User** (Many-to-One)
+   - Each availability entry belongs to one trainer
+   - A trainer can have multiple availability entries (recurring + overrides)
+
+10. **Appointment -> Multiple Entities** (Many-to-One)
+    - Links trainer, client (optional), location, package (optional), session (optional), organization
+    - Two User relations: trainer (required) and bookedBy (optional audit trail)
+    - Client nullable for fitness assessments with prospects
+
+11. **Session <-> Appointment** (One-to-One, optional)
+    - A session can optionally be linked to an appointment
+    - Linked when a SESSION-type appointment is logged as a session
+
+12. **Session <-> SessionFeedback** (One-to-One, optional)
+    - Each session can have at most one feedback record
+    - Feedback collected via validation confirmation page
 
 ### Cascade Rules
 - **User Deletion**: Soft delete, preserve sessions
@@ -905,6 +1086,18 @@ enum DurationUnit {
 // PackageType
 @@unique([organizationId, name])       // Unique type names per org
 @@index([organizationId])              // Org-scoped queries
+
+// TrainerAvailability
+@@index([trainerId, dayOfWeek])        // Recurring schedule lookups
+@@index([trainerId, specificDate])     // Date-specific override lookups
+
+// Appointment
+@@unique([sessionId])                  // One appointment per session
+@@index([trainerId, scheduledAt])      // Trainer schedule queries
+@@index([organizationId, scheduledAt]) // Org-wide schedule queries
+
+// SessionFeedback
+@@unique([sessionId])                  // One feedback per session
 ```
 
 ## Migration Strategy
@@ -959,9 +1152,10 @@ enum DurationUnit {
 
 ## Schema Versioning
 
-Current Version: **3.0.0**
+Current Version: **4.0.0**
 
 ### Version History
+- 4.0.0: Calendar & scheduling system (TrainerAvailability, Appointment, SessionFeedback), AppointmentType and AppointmentStatus enums, Organization calendar settings (calendarEnabled, availabilityEditableBy)
 - 3.0.0: Commission v2 system (CommissionProfile, CommissionTierV2, CommissionCalculation), UserLocation junction table, split payments, organization timezone, session cancellation support, demo data flags
 - 2.1.0: Added onboardingCompletedAt to Organization model for wizard completion tracking
 - 2.0.0: Simplified package system - removed PackageTemplate, consolidated PackageType with single name field
