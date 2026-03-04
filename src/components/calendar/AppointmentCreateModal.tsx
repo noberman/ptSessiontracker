@@ -26,6 +26,8 @@ interface ClientOption {
   id: string
   name: string
   email: string
+  primaryTrainerId: string | null
+  primaryTrainerName: string | null
 }
 
 interface PackageOption {
@@ -110,6 +112,8 @@ export function AppointmentCreateModal({
               id: c.id as string,
               name: c.name as string,
               email: c.email as string,
+              primaryTrainerId: (c.primaryTrainerId as string) || null,
+              primaryTrainerName: (c.primaryTrainer as Record<string, string> | null)?.name || null,
             }))
           )
         }
@@ -129,6 +133,14 @@ export function AppointmentCreateModal({
     setClients([])
     setClientPackages([])
     setSelectedPackageId('')
+
+    // Auto-select client's primary trainer if available in the trainer list
+    if (client.primaryTrainerId && hasMultipleTrainers && trainers) {
+      const trainerMatch = trainers.find((t) => t.id === client.primaryTrainerId)
+      if (trainerMatch) {
+        setChosenTrainerId(trainerMatch.id)
+      }
+    }
 
     try {
       const res = await fetch(`/api/packages?clientId=${client.id}&active=true&hasRemaining=true`)
@@ -212,28 +224,6 @@ export function AppointmentCreateModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="New Appointment" size="lg">
       <div className="space-y-4">
-        {/* Trainer */}
-        {hasMultipleTrainers ? (
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Trainer</label>
-            <select
-              value={chosenTrainerId}
-              onChange={(e) => setChosenTrainerId(e.target.value)}
-              className="w-full max-w-[300px] px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary text-sm"
-            >
-              {trainers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name || t.email}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div className="text-sm text-text-secondary">
-            Trainer: <span className="font-medium text-text-primary">{trainerName}</span>
-          </div>
-        )}
-
         {/* Date & Time */}
         <div className="flex flex-wrap gap-3">
           <div className="flex-1 min-w-[140px]">
@@ -381,6 +371,47 @@ export function AppointmentCreateModal({
             </>
           )}
         </div>
+
+        {/* Trainer */}
+        {hasMultipleTrainers ? (
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1">Trainer</label>
+            <select
+              value={chosenTrainerId}
+              onChange={(e) => setChosenTrainerId(e.target.value)}
+              className="w-full max-w-[300px] px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary text-sm"
+            >
+              {trainers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name || t.email}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="text-sm text-text-secondary">
+            Trainer: <span className="font-medium text-text-primary">{trainerName}</span>
+          </div>
+        )}
+
+        {/* Trainer mismatch warning */}
+        {selectedClient && selectedClient.primaryTrainerId && activeTrainerId !== selectedClient.primaryTrainerId && (
+          <div className="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md">
+            <span className="text-amber-600 text-sm leading-tight">
+              {selectedClient.name} is assigned to {selectedClient.primaryTrainerName || 'another trainer'}.
+              {' '}Booking with a different trainer — is this intentional?
+            </span>
+            {hasMultipleTrainers && trainers?.find((t) => t.id === selectedClient.primaryTrainerId) && (
+              <button
+                type="button"
+                onClick={() => setChosenTrainerId(selectedClient.primaryTrainerId!)}
+                className="flex-shrink-0 text-xs font-medium text-amber-700 hover:text-amber-900 underline"
+              >
+                Switch back
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Package (SESSION type with client) */}
         {type === 'SESSION' && selectedClient && (
