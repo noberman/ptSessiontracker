@@ -8,18 +8,6 @@ import { Trash2, Plus } from 'lucide-react'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-const TIME_SLOTS = generateTimeSlots()
-
-function generateTimeSlots(): string[] {
-  const slots: string[] = []
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 15) {
-      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
-    }
-  }
-  return slots
-}
-
 interface AvailabilityEntry {
   id: string
   trainerId: string
@@ -264,31 +252,23 @@ export function AvailabilityEditor({
                 </div>
                 <div>
                   <label className="block text-xs text-text-secondary mb-1">Start</label>
-                  <select
+                  <input
+                    type="time"
                     value={newStartTime}
                     onChange={(e) => setNewStartTime(e.target.value)}
+                    step={900}
                     className="px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary text-sm"
-                  >
-                    {TIME_SLOTS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-text-secondary mb-1">End</label>
-                  <select
+                  <input
+                    type="time"
                     value={newEndTime}
                     onChange={(e) => setNewEndTime(e.target.value)}
+                    step={900}
                     className="px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary text-sm"
-                  >
-                    {TIME_SLOTS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <Button
                   type="button"
@@ -379,31 +359,23 @@ export function AvailabilityEditor({
                     <>
                       <div>
                         <label className="block text-xs text-text-secondary mb-1">Start</label>
-                        <select
+                        <input
+                          type="time"
                           value={overrideStartTime}
                           onChange={(e) => setOverrideStartTime(e.target.value)}
+                          step={900}
                           className="px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary text-sm"
-                        >
-                          {TIME_SLOTS.map((t) => (
-                            <option key={t} value={t}>
-                              {t}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </div>
                       <div>
                         <label className="block text-xs text-text-secondary mb-1">End</label>
-                        <select
+                        <input
+                          type="time"
                           value={overrideEndTime}
                           onChange={(e) => setOverrideEndTime(e.target.value)}
+                          step={900}
                           className="px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary text-sm"
-                        >
-                          {TIME_SLOTS.map((t) => (
-                            <option key={t} value={t}>
-                              {t}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </div>
                     </>
                   )}

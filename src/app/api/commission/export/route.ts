@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       month,
       locationId || undefined,
       method,
-      session.user.organizationId
+      session.user.organizationId ?? undefined
     )
     
     console.log('Commission export - Commissions calculated:', {

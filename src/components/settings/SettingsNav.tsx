@@ -6,7 +6,6 @@ import {
   Package,
   DollarSign,
   MapPin,
-  Users,
   CreditCard,
   Building2,
   CalendarDays
@@ -45,13 +44,6 @@ const settingsLinks = [
     description: 'Calendar and availability settings'
   },
   {
-    href: '/settings/team',
-    label: 'Team',
-    icon: Users,
-    description: 'Manage team members',
-    comingSoon: true
-  },
-  {
     href: '/settings/billing',
     label: 'Billing',
     icon: CreditCard,
@@ -66,28 +58,8 @@ export function SettingsNav() {
     <nav className="space-y-1">
       {settingsLinks.map((link) => {
         const Icon = link.icon
-        const isActive = pathname === link.href || 
+        const isActive = pathname === link.href ||
                         (link.href !== '/settings' && pathname.startsWith(link.href))
-        const isDisabled = link.comingSoon
-
-        if (isDisabled) {
-          return (
-            <div
-              key={link.href}
-              className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-text-tertiary opacity-50 cursor-not-allowed"
-            >
-              <Icon className="h-4 w-4" />
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  {link.label}
-                  <span className="text-xs bg-background-tertiary px-1.5 py-0.5 rounded">
-                    Soon
-                  </span>
-                </div>
-              </div>
-            </div>
-          )
-        }
 
         return (
           <Link

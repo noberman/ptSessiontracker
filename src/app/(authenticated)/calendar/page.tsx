@@ -30,18 +30,42 @@ export default async function CalendarPage() {
   const canEdit =
     isManager || (role === 'TRAINER' && organization.availabilityEditableBy === 'MANAGER_AND_TRAINER')
 
-  // Fetch trainers for manager view (or just the current user for trainer view)
-  const trainers = isManager
-    ? await prisma.user.findMany({
+  // For managers: fetch accessible locations (trainers fetched client-side per location)
+  // For trainers: just pass themselves as the trainer list
+  let locations: { id: string; name: string }[] = []
+  let trainers: { id: string; name: string; email: string }[] = []
+
+  if (isManager) {
+    if (role === 'ADMIN') {
+      // ADMIN sees all active org locations
+      locations = await prisma.location.findMany({
         where: {
           organizationId: session.user.organizationId,
-          role: 'TRAINER',
           active: true,
+          archivedAt: null,
         },
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true },
         orderBy: { name: 'asc' },
       })
-    : [{ id: session.user.id, name: session.user.name ?? session.user.email ?? '', email: session.user.email ?? '' }]
+    } else {
+      // PT_MANAGER / CLUB_MANAGER: locations via UserLocation junction
+      const userLocations = await prisma.userLocation.findMany({
+        where: { userId: session.user.id },
+        select: {
+          location: {
+            select: { id: true, name: true, active: true, archivedAt: true },
+          },
+        },
+      })
+      locations = userLocations
+        .filter((ul) => ul.location.active && !ul.location.archivedAt)
+        .map((ul) => ({ id: ul.location.id, name: ul.location.name }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    }
+  } else {
+    // Trainer view: just themselves
+    trainers = [{ id: session.user.id, name: session.user.name ?? session.user.email ?? '', email: session.user.email ?? '' }]
+  }
 
   return (
     <div className="space-y-6">
@@ -69,6 +93,7 @@ export default async function CalendarPage() {
       ) : (
         <CalendarView
           trainers={trainers}
+          locations={locations}
           currentUserId={session.user.id}
           isManager={isManager}
           canEdit={canEdit}

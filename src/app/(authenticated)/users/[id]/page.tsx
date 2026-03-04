@@ -40,12 +40,15 @@ export default async function UserDetailPage({
             select: {
               id: true,
               remainingSessions: true,
+              totalSessions: true,
               expiresAt: true,
-              _count: {
-                select: { sessions: true }
-              }
             }
-          }
+          },
+          sessions: {
+            select: { sessionDate: true },
+            orderBy: { sessionDate: 'desc' as const },
+            take: 1,
+          },
         }
       },
       _count: {
@@ -224,7 +227,10 @@ export default async function UserDetailPage({
                         {!client.active ? (
                           <Badge variant="gray" size="xs">Archived</Badge>
                         ) : (() => {
-                          const clientState = getClientState({ packages: client.packages })
+                          const clientState = getClientState({
+                            packages: client.packages,
+                            lastSessionDate: client.sessions[0]?.sessionDate ?? null,
+                          })
                           const stateDisplay = getClientStateDisplay(clientState)
                           return (
                             <span

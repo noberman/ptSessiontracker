@@ -111,13 +111,15 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               remainingSessions: true,
+              totalSessions: true,
               expiresAt: true,
-              _count: {
-                select: {
-                  sessions: true,
-                },
-              },
             },
+          },
+          // Most recent session for lastSessionDate
+          sessions: {
+            select: { sessionDate: true },
+            orderBy: { sessionDate: 'desc' as const },
+            take: 1,
           },
           _count: {
             select: {
@@ -136,9 +138,12 @@ export async function GET(request: NextRequest) {
 
     // Calculate client state for each client
     const clients = clientsRaw.map(client => {
-      const clientState = getClientState({ packages: client.packages })
-      // Remove packages array from response to keep it lean
-      const { packages, ...clientWithoutPackages } = client
+      const clientState = getClientState({
+        packages: client.packages,
+        lastSessionDate: client.sessions[0]?.sessionDate ?? null,
+      })
+      // Remove packages and sessions arrays from response to keep it lean
+      const { packages, sessions, ...clientWithoutPackages } = client
       return {
         ...clientWithoutPackages,
         clientState,

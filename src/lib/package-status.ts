@@ -8,6 +8,7 @@
 // Types for package status checks
 interface PackageForStatusCheck {
   remainingSessions: number
+  totalSessions: number
   expiresAt: Date | null
   effectiveStartDate?: Date | null
   packageTypeId?: string | null
@@ -15,9 +16,6 @@ interface PackageForStatusCheck {
 
 interface PackageWithSessions extends PackageForStatusCheck {
   id: string
-  _count?: {
-    sessions: number
-  }
 }
 
 // =============================================================================
@@ -133,32 +131,32 @@ export function getExpiringSoonPackageWhereClause(daysAhead: number = 14) {
 // Client State Derivation
 // =============================================================================
 
-export type ClientState = 'active' | 'not_started' | 'at_risk' | 'lost' | 'new'
+export type ClientState = 'active' | 'not_started' | 'fading' | 'at_risk' | 'lost' | 'new'
 
 interface PackageForClientState {
   id: string
   remainingSessions: number
+  totalSessions: number
   expiresAt: Date | null
   effectiveStartDate?: Date | null
   packageTypeId?: string | null
-  _count?: {
-    sessions: number
-  }
 }
 
 interface ClientForStateCheck {
   packages: PackageForClientState[]
+  lastSessionDate?: Date | null
 }
 
 /**
  * Derive a client's state based on their packages and sessions
  *
  * Priority order (highest to lowest):
- * 1. at_risk - Has active package expiring soon (most urgent)
- * 2. not_started - Has active package but no sessions (needs onboarding)
- * 3. active - Has active package with sessions (healthy)
- * 4. lost - Had packages but none active (churned)
- * 5. new - No packages ever (just created)
+ * 1. new - No packages ever (just created)
+ * 2. lost - Had packages but none active (churned)
+ * 3. at_risk - Has active package at risk (expiring soon OR low sessions)
+ * 4. not_started - All active packages untouched (remaining === total)
+ * 5. fading - Has started but no session in 30+ days
+ * 6. active - Has active package with recent sessions (healthy)
  */
 export function getClientState(client: ClientForStateCheck): ClientState {
   const packages = client.packages || []
@@ -176,22 +174,25 @@ export function getClientState(client: ClientForStateCheck): ClientState {
     return 'lost'
   }
 
-  // Check if any active package is expiring soon
-  const hasAtRiskPackage = activePackages.some(pkg =>
-    isPackageExpiringSoon(pkg, CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
-  )
+  // Check if any active package is at risk (expiring soon OR low sessions)
+  const hasAtRiskPackage = activePackages.some(pkg => isPackageAtRisk(pkg))
   if (hasAtRiskPackage) {
     return 'at_risk'
   }
 
-  // Check if any active package has sessions
-  // _count.sessions represents sessions logged against that specific package
-  const hasSessionsAgainstActivePackage = activePackages.some(pkg =>
-    pkg._count && pkg._count.sessions > 0
-  )
-
-  if (!hasSessionsAgainstActivePackage) {
+  // Check if all active packages are untouched (remaining === total)
+  const allUntouched = activePackages.every(pkg => pkg.remainingSessions === pkg.totalSessions)
+  if (allUntouched) {
     return 'not_started'
+  }
+
+  // Check if client has started but no session in last 30 days
+  if (client.lastSessionDate) {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    if (new Date(client.lastSessionDate) < thirtyDaysAgo) {
+      return 'fading'
+    }
   }
 
   return 'active'
@@ -221,12 +222,19 @@ export function getClientStateDisplay(state: ClientState): {
         bgColor: 'bg-blue-100',
         description: 'Has package but no sessions yet'
       }
+    case 'fading':
+      return {
+        label: 'Fading',
+        color: 'text-yellow-700',
+        bgColor: 'bg-yellow-100',
+        description: 'No session in 30+ days'
+      }
     case 'at_risk':
       return {
         label: 'At Risk',
         color: 'text-orange-700',
         bgColor: 'bg-orange-100',
-        description: 'Package expiring soon'
+        description: 'Package expiring soon or low sessions'
       }
     case 'lost':
       return {
@@ -265,25 +273,26 @@ export function getClientStateFilterWhereClause(states: ClientState[]): any {
   const atRiskThreshold = new Date()
   atRiskThreshold.setDate(atRiskThreshold.getDate() + CLIENT_METRICS_CONFIG.AT_RISK_DAYS_AHEAD)
 
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+  const activePackageCondition = {
+    remainingSessions: { gt: 0 },
+    OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
+  }
+
   const stateConditions: any[] = []
 
   for (const state of states) {
     switch (state) {
       case 'active':
-        // Has active package with at least one session against it
+        // Has active package + has sessions against active package + has session in last 30 days
         stateConditions.push({
           packages: {
-            some: {
-              remainingSessions: { gt: 0 },
-              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
-            }
+            some: activePackageCondition
           },
           sessions: {
             some: {
-              package: {
-                remainingSessions: { gt: 0 },
-                OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
-              }
+              sessionDate: { gte: thirtyDaysAgo }
             }
           }
         })
@@ -291,20 +300,38 @@ export function getClientStateFilterWhereClause(states: ClientState[]): any {
 
       case 'not_started':
         // Has active package but no sessions against any active package
+        // Note: Uses session-based check. For imported packages where sessions were
+        // consumed externally, getClientState() (in-memory) uses remainingSessions === totalSessions
+        // for accurate tagging.
         stateConditions.push({
           packages: {
+            some: activePackageCondition
+          },
+          NOT: {
+            sessions: {
+              some: {
+                package: activePackageCondition
+              }
+            }
+          }
+        })
+        break
+
+      case 'fading':
+        // Has active package + has sessions against active package (started) + no session in last 30 days
+        stateConditions.push({
+          packages: {
+            some: activePackageCondition
+          },
+          sessions: {
             some: {
-              remainingSessions: { gt: 0 },
-              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
+              package: activePackageCondition
             }
           },
           NOT: {
             sessions: {
               some: {
-                package: {
-                  remainingSessions: { gt: 0 },
-                  OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
-                }
+                sessionDate: { gte: thirtyDaysAgo }
               }
             }
           }
@@ -312,17 +339,10 @@ export function getClientStateFilterWhereClause(states: ClientState[]): any {
         break
 
       case 'at_risk':
-        // Has active package expiring within threshold
+        // Has active package that is at risk (expiring soon OR low sessions)
         stateConditions.push({
           packages: {
-            some: {
-              remainingSessions: { gt: 0 },
-              expiresAt: {
-                not: null,
-                gte: now,
-                lte: atRiskThreshold
-              }
-            }
+            some: getAtRiskPackageWhereClause()
           }
         })
         break
@@ -335,10 +355,7 @@ export function getClientStateFilterWhereClause(states: ClientState[]): any {
           },
           NOT: {
             packages: {
-              some: {
-                remainingSessions: { gt: 0 },
-                OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
-              }
+              some: activePackageCondition
             }
           }
         })

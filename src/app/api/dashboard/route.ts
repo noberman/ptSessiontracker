@@ -8,6 +8,7 @@ import {
   getActivePackageWhereClause,
   getExpiringSoonPackageWhereClause,
   getAtRiskPackageWhereClause,
+  getClientStateFilterWhereClause,
   CLIENT_METRICS_CONFIG
 } from '@/lib/package-status'
 
@@ -235,24 +236,16 @@ export async function GET(request: Request) {
         // Total clients assigned to this trainer
         prisma.client.count({ where: clientsWhere }),
 
-        // Active clients (have active package)
+        // Active clients
         prisma.client.count({
-          where: {
-            ...clientsWhere,
-            packages: { some: getActivePackageWhereClause() }
-          }
+          where: { ...clientsWhere, ...getClientStateFilterWhereClause(['active']) }
         }),
 
-        // Not Started clients (have active package but no sessions against it)
+        // Not Started clients
         prisma.client.findMany({
           where: {
             ...clientsWhere,
-            packages: { some: getActivePackageWhereClause() },
-            NOT: {
-              sessions: {
-                some: { package: getActivePackageWhereClause() }
-              }
-            }
+            ...getClientStateFilterWhereClause(['not_started'])
           },
           select: {
             id: true,
@@ -276,13 +269,10 @@ export async function GET(request: Request) {
         }),
 
         // At Risk clients (expiring soon OR low sessions, but only if they have exactly 1 active package)
-        // We fetch clients with at-risk packages and their active packages, then filter in code
         prisma.client.findMany({
           where: {
             ...clientsWhere,
-            packages: {
-              some: getAtRiskPackageWhereClause()
-            }
+            ...getClientStateFilterWhereClause(['at_risk'])
           },
           select: {
             id: true,
@@ -527,58 +517,19 @@ export async function GET(request: Request) {
         // Total clients (all client profiles)
         prisma.client.count({ where: clientsWhere }),
 
-        // Active clients (have at least one active package)
+        // Active clients
         prisma.client.count({
-          where: {
-            ...clientsWhere,
-            packages: {
-              some: getActivePackageWhereClause()
-            }
-          }
+          where: { ...clientsWhere, ...getClientStateFilterWhereClause(['active']) }
         }),
 
-        // Not Started clients (have active package but no sessions against any active package)
+        // Not Started clients
         prisma.client.count({
-          where: {
-            ...clientsWhere,
-            // Has at least one active package
-            packages: {
-              some: getActivePackageWhereClause()
-            },
-            // But no sessions exist against any of their active packages
-            NOT: {
-              sessions: {
-                some: {
-                  package: getActivePackageWhereClause()
-                }
-              }
-            }
-          }
+          where: { ...clientsWhere, ...getClientStateFilterWhereClause(['not_started']) }
         }),
 
-        // Fading clients (active package, has started sessions, but no session in last 30 days)
+        // Fading clients
         prisma.client.count({
-          where: {
-            ...clientsWhere,
-            // Has at least one active package
-            packages: {
-              some: getActivePackageWhereClause()
-            },
-            // Has logged at least one session against an active package (i.e. started)
-            sessions: {
-              some: {
-                package: getActivePackageWhereClause()
-              }
-            },
-            // But no session in the last 30 days
-            NOT: {
-              sessions: {
-                some: {
-                  sessionDate: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-                }
-              }
-            }
-          }
+          where: { ...clientsWhere, ...getClientStateFilterWhereClause(['fading']) }
         }),
 
         // At-Risk clients (expiring soon OR low sessions, only if they have exactly 1 active package)
@@ -586,9 +537,7 @@ export async function GET(request: Request) {
         prisma.client.findMany({
           where: {
             ...clientsWhere,
-            packages: {
-              some: getAtRiskPackageWhereClause()
-            }
+            ...getClientStateFilterWhereClause(['at_risk'])
           },
           select: {
             id: true,
@@ -599,21 +548,9 @@ export async function GET(request: Request) {
           }
         }),
 
-        // Lost clients (had packages before but none are currently active)
+        // Lost clients
         prisma.client.count({
-          where: {
-            ...clientsWhere,
-            // Has had at least one package
-            packages: {
-              some: {}
-            },
-            // But none are currently active
-            NOT: {
-              packages: {
-                some: getActivePackageWhereClause()
-              }
-            }
-          }
+          where: { ...clientsWhere, ...getClientStateFilterWhereClause(['lost']) }
         }),
 
         // Unassigned clients
@@ -896,52 +833,26 @@ export async function GET(request: Request) {
             // Total clients assigned to this trainer
             prisma.client.count({ where: trainerClientsWhere }),
 
-            // Active clients (have at least one active package)
+            // Active clients
             prisma.client.count({
-              where: {
-                ...trainerClientsWhere,
-                packages: { some: getActivePackageWhereClause() }
-              }
+              where: { ...trainerClientsWhere, ...getClientStateFilterWhereClause(['active']) }
             }),
 
-            // Not Started (have active package but no sessions against it)
+            // Not Started
             prisma.client.count({
-              where: {
-                ...trainerClientsWhere,
-                packages: { some: getActivePackageWhereClause() },
-                NOT: {
-                  sessions: {
-                    some: { package: getActivePackageWhereClause() }
-                  }
-                }
-              }
+              where: { ...trainerClientsWhere, ...getClientStateFilterWhereClause(['not_started']) }
             }),
 
-            // Fading (active package, has started, but no session in last 30 days)
+            // Fading
             prisma.client.count({
-              where: {
-                ...trainerClientsWhere,
-                packages: { some: getActivePackageWhereClause() },
-                sessions: {
-                  some: { package: getActivePackageWhereClause() }
-                },
-                NOT: {
-                  sessions: {
-                    some: {
-                      sessionDate: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-                    }
-                  }
-                }
-              }
+              where: { ...trainerClientsWhere, ...getClientStateFilterWhereClause(['fading']) }
             }),
 
             // At Risk (expiring soon OR low sessions, only if they have exactly 1 active package)
             prisma.client.findMany({
               where: {
                 ...trainerClientsWhere,
-                packages: {
-                  some: getAtRiskPackageWhereClause()
-                }
+                ...getClientStateFilterWhereClause(['at_risk'])
               },
               select: {
                 id: true,
@@ -1072,36 +983,18 @@ export async function GET(request: Request) {
       ] = await Promise.all([
         prisma.client.count({ where: unassignedClientsWhere }),
         prisma.client.count({
-          where: { ...unassignedClientsWhere, packages: { some: getActivePackageWhereClause() } }
+          where: { ...unassignedClientsWhere, ...getClientStateFilterWhereClause(['active']) }
         }),
         prisma.client.count({
-          where: {
-            ...unassignedClientsWhere,
-            packages: { some: getActivePackageWhereClause() },
-            NOT: { sessions: { some: { package: getActivePackageWhereClause() } } }
-          }
+          where: { ...unassignedClientsWhere, ...getClientStateFilterWhereClause(['not_started']) }
         }),
-        // Fading (active package, has started, but no session in last 30 days)
         prisma.client.count({
-          where: {
-            ...unassignedClientsWhere,
-            packages: { some: getActivePackageWhereClause() },
-            sessions: {
-              some: { package: getActivePackageWhereClause() }
-            },
-            NOT: {
-              sessions: {
-                some: {
-                  sessionDate: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-                }
-              }
-            }
-          }
+          where: { ...unassignedClientsWhere, ...getClientStateFilterWhereClause(['fading']) }
         }),
         prisma.client.findMany({
           where: {
             ...unassignedClientsWhere,
-            packages: { some: getAtRiskPackageWhereClause() }
+            ...getClientStateFilterWhereClause(['at_risk'])
           },
           select: {
             id: true,

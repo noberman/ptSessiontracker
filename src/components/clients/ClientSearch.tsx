@@ -10,7 +10,8 @@ import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
 const CLIENT_STATE_OPTIONS = [
   { value: 'active', label: 'Active', subLabel: 'Has active package with sessions' },
   { value: 'not_started', label: 'Not Started', subLabel: 'Has package, no sessions yet' },
-  { value: 'at_risk', label: 'At Risk', subLabel: 'Package expiring soon' },
+  { value: 'fading', label: 'Fading', subLabel: 'No session in 30+ days' },
+  { value: 'at_risk', label: 'At Risk', subLabel: 'Package expiring soon or low sessions' },
   { value: 'lost', label: 'Lost', subLabel: 'No active packages' },
   { value: 'new', label: 'New', subLabel: 'No packages yet' },
 ]

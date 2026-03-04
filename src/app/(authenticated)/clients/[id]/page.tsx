@@ -98,7 +98,10 @@ export default async function ClientDetailPage({
   const canManage = ['ADMIN', 'PT_MANAGER', 'CLUB_MANAGER'].includes(session.user.role)
 
   // Calculate derived client state
-  const clientState = getClientState({ packages: client.packages })
+  const clientState = getClientState({
+    packages: client.packages,
+    lastSessionDate: client.sessions[0]?.sessionDate ?? null,
+  })
   const clientStateDisplay = getClientStateDisplay(clientState)
 
   // Helper function to determine package status

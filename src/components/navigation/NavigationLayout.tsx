@@ -4,18 +4,15 @@ import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
 import { Sidebar } from './Sidebar'
-import { Breadcrumbs } from './Breadcrumbs'
 import { cn } from '@/lib/utils'
 
 interface NavigationLayoutProps {
   children: React.ReactNode
-  showBreadcrumbs?: boolean
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full'
 }
 
-export function NavigationLayout({ 
-  children, 
-  showBreadcrumbs = true,
+export function NavigationLayout({
+  children,
   maxWidth = '2xl'
 }: NavigationLayoutProps) {
   const { status } = useSession()
@@ -67,11 +64,6 @@ export function NavigationLayout({
           {/* Mobile spacing for hamburger menu */}
           <div className="lg:hidden h-12 mb-4"></div>
           
-          {showBreadcrumbs && pathname !== '/dashboard' && (
-            <div className="mb-6">
-              <Breadcrumbs />
-            </div>
-          )}
           {children}
         </div>
       </main>

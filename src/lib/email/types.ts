@@ -41,3 +41,25 @@ export interface ReminderEmailData {
   validationUrls: string[]
   daysUntilExpiry: number
 }
+
+export interface AppointmentConfirmationEmailData {
+  recipientName: string
+  appointmentType: string
+  scheduledAt: Date
+  duration: number
+  trainerName: string
+  locationName: string
+  notes: string | null
+  orgTimezone: string
+}
+
+export interface AppointmentCancellationEmailData {
+  recipientName: string
+  appointmentType: string
+  scheduledAt: Date
+  duration: number
+  trainerName: string
+  locationName: string
+  cancelledByName: string
+  orgTimezone: string
+}
