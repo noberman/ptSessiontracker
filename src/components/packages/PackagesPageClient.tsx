@@ -78,18 +78,19 @@ export function PackagesPageClient({
                 Manage client packages and track sessions
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2 md:gap-3">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
                 disabled={isExporting || packages.length === 0}
+                className="whitespace-nowrap"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {isExporting ? 'Exporting...' : 'Export CSV'}
               </Button>
               {canManageTypes && (
-                <Link href="/settings/package-types">
+                <Link href="/settings/package-types" className="hidden md:inline-flex">
                   <Button variant="outline" size="sm">
                     <Settings className="h-4 w-4 mr-2" />
                     Configure Types
@@ -98,7 +99,7 @@ export function PackagesPageClient({
               )}
               {canCreate && (
                 <Link href="/packages/new">
-                  <Button>Add New Package</Button>
+                  <Button size="sm" className="whitespace-nowrap">Add New Package</Button>
                 </Link>
               )}
             </div>

@@ -16,6 +16,9 @@ import {
   Line,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -498,6 +501,16 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
 
   // Color palette for different lines
   const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
+
+  // Pie chart data for mobile: total sessions per trainer
+  const pieData = topTrainers.map((name, i) => {
+    const lastPoint = chartData[chartData.length - 1]
+    return {
+      name: name as string,
+      value: (lastPoint?.[name as string] as number) || 0,
+      color: colors[i % colors.length],
+    }
+  }).filter(d => d.value > 0)
 
   return (
     <div className="space-y-6">
@@ -1043,25 +1056,56 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
               </span>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="date" fontSize={12} />
-              <YAxis fontSize={12} />
-              <Tooltip wrapperStyle={{ zIndex: 1000 }} />
-              <Legend />
-              {/* Add lines for trainers/PT managers only */}
-              {topTrainers.map((trainerName, index) => (
-                <Line 
-                  key={trainerName}
-                  type="monotone" 
-                  dataKey={trainerName} 
-                  stroke={colors[index % colors.length]} 
-                  strokeWidth={2}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+          {/* Desktop: Line chart */}
+          <div className="hidden md:block">
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="date" fontSize={12} />
+                <YAxis fontSize={12} />
+                <Tooltip wrapperStyle={{ zIndex: 1000 }} />
+                <Legend />
+                {topTrainers.map((trainerName, index) => (
+                  <Line
+                    key={trainerName}
+                    type="monotone"
+                    dataKey={trainerName}
+                    stroke={colors[index % colors.length]}
+                    strokeWidth={2}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          {/* Mobile: Donut chart */}
+          <div className="md:hidden">
+            {pieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, value }) => `${name}: ${value}`}
+                    labelLine={false}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-sm text-text-secondary text-center py-8">No session data available</p>
+            )}
+          </div>
         </CardContent>
       </Card>
 

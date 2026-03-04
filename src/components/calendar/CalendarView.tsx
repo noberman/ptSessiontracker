@@ -628,7 +628,7 @@ export function CalendarView({
                   Set Availability
                 </Button>
                 {availTrainerPickerOpen && (
-                  <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded-md shadow-lg z-30 min-w-[180px]">
+                  <div className="absolute left-0 md:right-0 md:left-auto top-full mt-1 bg-white border border-border rounded-md shadow-lg z-30 min-w-[180px]">
                     {locationTrainers.map((t) => (
                       <button
                         key={t.id}
