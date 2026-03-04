@@ -48,11 +48,12 @@ export async function GET(request: NextRequest) {
     
     console.log('Commission export - Method:', method)
     
-    // Calculate commissions
+    // Calculate commissions (scoped to the user's organization)
     const commissions = await calculateMonthlyCommissions(
       month,
       locationId || undefined,
-      method
+      method,
+      session.user.organizationId
     )
     
     console.log('Commission export - Commissions calculated:', {
