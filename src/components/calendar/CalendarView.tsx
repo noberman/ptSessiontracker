@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { AvailabilityEditor } from './AvailabilityEditor'
@@ -201,6 +201,21 @@ export function CalendarView({
   const [allTrainerAvailability, setAllTrainerAvailability] = useState<Record<string, Record<string, DayAvailability>>>({})
   const [createTrainerId, setCreateTrainerId] = useState('')
   const [mobileActiveTrainerId, setMobileActiveTrainerId] = useState<string | null>(null)
+
+  // Mobile swipe navigation
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }, [])
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      setDayOffset(o => deltaX < 0 ? o + 1 : o - 1)
+    }
+  }, [])
 
   // Derived: manager view mode
   const isOverviewMode = hasLocations && managerViewMode === 'overview'
@@ -724,7 +739,7 @@ export function CalendarView({
           /* ===== OVERVIEW MODE: Trainer columns for one day ===== */
           <>
             {/* Mobile: trainer chips + agenda/single-trainer view */}
-            <div className="md:hidden">
+            <div className="md:hidden" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
               {/* Trainer chips bar */}
               <div className="flex gap-2 px-3 py-2 border-b border-border overflow-x-auto">
                 <button
