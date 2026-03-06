@@ -16,6 +16,11 @@ export default async function NewSessionPage({
     redirect('/login')
   }
 
+  // Direct session logging removed — sessions must go through appointments
+  if (!params.appointmentId) {
+    redirect('/calendar')
+  }
+
   // Fetch appointment data if appointmentId is provided
   let appointmentData: {
     id: string

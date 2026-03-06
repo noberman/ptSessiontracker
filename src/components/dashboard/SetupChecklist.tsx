@@ -86,9 +86,9 @@ export function SetupChecklist() {
         },
         {
           id: 'session',
-          label: 'Log your first session',
+          label: 'Schedule your first appointment',
           completed: sessions.sessions?.length > 0,
-          href: '/sessions/new'
+          href: '/calendar'
         },
         {
           id: 'team',

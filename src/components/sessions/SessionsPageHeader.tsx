@@ -2,15 +2,10 @@
 
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Download } from 'lucide-react'
 
-interface SessionsPageHeaderProps {
-  canCreate: boolean
-}
-
-export function SessionsPageHeader({ canCreate }: SessionsPageHeaderProps) {
+export function SessionsPageHeader() {
   const [isExporting, setIsExporting] = useState(false)
   const searchParams = useSearchParams()
 
@@ -62,11 +57,6 @@ export function SessionsPageHeader({ canCreate }: SessionsPageHeaderProps) {
           <Download className="h-4 w-4 mr-2" />
           {isExporting ? 'Exporting...' : 'Export CSV'}
         </Button>
-        {canCreate && (
-          <Link href="/sessions/new">
-            <Button>Log New Session</Button>
-          </Link>
-        )}
       </div>
     </div>
   )

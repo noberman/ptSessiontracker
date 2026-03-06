@@ -10,7 +10,6 @@ import {
   CalendarDays,
   Users,
   Package,
-  UserPlus,
   Menu,
   X,
   ChevronLeft,
@@ -46,14 +45,14 @@ const navItems: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Sessions',
-    href: '/sessions',
-    icon: Calendar,
-  },
-  {
     title: 'Calendar',
     href: '/calendar',
     icon: CalendarDays,
+  },
+  {
+    title: 'Sessions',
+    href: '/sessions',
+    icon: Calendar,
   },
   {
     title: 'Clients',
@@ -88,13 +87,7 @@ const navItems: NavItem[] = [
     href: '/locations',
     icon: MapPin,
   },
-  {
-    title: 'Log Session',
-    href: '/sessions/new',
-    icon: UserPlus,
-    roles: ['PERSONAL_TRAINER'],
-  },
-  {
+{
     title: 'Users',
     href: '/users',
     icon: Users,

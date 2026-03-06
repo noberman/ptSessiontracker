@@ -307,7 +307,6 @@ export default async function SessionsPage({
     totalPages: Math.ceil(total / limit),
   }
 
-  const canCreate = true // All authenticated users can create sessions
   const canValidate = session.user.role === 'PT_MANAGER' || session.user.role === 'ADMIN'
   const canDelete = session.user.role === 'PT_MANAGER' || session.user.role === 'ADMIN'
   // Allow trainers to see actions column for resend functionality
@@ -315,7 +314,7 @@ export default async function SessionsPage({
 
   return (
     <div>
-        <SessionsPageHeader canCreate={canCreate} />
+        <SessionsPageHeader />
 
         {/* Filters */}
         <SessionFilters 

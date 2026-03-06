@@ -212,11 +212,11 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
               </Button>
             </div>
           </div>
-          {/* Desktop Add Session button */}
-          <Link href="/sessions/new" className="hidden md:block">
+          {/* Desktop New Appointment button */}
+          <Link href="/calendar" className="hidden md:block">
             <Button className="flex items-center">
               <Plus className="w-4 h-4 mr-2" />
-              Add Session
+              New Appointment
             </Button>
           </Link>
         </div>
@@ -547,7 +547,7 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
       </Card>
 
       {/* Mobile Floating Action Button */}
-      <Link href="/sessions/new" className="md:hidden">
+      <Link href="/calendar" className="md:hidden">
         <Button 
           className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg w-14 h-14 p-0 flex items-center justify-center"
           size="lg"
