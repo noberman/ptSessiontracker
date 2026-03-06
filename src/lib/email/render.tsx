@@ -3,10 +3,12 @@ import React from 'react'
 import SessionValidationEmail from './templates/session-validation'
 import AppointmentConfirmationEmail from './templates/appointment-confirmation'
 import AppointmentCancellationEmail from './templates/appointment-cancellation'
+import AppointmentReminderEmail from './templates/appointment-reminder'
 import type {
   SessionValidationEmailData,
   AppointmentConfirmationEmailData,
   AppointmentCancellationEmailData,
+  AppointmentReminderEmailData,
 } from './types'
 import { format } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
@@ -107,6 +109,39 @@ Trainer: ${data.trainerName}
 Location: ${data.locationName}
 
 If you have any questions, please contact your trainer or gym management.
+
+PT Session Tracker
+  `.trim()
+
+  return { html, text }
+}
+
+/**
+ * Render appointment reminder email to HTML
+ */
+export async function renderAppointmentReminderEmail(
+  data: AppointmentReminderEmailData
+): Promise<{ html: string; text: string }> {
+  const html = await render(<AppointmentReminderEmail {...data} />)
+
+  const zonedDate = toZonedTime(data.scheduledAt, data.orgTimezone)
+  const formattedDate = format(zonedDate, 'EEEE, MMMM d, yyyy')
+  const formattedTime = format(zonedDate, 'h:mm a')
+  const typeLabel = data.appointmentType === 'FITNESS_ASSESSMENT' ? 'Fitness Assessment' : 'Session'
+
+  const text = `
+Reminder: You have an appointment tomorrow
+
+Hi ${data.recipientName}, this is a reminder about your upcoming appointment:
+
+Type: ${typeLabel}
+Date: ${formattedDate}
+Time: ${formattedTime}
+Duration: ${data.duration} minutes
+Trainer: ${data.trainerName}
+Location: ${data.locationName}
+
+If you need to reschedule, please contact your trainer or gym management.
 
 PT Session Tracker
   `.trim()
