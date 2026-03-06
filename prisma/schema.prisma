@@ -569,6 +569,9 @@ model Appointment {
 
   notes           String?
 
+  // Sale outcome tracking (FITNESS_ASSESSMENT only): "SALE" or "NO_SALE"
+  saleOutcome     String?
+
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 

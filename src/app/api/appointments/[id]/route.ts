@@ -91,6 +91,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       packageId,
       prospectName,
       prospectEmail,
+      saleOutcome,
     } = body
 
     const updateData: Record<string, unknown> = {}
@@ -101,6 +102,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     if (packageId !== undefined) updateData.packageId = packageId || null
     if (prospectName !== undefined) updateData.prospectName = prospectName || null
     if (prospectEmail !== undefined) updateData.prospectEmail = prospectEmail || null
+    if (saleOutcome !== undefined) {
+      if (saleOutcome !== null && saleOutcome !== 'SALE' && saleOutcome !== 'NO_SALE') {
+        return NextResponse.json({ error: 'saleOutcome must be "SALE", "NO_SALE", or null' }, { status: 400 })
+      }
+      updateData.saleOutcome = saleOutcome
+    }
 
     // Validate status transitions
     if (status !== undefined) {

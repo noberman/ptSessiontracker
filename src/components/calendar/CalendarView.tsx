@@ -28,6 +28,7 @@ interface Appointment {
   notes: string | null
   prospectName: string | null
   prospectEmail: string | null
+  saleOutcome: string | null
   trainer: { id: string; name: string; email: string }
   client: { id: string; name: string; email: string; status?: string } | null
   location: { id: string; name: string }
@@ -148,13 +149,13 @@ const APPOINTMENT_COLORS = {
   SESSION: {
     SCHEDULED: 'bg-blue-100 border-blue-300 text-blue-800',
     COMPLETED: 'bg-green-100 border-green-300 text-green-700',
-    NO_SHOW: 'bg-red-100 border-red-300 text-red-700',
+    NO_SHOW: 'bg-gray-200 border-gray-400 text-gray-600',
     CANCELLED: 'bg-gray-100 border-gray-300 text-gray-500',
   },
   FITNESS_ASSESSMENT: {
     SCHEDULED: 'bg-orange-100 border-orange-300 text-orange-800',
     COMPLETED: 'bg-green-100 border-green-300 text-green-700',
-    NO_SHOW: 'bg-red-100 border-red-300 text-red-700',
+    NO_SHOW: 'bg-gray-200 border-gray-400 text-gray-600',
     CANCELLED: 'bg-gray-100 border-gray-300 text-gray-500',
   },
 }

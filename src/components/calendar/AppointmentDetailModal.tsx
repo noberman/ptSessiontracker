@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { toast } from 'react-hot-toast'
-import { Clock, MapPin, User, Package, FileText, CalendarDays, UserPlus } from 'lucide-react'
+import { Clock, MapPin, User, Package, FileText, CalendarDays, ShoppingBag, X } from 'lucide-react'
 
 interface Appointment {
   id: string
@@ -16,6 +16,7 @@ interface Appointment {
   notes: string | null
   prospectName: string | null
   prospectEmail: string | null
+  saleOutcome: string | null
   trainer: { id: string; name: string; email: string }
   client: { id: string; name: string; email: string; status?: string } | null
   location: { id: string; name: string }
@@ -53,6 +54,8 @@ export function AppointmentDetailModal({
   const router = useRouter()
   const [cancelling, setCancelling] = useState(false)
   const [loggingSession, setLoggingSession] = useState(false)
+  const [showSaleOutcome, setShowSaleOutcome] = useState(false)
+  const [savingOutcome, setSavingOutcome] = useState(false)
 
   if (!appointment) return null
 
@@ -117,9 +120,44 @@ export function AppointmentDetailModal({
       }
       toast.success('Marked as completed')
       onUpdated()
-      onClose()
+
+      // For fitness assessments, show sale outcome step instead of closing
+      if (isAssessmentType) {
+        setShowSaleOutcome(true)
+      } else {
+        onClose()
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update')
+    }
+  }
+
+  const handleSaleOutcome = async (outcome: 'SALE' | 'NO_SALE') => {
+    setSavingOutcome(true)
+    try {
+      const res = await fetch(`/api/appointments/${appointment.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ saleOutcome: outcome }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to save outcome')
+      }
+      onUpdated()
+
+      if (outcome === 'SALE') {
+        const clientId = appointment.client?.id
+        onClose()
+        router.push(clientId ? `/packages/new?clientId=${clientId}` : '/packages/new')
+      } else {
+        toast.success('Outcome recorded')
+        onClose()
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save outcome')
+    } finally {
+      setSavingOutcome(false)
     }
   }
 
@@ -281,7 +319,7 @@ export function AppointmentDetailModal({
                 Mark Completed
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={handleMarkNoShow}>
+            <Button size="sm" variant="outline" onClick={handleMarkNoShow} className="text-gray-700 hover:text-gray-900 border-gray-300 hover:border-gray-400">
               No-Show
             </Button>
             <Button
@@ -296,16 +334,43 @@ export function AppointmentDetailModal({
           </div>
         )}
 
-        {/* Hint for completed fitness assessments with new clients */}
-        {isCompleted && isAssessmentType && appointment.client && (
+        {/* Sale outcome step for fitness assessments */}
+        {showSaleOutcome && isAssessmentType && (
+          <div className="pt-3 border-t border-border">
+            <p className="text-sm font-medium text-text-primary mb-3">Did this assessment result in a sale?</p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => handleSaleOutcome('SALE')}
+                disabled={savingOutcome}
+                className="flex-1"
+              >
+                <ShoppingBag className="w-4 h-4 mr-1.5" />
+                {savingOutcome ? 'Saving...' : 'Sale'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleSaleOutcome('NO_SALE')}
+                disabled={savingOutcome}
+                className="flex-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+              >
+                <X className="w-4 h-4 mr-1.5" />
+                {savingOutcome ? 'Saving...' : 'No Sale'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Show recorded outcome for completed fitness assessments */}
+        {isCompleted && isAssessmentType && !showSaleOutcome && appointment.saleOutcome && (
           <div className="pt-2 border-t border-border">
             <div className="flex items-center gap-2 text-sm text-text-secondary">
-              <UserPlus className="w-4 h-4 text-purple-500 shrink-0" />
+              <ShoppingBag className="w-4 h-4 shrink-0" />
               <span>
-                <a href={`/clients/${appointment.client.id}`} className="text-primary-600 hover:underline">
-                  View client profile
-                </a>
-                {' '}to assign a package
+                Outcome: <span className="font-medium text-text-primary">
+                  {appointment.saleOutcome === 'SALE' ? 'Sale' : 'No Sale'}
+                </span>
               </span>
             </div>
           </div>

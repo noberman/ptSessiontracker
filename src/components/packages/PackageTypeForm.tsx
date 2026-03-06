@@ -44,13 +44,20 @@ export function PackageTypeForm({ packageType, onSuccess, onCancel }: PackageTyp
       return
     }
     
-    // Validate numeric fields
-    if (formData.defaultSessions && parseInt(formData.defaultSessions) <= 0) {
+    if (!formData.defaultSessions) {
+      toast.error('Please enter the number of sessions for this package type')
+      return
+    }
+    if (parseInt(formData.defaultSessions) <= 0) {
       toast.error('Default sessions must be greater than 0')
       return
     }
-    
-    if (formData.defaultPrice && parseFloat(formData.defaultPrice) < 0) {
+
+    if (!formData.defaultPrice) {
+      toast.error('Please enter the price for this package type')
+      return
+    }
+    if (parseFloat(formData.defaultPrice) < 0) {
       toast.error('Default price cannot be negative')
       return
     }
@@ -121,7 +128,7 @@ export function PackageTypeForm({ packageType, onSuccess, onCancel }: PackageTyp
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label htmlFor="defaultSessions" className="block text-sm font-medium text-text-primary mb-1">
-            Default Sessions (optional)
+            Default Sessions
           </label>
           <input
             type="number"
@@ -131,12 +138,13 @@ export function PackageTypeForm({ packageType, onSuccess, onCancel }: PackageTyp
             className="w-full px-3 py-2 border border-border rounded-md bg-background-primary text-text-primary"
             min="1"
             placeholder="e.g., 10"
+            required
           />
         </div>
 
         <div>
           <label htmlFor="defaultPrice" className="block text-sm font-medium text-text-primary mb-1">
-            Default Price (optional)
+            Default Price
           </label>
           <input
             type="number"
@@ -147,6 +155,7 @@ export function PackageTypeForm({ packageType, onSuccess, onCancel }: PackageTyp
             min="0"
             step="0.01"
             placeholder="e.g., 500.00"
+            required
           />
         </div>
       </div>

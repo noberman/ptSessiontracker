@@ -771,6 +771,9 @@ model Appointment {
 
   notes           String?
 
+  // Sale outcome tracking (FITNESS_ASSESSMENT only): "SALE" or "NO_SALE"
+  saleOutcome     String?
+
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -797,6 +800,7 @@ model Appointment {
 - sessionId links to the Session record when a SESSION-type appointment is logged
 - bookedById tracks who created the appointment (for audit)
 - Booking permissions: Admin, PT Manager, Club Manager can book on behalf of trainers. Trainers book their own.
+- `saleOutcome`: tracks whether a FITNESS_ASSESSMENT resulted in a sale. Values: `"SALE"`, `"NO_SALE"`, or `null` (not yet recorded). Only applicable to FITNESS_ASSESSMENT type.
 
 ### SessionFeedback
 Captures client feedback after a training session. Linked 1:1 with Session.
@@ -1166,9 +1170,10 @@ enum ClientStatus {
 
 ## Schema Versioning
 
-Current Version: **4.0.0**
+Current Version: **4.1.0**
 
 ### Version History
+- 4.1.0: Added `saleOutcome` field to Appointment model for fitness assessment sale tracking
 - 4.0.0: Calendar & scheduling system (TrainerAvailability, Appointment, SessionFeedback), AppointmentType and AppointmentStatus enums, Organization calendar settings (calendarEnabled, availabilityEditableBy)
 - 3.0.0: Commission v2 system (CommissionProfile, CommissionTierV2, CommissionCalculation), UserLocation junction table, split payments, organization timezone, session cancellation support, demo data flags
 - 2.1.0: Added onboardingCompletedAt to Organization model for wizard completion tracking
