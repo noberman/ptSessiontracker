@@ -202,6 +202,13 @@ export function CalendarView({
   const [createTrainerId, setCreateTrainerId] = useState('')
   const [mobileActiveTrainerId, setMobileActiveTrainerId] = useState<string | null>(null)
 
+  // Trainer mobile day navigation (index into weekDateStrings: 0=Mon..6=Sun)
+  const [trainerMobileDayIndex, setTrainerMobileDayIndex] = useState(() => {
+    const today = getTodayInOrgTz(orgTimezone)
+    const dow = parseDateStr(today).dayOfWeek
+    return (dow + 6) % 7
+  })
+
   // Mobile swipe navigation
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
@@ -216,6 +223,34 @@ export function CalendarView({
       setDayOffset(o => deltaX < 0 ? o + 1 : o - 1)
     }
   }, [])
+
+  // Trainer mobile day navigation functions
+  const trainerMobileGoNext = useCallback(() => {
+    setTrainerMobileDayIndex(prev => {
+      if (prev >= 6) {
+        setWeekOffset(o => o + 1)
+        return 0
+      }
+      return prev + 1
+    })
+  }, [])
+  const trainerMobileGoPrev = useCallback(() => {
+    setTrainerMobileDayIndex(prev => {
+      if (prev <= 0) {
+        setWeekOffset(o => o - 1)
+        return 6
+      }
+      return prev - 1
+    })
+  }, [])
+  const handleTrainerTouchEnd = useCallback((e: React.TouchEvent) => {
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX < 0) trainerMobileGoNext()
+      else trainerMobileGoPrev()
+    }
+  }, [trainerMobileGoNext, trainerMobileGoPrev])
 
   // Derived: manager view mode
   const isOverviewMode = hasLocations && managerViewMode === 'overview'
@@ -238,6 +273,20 @@ export function CalendarView({
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     return `${dayNames[date.getDay()]}, ${MONTH_NAMES[m - 1]} ${d}, ${y}`
   }, [overviewDateStr])
+
+  // Trainer mobile day view: derived values
+  const todayMondayIndex = useMemo(() => {
+    const dow = parseDateStr(todayStr).dayOfWeek
+    return (dow + 6) % 7
+  }, [todayStr])
+  const trainerMobileDateStr = weekDateStrings[trainerMobileDayIndex] || todayStr
+  const trainerMobileDayLabel = useMemo(() => {
+    const [y, m, d] = trainerMobileDateStr.split('-').map(Number)
+    const date = new Date(y, m - 1, d)
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return `${dayNames[date.getDay()]}, ${MONTH_NAMES[m - 1]} ${d}, ${y}`
+  }, [trainerMobileDateStr])
+
   const overviewTrainers = useMemo(
     () => locationTrainers.filter((t) => selectedTrainerIds.has(t.id)),
     [locationTrainers, selectedTrainerIds]
@@ -605,27 +654,45 @@ export function CalendarView({
               </div>
             </>
           ) : (
-            /* Week navigation for detail/trainer mode */
+            /* Navigation for detail/trainer mode */
             <>
-              <Button variant="outline" size="sm" onClick={() => setWeekOffset((o) => o - 1)}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm font-medium text-text-primary min-w-[200px] text-center">
-                {weekLabel}
-              </span>
-              <Button variant="outline" size="sm" onClick={() => setWeekOffset((o) => o + 1)}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              {weekOffset !== 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setWeekOffset(0)}
-                  className="text-xs"
-                >
-                  Today
+              {/* Mobile: day navigation */}
+              <div className="flex items-center gap-2 md:hidden">
+                <Button variant="outline" size="sm" onClick={trainerMobileGoPrev}>
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-              )}
+                <span className="text-sm font-medium text-text-primary min-w-[200px] text-center">
+                  {trainerMobileDayLabel}
+                </span>
+                <Button variant="outline" size="sm" onClick={trainerMobileGoNext}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                {(weekOffset !== 0 || trainerMobileDayIndex !== todayMondayIndex) && (
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setWeekOffset(0)
+                    setTrainerMobileDayIndex(todayMondayIndex)
+                  }} className="text-xs">
+                    Today
+                  </Button>
+                )}
+              </div>
+              {/* Desktop: week navigation */}
+              <div className="hidden md:flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setWeekOffset((o) => o - 1)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium text-text-primary min-w-[200px] text-center">
+                  {weekLabel}
+                </span>
+                <Button variant="outline" size="sm" onClick={() => setWeekOffset((o) => o + 1)}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                {weekOffset !== 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)} className="text-xs">
+                    Today
+                  </Button>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -1116,8 +1183,114 @@ export function CalendarView({
             </div>
           </>
         ) : (
-          /* ===== DETAIL / TRAINER MODE: Week grid (existing) ===== */
-          <div className="overflow-y-auto overflow-x-auto" style={{ maxHeight: '70vh' }}>
+          /* ===== DETAIL / TRAINER MODE ===== */
+          <>
+          {/* Mobile: day view with swipe */}
+          <div className="md:hidden" onTouchStart={handleTouchStart} onTouchEnd={handleTrainerTouchEnd}>
+            <div className="overflow-y-auto" style={{ maxHeight: '60vh' }}>
+              <div
+                className="grid grid-cols-[44px_1fr] relative"
+                style={{ height: TOTAL_HOURS * HOUR_HEIGHT }}
+              >
+                {/* Compact time gutter */}
+                <div className="border-r border-border relative">
+                  {HOURS.map((hour) => (
+                    <div
+                      key={hour}
+                      className="absolute right-0 left-0 flex items-center justify-end pr-1"
+                      style={{ top: (hour - START_HOUR) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+                    >
+                      <span className="text-[10px] text-text-tertiary select-none">
+                        {hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Single day column */}
+                <div
+                  className="relative"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    const clickY = e.clientY - rect.top
+                    const minuteOfDay = START_HOUR * 60 + (clickY / (TOTAL_HOURS * HOUR_HEIGHT)) * (TOTAL_HOURS * 60)
+                    handleSlotClick(trainerMobileDateStr, minuteOfDay)
+                  }}
+                >
+                  {/* Hour grid lines */}
+                  {HOURS.map((hour) => (
+                    <div
+                      key={hour}
+                      className="absolute left-0 right-0 border-t border-border/50"
+                      style={{ top: (hour - START_HOUR) * HOUR_HEIGHT }}
+                    />
+                  ))}
+
+                  {/* Availability shading */}
+                  {availability[trainerMobileDateStr]?.isAvailable &&
+                    availability[trainerMobileDateStr].blocks.map((block, bi) => {
+                      const sMin = timeToMinutes(block.startTime)
+                      const eMin = timeToMinutes(block.endTime)
+                      if (eMin <= START_HOUR * 60 || sMin >= END_HOUR * 60) return null
+                      const topPx = ((sMin - START_HOUR * 60) / 60) * HOUR_HEIGHT
+                      const heightPx = ((eMin - sMin) / 60) * HOUR_HEIGHT
+                      return (
+                        <div
+                          key={`avail-${bi}`}
+                          className="absolute left-0 right-0 bg-green-50/70 z-[1]"
+                          style={{ top: Math.max(topPx, 0), height: Math.max(heightPx, 4) }}
+                        />
+                      )
+                    })}
+
+                  {/* "Not available" indicator */}
+                  {availability[trainerMobileDateStr] && !availability[trainerMobileDateStr].isAvailable && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xs text-text-tertiary bg-background-secondary/80 px-2 py-1 rounded">
+                        Not available
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Appointments */}
+                  {(appointmentsByDate[trainerMobileDateStr] || []).map((appt) => {
+                    const apptStartMin = getApptMinutes(appt.scheduledAt)
+                    const apptEndMin = apptStartMin + appt.duration
+                    if (apptEndMin <= START_HOUR * 60 || apptStartMin >= END_HOUR * 60) return null
+                    const topPx = ((apptStartMin - START_HOUR * 60) / 60) * HOUR_HEIGHT
+                    const heightPx = (appt.duration / 60) * HOUR_HEIGHT
+                    const colorClass = APPOINTMENT_COLORS[appt.type]?.[appt.status] || 'bg-gray-100 border-gray-300 text-gray-700'
+                    const clientName = appt.client?.name || appt.prospectName || ''
+                    return (
+                      <div
+                        key={appt.id}
+                        className={`absolute left-1 right-1 border rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer z-[5] ${colorClass}`}
+                        style={{ top: Math.max(topPx, 0), height: Math.max(heightPx, 20) }}
+                        onClick={(e) => handleAppointmentClick(appt, e)}
+                      >
+                        <div className="text-[11px] font-medium leading-tight truncate">
+                          {clientName}
+                        </div>
+                        {heightPx > 28 && (
+                          <div className="text-[10px] opacity-75 leading-tight">
+                            {minutesToTime(apptStartMin)} - {minutesToTime(apptEndMin)}
+                          </div>
+                        )}
+                        {heightPx > 44 && (
+                          <div className="text-[10px] opacity-60 leading-tight truncate">
+                            {appt.type === 'FITNESS_ASSESSMENT' ? 'Assessment' : 'Session'}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop: week grid */}
+          <div className="hidden md:block overflow-y-auto overflow-x-auto" style={{ maxHeight: '70vh' }}>
             {/* Header row */}
             <div className="sticky top-0 z-10 grid grid-cols-[56px_repeat(7,1fr)] border-b border-border">
               <div className="border-r border-border bg-background-primary" />
@@ -1298,6 +1471,7 @@ export function CalendarView({
               </div>
             </div>
           </div>
+          </>
         )}
       </Card>
 
