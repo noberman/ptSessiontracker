@@ -164,12 +164,24 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
 
   return (
     <div className="space-y-6">
-      {/* Period Filter - Consistent with other pages */}
+      {/* Period Filter */}
       <div className="bg-surface rounded-lg p-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center space-x-2">
             <span className="text-sm text-text-secondary">Period:</span>
-            <div className="flex space-x-2">
+            {/* Mobile: dropdown select */}
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="md:hidden rounded-lg border border-border px-3 py-2 text-text-primary bg-surface hover:bg-surface-hover focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            >
+              <option value="day">Today</option>
+              <option value="week">This Week</option>
+              <option value="lastMonth">Last Month</option>
+              <option value="month">This Month</option>
+            </select>
+            {/* Desktop: buttons */}
+            <div className="hidden md:flex space-x-2">
               <Button
                 variant={period === 'day' ? 'primary' : 'outline'}
                 size="sm"
