@@ -19,8 +19,8 @@ export default async function ClientsPage({
     locationIds?: string // New multi-select
     primaryTrainerId?: string // Keep for backwards compatibility
     trainerIds?: string // New multi-select
-    clientStates?: string // New: filter by client state
-    active?: string
+    clientStates?: string // Filter by client state (lead, active, not_started, fading, at_risk, lost)
+    showArchived?: string // Show archived clients checkbox
   }>
 }) {
   const params = await searchParams
@@ -52,7 +52,8 @@ export default async function ClientsPage({
     ? (params.clientStates.split(',').filter(Boolean) as ClientState[])
     : []
 
-  const active = params.active !== 'false'
+  // Parse showArchived flag
+  const showArchived = params.showArchived === 'true'
 
   const skip = (page - 1) * limit
 
@@ -61,11 +62,12 @@ export default async function ClientsPage({
     organizationId: session.user.organizationId
   }
 
-  // Default to active clients unless explicitly requested
-  if (params.active !== undefined) {
-    where.active = active
+  // Handle status filtering
+  // If showArchived is checked, include both ACTIVE and ARCHIVED
+  if (showArchived) {
+    where.status = { in: ['ACTIVE', 'ARCHIVED'] }
   } else {
-    where.active = true
+    where.status = 'ACTIVE'
   }
 
   // Build search conditions separately
@@ -125,6 +127,7 @@ export default async function ClientsPage({
   }
 
   // Handle client state filter
+  // Handle client state filter (computed states for ACTIVE clients)
   if (clientStates.length > 0) {
     const stateFilter = getClientStateFilterWhereClause(clientStates)
     if (stateFilter.OR) {
@@ -189,7 +192,7 @@ export default async function ClientsPage({
         name: true,
         email: true,
         phone: true,
-        active: true,
+        status: true,
         locationId: true,
         primaryTrainerId: true,
         location: {
@@ -322,10 +325,9 @@ export default async function ClientsPage({
         </div>
 
         <div className="mb-6">
-          <ClientSearch 
+          <ClientSearch
             locations={locations}
             trainers={trainers}
-            showInactive={session.user.role === 'ADMIN'}
           />
         </div>
 

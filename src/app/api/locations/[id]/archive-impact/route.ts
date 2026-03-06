@@ -84,7 +84,7 @@ export async function GET(
       prisma.client.count({
         where: {
           locationId,
-          active: true
+          status: 'ACTIVE'
         }
       }),
       
@@ -104,7 +104,7 @@ export async function GET(
         where: {
           client: {
             locationId,
-            active: true
+            status: 'ACTIVE'
           },
           active: true
         }

@@ -150,7 +150,7 @@ export default async function SessionsPage({
       filterClients = await prisma.client.findMany({
         where: {
           locationId: { in: trainerLocationIds },
-          active: true,
+          status: 'ACTIVE',
         },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
@@ -186,7 +186,7 @@ export default async function SessionsPage({
       filterClients = await prisma.client.findMany({
         where: {
           locationId: { in: managerLocationIds },
-          active: true,
+          status: 'ACTIVE',
         },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
@@ -220,8 +220,8 @@ export default async function SessionsPage({
     // Now using direct organizationId - no JOINs needed!
     const [clients, trainers, locations] = await Promise.all([
       prisma.client.findMany({
-        where: { 
-          active: true,
+        where: {
+          status: 'ACTIVE',
           organizationId: session.user.organizationId // Direct filter!
         },
         select: { id: true, name: true },

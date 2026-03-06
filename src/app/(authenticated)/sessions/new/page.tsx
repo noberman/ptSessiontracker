@@ -7,7 +7,7 @@ import { SessionForm } from '@/components/sessions/SessionForm'
 export default async function NewSessionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ clientId?: string }>
+  searchParams: Promise<{ clientId?: string; appointmentId?: string }>
 }) {
   const params = await searchParams
   const session = await getServerSession(authOptions)
@@ -16,7 +16,57 @@ export default async function NewSessionPage({
     redirect('/login')
   }
 
-  const preselectedClientId = params.clientId
+  // Fetch appointment data if appointmentId is provided
+  let appointmentData: {
+    id: string
+    clientId: string
+    trainerId: string
+    packageId: string | null
+    sessionDate: string
+    sessionTime: string
+    notes: string | null
+  } | undefined
+
+  if (params.appointmentId && session.user.organizationId) {
+    const org = await prisma.organization.findUnique({
+      where: { id: session.user.organizationId },
+      select: { timezone: true }
+    })
+    const orgTimezone = org?.timezone || 'Asia/Singapore'
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: params.appointmentId },
+      include: {
+        trainer: { select: { id: true } },
+        client: { select: { id: true } },
+        location: { select: { id: true } },
+        package: { select: { id: true } },
+      }
+    })
+
+    if (appointment && appointment.type === 'SESSION' && appointment.status === 'SCHEDULED') {
+      const scheduledDate = new Date(appointment.scheduledAt)
+      const dateStr = scheduledDate.toLocaleDateString('en-CA', { timeZone: orgTimezone }) // YYYY-MM-DD
+      const timeStr = scheduledDate.toLocaleTimeString('en-GB', {
+        timeZone: orgTimezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }) // HH:MM
+
+      appointmentData = {
+        id: appointment.id,
+        clientId: appointment.clientId || '',
+        trainerId: appointment.trainerId,
+        packageId: appointment.packageId,
+        sessionDate: dateStr,
+        sessionTime: timeStr,
+        notes: appointment.notes,
+      }
+    }
+  }
+
+  const preselectedClientId = appointmentData?.clientId || params.clientId
 
   // Get clients based on user role and location
   let clients: any[] = []
@@ -45,7 +95,7 @@ export default async function NewSessionPage({
       clients = await prisma.client.findMany({
         where: {
           locationId: { in: accessibleLocationIds },
-          active: true,
+          status: 'ACTIVE',
         },
         select: {
           id: true,
@@ -60,7 +110,7 @@ export default async function NewSessionPage({
             }
           },
           packages: {
-            where: { 
+            where: {
               active: true,
               remainingSessions: {
                 gt: 0
@@ -78,7 +128,7 @@ export default async function NewSessionPage({
         },
         orderBy: { name: 'asc' },
       })
-      
+
       // Separate into "my clients" (assigned to me) and "other clients" (at my locations but not assigned to me)
       myClients = clients.filter(c => c.primaryTrainerId === session.user.id)
       otherClients = clients.filter(c => c.primaryTrainerId !== session.user.id)
@@ -87,7 +137,7 @@ export default async function NewSessionPage({
       myClients = await prisma.client.findMany({
         where: {
           primaryTrainerId: session.user.id,
-          active: true,
+          status: 'ACTIVE',
         },
         select: {
           id: true,
@@ -101,7 +151,7 @@ export default async function NewSessionPage({
             }
           },
           packages: {
-            where: { 
+            where: {
               active: true,
               remainingSessions: {
                 gt: 0
@@ -142,7 +192,7 @@ export default async function NewSessionPage({
       clients = await prisma.client.findMany({
         where: {
           locationId: { in: accessibleLocationIds },
-          active: true,
+          status: 'ACTIVE',
         },
       select: {
         id: true,
@@ -156,7 +206,7 @@ export default async function NewSessionPage({
           }
         },
         packages: {
-          where: { 
+          where: {
             active: true,
             remainingSessions: {
               gt: 0
@@ -179,8 +229,8 @@ export default async function NewSessionPage({
     // Only Admins can see all clients in their organization
     clients = await prisma.client.findMany({
       where: {
-        active: true,
-        organizationId: session.user.organizationId // Direct filter - much faster!
+        status: 'ACTIVE',
+        organizationId: session.user.organizationId
       },
       select: {
         id: true,
@@ -194,7 +244,7 @@ export default async function NewSessionPage({
           }
         },
         packages: {
-          where: { 
+          where: {
             active: true,
             remainingSessions: {
               gt: 0
@@ -282,7 +332,7 @@ export default async function NewSessionPage({
           </p>
         </div>
 
-        <SessionForm 
+        <SessionForm
           clients={clients}
           myClients={myClients}
           otherClients={otherClients}
@@ -290,6 +340,7 @@ export default async function NewSessionPage({
           preselectedClientId={preselectedClientId}
           currentUserRole={session.user.role}
           currentUserId={session.user.id}
+          appointmentData={appointmentData}
         />
       </div>
     </div>

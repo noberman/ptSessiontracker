@@ -150,7 +150,7 @@ export default async function ClientDetailPage({
               >
                 {clientStateDisplay.label}
               </span>
-              {!client.active && (
+              {client.status === 'ARCHIVED' && (
                 <Badge variant="error" size="sm">
                   Archived
                 </Badge>
@@ -162,10 +162,10 @@ export default async function ClientDetailPage({
             <ClientActions
               clientId={client.id}
               clientName={client.name}
-              isActive={client.active}
+              isActive={client.status !== 'ARCHIVED'}
               canManage={canManage}
             />
-            {canEdit && client.active && (
+            {canEdit && client.status !== 'ARCHIVED' && (
               <Link href={`/clients/${client.id}/edit`}>
                 <Button variant="outline">Edit Client</Button>
               </Link>
@@ -194,7 +194,7 @@ export default async function ClientDetailPage({
                       >
                         {clientStateDisplay.label}
                       </span>
-                      {!client.active && (
+                      {client.status === 'ARCHIVED' && (
                         <Badge variant="gray" size="sm">Archived</Badge>
                       )}
                     </div>

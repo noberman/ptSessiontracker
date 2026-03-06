@@ -58,7 +58,7 @@ export async function GET(
             assignedClients: {
               where: {
                 locationId: locationId,
-                active: true
+                status: 'ACTIVE'
               }
             }
           }

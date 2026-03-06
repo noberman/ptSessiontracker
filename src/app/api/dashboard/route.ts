@@ -104,8 +104,8 @@ export async function GET(request: Request) {
     }
 
     // eslint-disable-next-line prefer-const
-    let clientsWhere: any = { 
-      active: true,
+    let clientsWhere: any = {
+      status: 'ACTIVE',
       organizationId // Direct filter by organization (includes unassigned clients)
     }
     // eslint-disable-next-line prefer-const

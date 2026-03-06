@@ -31,7 +31,7 @@ async function generateSnapFitnessReport() {
     const clients = await prisma.client.findMany({
       where: {
         organizationId: organization.id,
-        active: true
+        status: 'ACTIVE'
       },
       include: {
         packages: {

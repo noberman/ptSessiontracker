@@ -15,7 +15,7 @@ interface ClientFormProps {
     phone?: string | null
     locationId?: string | null
     primaryTrainerId?: string | null
-    active: boolean
+    status: 'ACTIVE' | 'ARCHIVED'
   }
   locations?: Array<{
     id: string
@@ -31,25 +31,31 @@ interface ClientFormProps {
     }>
   }>
   currentUserRole: string
+  initialData?: {
+    name?: string
+    email?: string
+    locationId?: string
+  }
 }
 
-export function ClientForm({ 
-  client, 
-  locations = [], 
+export function ClientForm({
+  client,
+  locations = [],
   trainers = [],
-  currentUserRole 
+  currentUserRole,
+  initialData
 }: ClientFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  
+
   const [formData, setFormData] = useState({
-    name: client?.name || '',
-    email: client?.email || '',
+    name: client?.name || initialData?.name || '',
+    email: client?.email || initialData?.email || '',
     phone: client?.phone || '',
-    locationId: client?.locationId || '',
+    locationId: client?.locationId || initialData?.locationId || '',
     primaryTrainerId: client?.primaryTrainerId || '',
-    active: client?.active !== false,
+    status: client?.status || 'ACTIVE',
   })
 
   const [filteredTrainers, setFilteredTrainers] = useState(trainers)
@@ -123,8 +129,8 @@ export function ClientForm({
         primaryTrainerId: formData.primaryTrainerId || null,
       }
 
-      if (isEdit && currentUserRole === 'ADMIN') {
-        body.active = formData.active
+      if (isEdit && (currentUserRole === 'ADMIN' || currentUserRole === 'PT_MANAGER')) {
+        body.status = formData.status
       }
 
       const response = await fetch(url, {
@@ -249,18 +255,20 @@ export function ClientForm({
             )}
           </div>
 
-          {isEdit && currentUserRole === 'ADMIN' && (
-            <div className="flex items-center">
-              <input
-                id="archived"
-                type="checkbox"
-                checked={!formData.active}
-                onChange={(e) => setFormData({ ...formData, active: !e.target.checked })}
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-              />
-              <label htmlFor="archived" className="ml-2 block text-sm text-text-primary">
-                Archived
+          {isEdit && (currentUserRole === 'ADMIN' || currentUserRole === 'PT_MANAGER') && (
+            <div>
+              <label htmlFor="status" className="block text-sm font-medium text-text-primary mb-1">
+                Status
               </label>
+              <select
+                id="status"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ACTIVE' | 'ARCHIVED' })}
+                className="block w-full rounded-lg border border-border px-3 py-2 text-text-primary focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              >
+                <option value="ACTIVE">Active</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
             </div>
           )}
 

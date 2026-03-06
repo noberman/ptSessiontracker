@@ -230,7 +230,8 @@ export async function POST(request: Request) {
       sessionTime,
       notes,
       isNoShow,
-      isDemo = false
+      isDemo = false,
+      appointmentId
     } = body
 
     // Validate required fields
@@ -239,6 +240,28 @@ export async function POST(request: Request) {
         { error: 'Missing required fields' },
         { status: 400 }
       )
+    }
+
+    // Validate appointment if provided
+    let appointment: { id: string; type: string; status: string; organizationId: string } | null = null
+    if (appointmentId) {
+      appointment = await prisma.appointment.findUnique({
+        where: { id: appointmentId },
+        select: { id: true, type: true, status: true, organizationId: true }
+      })
+
+      if (!appointment) {
+        return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
+      }
+      if (appointment.organizationId !== orgId) {
+        return NextResponse.json({ error: 'Appointment does not belong to your organization' }, { status: 403 })
+      }
+      if (appointment.type !== 'SESSION') {
+        return NextResponse.json({ error: 'Only SESSION-type appointments can be linked to sessions' }, { status: 400 })
+      }
+      if (appointment.status !== 'SCHEDULED') {
+        return NextResponse.json({ error: 'Appointment is not in SCHEDULED status' }, { status: 400 })
+      }
     }
 
     // Determine the trainer ID
@@ -535,6 +558,17 @@ export async function POST(request: Request) {
         await tx.package.update({
           where: { id: packageId },
           data: packageUpdateData,
+        })
+      }
+
+      // Link appointment to session if appointmentId was provided
+      if (appointment) {
+        await tx.appointment.update({
+          where: { id: appointment.id },
+          data: {
+            sessionId: createdSession.id,
+            status: isNoShow ? 'NO_SHOW' : 'COMPLETED',
+          },
         })
       }
 

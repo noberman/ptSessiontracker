@@ -6,14 +6,14 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
 
-// Client state options for filtering
+// Client status filter options (computed states for ACTIVE clients)
 const CLIENT_STATE_OPTIONS = [
+  { value: 'lead', label: 'Lead', subLabel: 'No packages yet' },
   { value: 'active', label: 'Active', subLabel: 'Has active package with sessions' },
   { value: 'not_started', label: 'Not Started', subLabel: 'Has package, no sessions yet' },
   { value: 'fading', label: 'Fading', subLabel: 'No session in 30+ days' },
   { value: 'at_risk', label: 'At Risk', subLabel: 'Package expiring soon or low sessions' },
   { value: 'lost', label: 'Lost', subLabel: 'No active packages' },
-  { value: 'new', label: 'New', subLabel: 'No packages yet' },
 ]
 
 interface ClientSearchProps {
@@ -26,13 +26,11 @@ interface ClientSearchProps {
     name: string
     email: string
   }>
-  showInactive?: boolean
 }
 
-export function ClientSearch({ 
-  locations = [], 
+export function ClientSearch({
+  locations = [],
   trainers = [],
-  showInactive = false 
 }: ClientSearchProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -48,7 +46,7 @@ export function ClientSearch({
     locationIds: getArrayFromParam(searchParams.get('locationIds')),
     trainerIds: getArrayFromParam(searchParams.get('trainerIds')),
     clientStates: getArrayFromParam(searchParams.get('clientStates')),
-    active: searchParams.get('active') !== 'false',
+    showArchived: searchParams.get('showArchived') === 'true',
   })
 
   const [isOpen, setIsOpen] = useState(false)
@@ -61,7 +59,7 @@ export function ClientSearch({
       locationIds: getArrayFromParam(searchParams.get('locationIds')),
       trainerIds: getArrayFromParam(searchParams.get('trainerIds')),
       clientStates: getArrayFromParam(searchParams.get('clientStates')),
-      active: searchParams.get('active') !== 'false',
+      showArchived: searchParams.get('showArchived') === 'true',
     })
     setSearchInput(searchParams.get('search') || '')
   }, [searchParams])
@@ -84,10 +82,8 @@ export function ClientSearch({
     if (filters.clientStates && filters.clientStates.length > 0) {
       params.set('clientStates', filters.clientStates.join(','))
     }
-
-    // Handle active status
-    if (!filters.active && showInactive) {
-      params.set('active', 'false')
+    if (filters.showArchived) {
+      params.set('showArchived', 'true')
     }
 
     // Update filters state with search
@@ -105,7 +101,7 @@ export function ClientSearch({
       locationIds: [],
       trainerIds: [],
       clientStates: [],
-      active: true,
+      showArchived: false,
     })
     setSearchInput('')
     router.push('/clients')
@@ -131,9 +127,8 @@ export function ClientSearch({
     if (updatedFilters.clientStates.length > 0) {
       params.set('clientStates', updatedFilters.clientStates.join(','))
     }
-
-    if (!updatedFilters.active && showInactive) {
-      params.set('active', 'false')
+    if (updatedFilters.showArchived) {
+      params.set('showArchived', 'true')
     }
 
     router.push(`/clients?${params.toString()}`)
@@ -145,7 +140,7 @@ export function ClientSearch({
     filters.locationIds.length +
     filters.trainerIds.length +
     filters.clientStates.length +
-    (!filters.active ? 1 : 0)
+    (filters.showArchived ? 1 : 0)
 
   return (
     <div className="mb-4">
@@ -238,7 +233,7 @@ export function ClientSearch({
               </div>
             )}
 
-            {/* Client State Filter */}
+            {/* Client Status Filter */}
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 Client Status
@@ -248,30 +243,25 @@ export function ClientSearch({
                 value={filters.clientStates}
                 onChange={(states) => setFilters(prev => ({ ...prev, clientStates: states }))}
                 placeholder="All Statuses"
-                searchPlaceholder="Search statuses..."
+                searchPlaceholder="Search..."
               />
             </div>
 
-            {/* Archived Status (if showInactive is true) */}
-            {showInactive && (
-              <div className="relative">
-                <label className="block text-sm font-medium text-text-primary mb-1">
-                  Archived
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    id="showArchived"
-                    type="checkbox"
-                    checked={!filters.active}
-                    onChange={(e) => setFilters({ ...filters, active: !e.target.checked })}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="showArchived" className="text-sm text-text-primary">
-                    Show archived clients
-                  </label>
-                </div>
-              </div>
-            )}
+            {/* Archived Checkbox */}
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Archived
+              </label>
+              <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.showArchived}
+                  onChange={(e) => setFilters(prev => ({ ...prev, showArchived: e.target.checked }))}
+                  className="h-4 w-4 rounded border-border text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm text-text-primary">Show archived clients</span>
+              </label>
+            </div>
 
             {/* Apply Button */}
             <div className="flex items-end">

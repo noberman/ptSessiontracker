@@ -54,7 +54,7 @@ export default async function PaymentsPage() {
     prisma.client.findMany({
       where: {
         organizationId: orgId,
-        active: true,
+        status: 'ACTIVE',
         ...(accessibleLocations && accessibleLocations.length > 0
           ? { locationId: { in: accessibleLocations } }
           : {}),

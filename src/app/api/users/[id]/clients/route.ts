@@ -27,7 +27,7 @@ export async function GET(
     const clients = await prisma.client.findMany({
       where: {
         primaryTrainerId: userId,
-        active: true,
+        status: 'ACTIVE',
         organizationId: session.user.organizationId
       },
       select: {

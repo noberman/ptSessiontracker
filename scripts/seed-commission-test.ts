@@ -123,7 +123,7 @@ async function main() {
             organizationId: org.id,
             locationId: location.id,
             primaryTrainerId: trainer.id,
-            active: true
+            status: 'ACTIVE'
           }
         })
       }

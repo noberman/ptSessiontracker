@@ -29,7 +29,7 @@ interface Appointment {
   prospectName: string | null
   prospectEmail: string | null
   trainer: { id: string; name: string; email: string }
-  client: { id: string; name: string; email: string } | null
+  client: { id: string; name: string; email: string; status?: string } | null
   location: { id: string; name: string }
   package: { id: string; name: string } | null
   bookedBy: { id: string; name: string; email: string } | null
@@ -296,7 +296,7 @@ export function CalendarView({
             `/api/appointments?locationId=${selectedLocationId}&startDate=${startDate}&endDate=${endDate}`
           )
           if (apptRes.ok) {
-            const appts = await apptRes.json()
+            const appts = (await apptRes.json()).filter((a: Appointment) => a.status !== 'CANCELLED')
             setAllLocationAppointments(appts)
             setAppointments(appts)
           }
@@ -336,7 +336,7 @@ export function CalendarView({
           if (availRes.ok) setAvailability(await availRes.json())
           else setAvailability({})
           if (apptRes.ok) {
-            const appts = await apptRes.json()
+            const appts = (await apptRes.json()).filter((a: Appointment) => a.status !== 'CANCELLED')
             setAppointments(appts)
             setAllLocationAppointments(appts)
           }
@@ -356,7 +356,7 @@ export function CalendarView({
           fetch(`/api/appointments?trainerId=${selectedTrainerId}&startDate=${startDate}&endDate=${endDate}`),
         ])
         if (availRes.ok) setAvailability(await availRes.json())
-        if (apptRes.ok) setAppointments(await apptRes.json())
+        if (apptRes.ok) setAppointments((await apptRes.json()).filter((a: Appointment) => a.status !== 'CANCELLED'))
       } catch (error) {
         console.error('Failed to fetch calendar data:', error)
       } finally {
@@ -828,8 +828,9 @@ export function CalendarView({
                             const topPx = ((apptStartMin - START_HOUR * 60) / 60) * HOUR_HEIGHT
                             const heightPx = (appt.duration / 60) * HOUR_HEIGHT
 
+                            // Trainer color for scheduled; status color for completed/no-show/cancelled
                             const tColor = trainerColors.get(appt.trainer.id)
-                            const colorClass = tColor
+                            const colorClass = appt.status === 'SCHEDULED' && tColor
                               ? `${tColor.bg} ${tColor.border} ${tColor.text}`
                               : (APPOINTMENT_COLORS[appt.type]?.[appt.status] || 'bg-gray-100 border-gray-300 text-gray-700')
 
@@ -1060,9 +1061,9 @@ export function CalendarView({
                           const topPx = ((apptStartMin - START_HOUR * 60) / 60) * HOUR_HEIGHT
                           const heightPx = (appt.duration / 60) * HOUR_HEIGHT
 
-                          // Trainer color coding
+                          // Trainer color for scheduled; status color for completed/no-show/cancelled
                           const tColor = trainerColors.get(appt.trainer.id)
-                          const colorClass = tColor
+                          const colorClass = appt.status === 'SCHEDULED' && tColor
                             ? `${tColor.bg} ${tColor.border} ${tColor.text}`
                             : (APPOINTMENT_COLORS[appt.type]?.[appt.status] || 'bg-gray-100 border-gray-300 text-gray-700')
 

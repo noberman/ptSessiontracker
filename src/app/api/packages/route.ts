@@ -178,6 +178,7 @@ export async function POST(request: NextRequest) {
         id: true,
         locationId: true,
         name: true,
+        status: true,
       },
     })
 

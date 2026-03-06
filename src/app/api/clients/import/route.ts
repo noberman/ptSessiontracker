@@ -599,6 +599,11 @@ export async function POST(request: Request) {
               const updateData: any = {}
               const existingClientData = existingClient as any // Has locationId and primaryTrainerId
               
+              // Re-activate archived/lead clients on import
+              if (existingClientData.status !== 'ACTIVE') {
+                updateData.status = 'ACTIVE'
+              }
+
               // Only update location if it's different from current
               if (firstRow.location && firstRow.location.id !== existingClientData.locationId) {
                 updateData.locationId = firstRow.location.id
@@ -636,8 +641,8 @@ export async function POST(request: Request) {
                   phone: firstRow.row.phone || null,
                   locationId: firstRow.location!.id,
                   primaryTrainerId: firstRow.trainer?.id,
-                  organizationId: session.user.organizationId!, // Add organizationId
-                  active: true
+                  organizationId: session.user.organizationId!,
+                  status: 'ACTIVE'
                 }
               })
               console.log(`Created client: ${client.id} - ${client.name}`)

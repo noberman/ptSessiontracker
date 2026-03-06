@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { toast } from 'react-hot-toast'
-import { Clock, MapPin, User, Package, FileText, CalendarDays } from 'lucide-react'
+import { Clock, MapPin, User, Package, FileText, CalendarDays, UserPlus } from 'lucide-react'
 
 interface Appointment {
   id: string
@@ -16,7 +17,7 @@ interface Appointment {
   prospectName: string | null
   prospectEmail: string | null
   trainer: { id: string; name: string; email: string }
-  client: { id: string; name: string; email: string } | null
+  client: { id: string; name: string; email: string; status?: string } | null
   location: { id: string; name: string }
   package: { id: string; name: string } | null
   bookedBy: { id: string; name: string; email: string } | null
@@ -49,9 +50,18 @@ export function AppointmentDetailModal({
   orgTimezone,
   onUpdated,
 }: AppointmentDetailModalProps) {
+  const router = useRouter()
   const [cancelling, setCancelling] = useState(false)
+  const [loggingSession, setLoggingSession] = useState(false)
 
   if (!appointment) return null
+
+  const isSessionType = appointment.type === 'SESSION'
+  const isAssessmentType = appointment.type === 'FITNESS_ASSESSMENT'
+  const isScheduled = appointment.status === 'SCHEDULED'
+  const isCompleted = appointment.status === 'COMPLETED'
+  const hasClient = !!appointment.client
+  const hasProspect = !appointment.client && !!appointment.prospectName
 
   const handleCancel = async () => {
     if (!confirm('Are you sure you want to cancel this appointment?')) return
@@ -113,6 +123,50 @@ export function AppointmentDetailModal({
     }
   }
 
+  const handleLogSession = async () => {
+    if (!appointment.client || !appointment.package) return
+
+    setLoggingSession(true)
+    try {
+      const scheduled = new Date(appointment.scheduledAt)
+      const sessionDate = scheduled.toLocaleDateString('en-CA', { timeZone: orgTimezone })
+      const sessionTime = scheduled.toLocaleTimeString('en-GB', {
+        timeZone: orgTimezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: appointment.client.id,
+          trainerId: appointment.trainer.id,
+          packageId: appointment.package.id,
+          sessionDate,
+          sessionTime,
+          notes: appointment.notes || '',
+          isNoShow: false,
+          appointmentId: appointment.id,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to log session')
+      }
+
+      toast.success('Session logged and appointment completed')
+      onUpdated()
+      onClose()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to log session')
+    } finally {
+      setLoggingSession(false)
+    }
+  }
+
   // Format scheduled time in org timezone
   const scheduledDate = new Date(appointment.scheduledAt)
   const formattedDate = scheduledDate.toLocaleDateString('en-US', {
@@ -139,7 +193,6 @@ export function AppointmentDetailModal({
 
   const clientName = appointment.client?.name || appointment.prospectName || 'Unknown'
   const clientEmail = appointment.client?.email || appointment.prospectEmail || ''
-  const isScheduled = appointment.status === 'SCHEDULED'
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Appointment Details" size="md">
@@ -215,9 +268,19 @@ export function AppointmentDetailModal({
         {/* Actions */}
         {isScheduled && (
           <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-            <Button size="sm" onClick={handleMarkCompleted}>
-              Mark Completed
-            </Button>
+            {isSessionType && hasClient ? (
+              <Button
+                size="sm"
+                onClick={handleLogSession}
+                disabled={loggingSession}
+              >
+                {loggingSession ? 'Logging...' : 'Log Session'}
+              </Button>
+            ) : (
+              <Button size="sm" onClick={handleMarkCompleted}>
+                Mark Completed
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={handleMarkNoShow}>
               No-Show
             </Button>
@@ -230,6 +293,21 @@ export function AppointmentDetailModal({
             >
               {cancelling ? 'Cancelling...' : 'Cancel Appointment'}
             </Button>
+          </div>
+        )}
+
+        {/* Hint for completed fitness assessments with new clients */}
+        {isCompleted && isAssessmentType && appointment.client && (
+          <div className="pt-2 border-t border-border">
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <UserPlus className="w-4 h-4 text-purple-500 shrink-0" />
+              <span>
+                <a href={`/clients/${appointment.client.id}`} className="text-primary-600 hover:underline">
+                  View client profile
+                </a>
+                {' '}to assign a package
+              </span>
+            </div>
           </div>
         )}
       </div>

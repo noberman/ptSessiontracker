@@ -116,7 +116,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { name, email, phone, locationId, primaryTrainerId, active } = body
+    const { name, email, phone, locationId, primaryTrainerId, status } = body
 
     // Get current client
     const currentClient = await prisma.client.findUnique({
@@ -206,7 +206,7 @@ export async function PUT(
     if (phone !== undefined) updateData.phone = phone
     if (locationId !== undefined) updateData.locationId = locationId
     if (primaryTrainerId !== undefined) updateData.primaryTrainerId = primaryTrainerId
-    if (active !== undefined && session.user.role === 'ADMIN') updateData.active = active
+    if (status !== undefined && session.user.role === 'ADMIN') updateData.status = status
 
     // Update client
     const updatedClient = await prisma.client.update({
@@ -219,7 +219,7 @@ export async function PUT(
         phone: true,
         locationId: true,
         primaryTrainerId: true,
-        active: true,
+        status: true,
         updatedAt: true,
       },
     })
@@ -265,10 +265,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Soft delete (set inactive)
+    // Soft delete (set archived)
     const client = await prisma.client.update({
       where: { id },
-      data: { active: false },
+      data: { status: 'ARCHIVED' },
       select: {
         id: true,
         name: true,
@@ -283,8 +283,8 @@ export async function DELETE(
         userId: session.user.id,
         entityType: 'Client',
         entityId: client.id,
-        oldValue: { active: true },
-        newValue: { active: false },
+        oldValue: { status: 'ACTIVE' },
+        newValue: { status: 'ARCHIVED' },
       },
     })
 

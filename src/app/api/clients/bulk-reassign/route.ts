@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
             where: {
               id: clientId,
               locationId: locationId,
-              active: true
+              status: 'ACTIVE'
             }
           })
 

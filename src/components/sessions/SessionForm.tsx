@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { SearchableSelect, type Option } from '@/components/ui/SearchableSelect'
 import Link from 'next/link'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, CalendarDays } from 'lucide-react'
 
 interface Package {
   id: string
@@ -32,6 +32,16 @@ interface Client {
   packages: Package[]
 }
 
+interface AppointmentData {
+  id: string
+  clientId: string
+  trainerId: string
+  packageId: string | null
+  sessionDate: string
+  sessionTime: string
+  notes: string | null
+}
+
 interface SessionFormProps {
   clients: Client[]
   myClients?: Client[]
@@ -44,28 +54,31 @@ interface SessionFormProps {
   preselectedClientId?: string
   currentUserRole: string
   currentUserId: string
+  appointmentData?: AppointmentData
 }
 
-export function SessionForm({ 
+export function SessionForm({
   clients,
   myClients = [],
   otherClients = [],
   trainers = [],
   preselectedClientId,
   currentUserRole,
-  currentUserId
+  currentUserId,
+  appointmentData
 }: SessionFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  
+  const fromAppointment = !!appointmentData
+
   const [formData, setFormData] = useState({
-    clientId: preselectedClientId || '',
-    trainerId: currentUserId, // Default to current user for trainers
-    packageId: '',
-    sessionDate: new Date().toISOString().split('T')[0],
-    sessionTime: new Date().toTimeString().slice(0, 5), // Default to current time (HH:MM)
-    notes: '',
+    clientId: appointmentData?.clientId || preselectedClientId || '',
+    trainerId: appointmentData?.trainerId || currentUserId,
+    packageId: appointmentData?.packageId || '',
+    sessionDate: appointmentData?.sessionDate || new Date().toISOString().split('T')[0],
+    sessionTime: appointmentData?.sessionTime || new Date().toTimeString().slice(0, 5),
+    notes: appointmentData?.notes || '',
     isNoShow: false
   })
 
@@ -190,7 +203,10 @@ export function SessionForm({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          ...(appointmentData?.id && { appointmentId: appointmentData.id }),
+        }),
       })
 
       const data = await response.json()
@@ -214,8 +230,10 @@ export function SessionForm({
         return
       }
 
-      // Redirect to sessions list or client page
-      if (preselectedClientId) {
+      // Redirect based on context
+      if (fromAppointment) {
+        router.push('/calendar')
+      } else if (preselectedClientId) {
         router.push(`/clients/${preselectedClientId}`)
       } else {
         router.push('/sessions')
@@ -280,6 +298,15 @@ export function SessionForm({
               ) : (
                 <p className="text-sm text-error-700">{error}</p>
               )}
+            </div>
+          )}
+
+          {fromAppointment && (
+            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 flex items-start gap-2">
+              <CalendarDays className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+              <p className="text-sm text-blue-700">
+                Pre-filled from scheduled appointment. Review and submit to log the session.
+              </p>
             </div>
           )}
 
@@ -475,7 +502,9 @@ export function SessionForm({
               type="button"
               variant="outline"
               onClick={() => {
-                if (preselectedClientId) {
+                if (fromAppointment) {
+                  router.push('/calendar')
+                } else if (preselectedClientId) {
                   router.push(`/clients/${preselectedClientId}`)
                 } else {
                   router.push('/sessions')

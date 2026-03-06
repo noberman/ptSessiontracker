@@ -197,7 +197,7 @@ export default async function PackagesPage({
         where: {
           organizationId: session.user.organizationId,
           locationId: { in: userAccessibleLocationIds },
-          active: true,
+          status: 'ACTIVE',
         },
         select: {
           id: true,
@@ -211,7 +211,7 @@ export default async function PackagesPage({
     // Admin and PT Manager can see all in their organization
     availableClients = await prisma.client.findMany({
       where: {
-        active: true,
+        status: 'ACTIVE',
         organizationId: session.user.organizationId // Direct filter!
       },
       select: {

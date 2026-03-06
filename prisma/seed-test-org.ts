@@ -85,10 +85,10 @@ async function createTestOrganization() {
         organizationId: org.id,
         locationId: location.id,
         primaryTrainerId: trainer.id,
-        active: true
+        status: 'ACTIVE'
       }
     })
-    
+
     const client2 = await prisma.client.create({
       data: {
         name: 'Mike Smith',
@@ -96,7 +96,7 @@ async function createTestOrganization() {
         organizationId: org.id,
         locationId: location.id,
         primaryTrainerId: trainer.id,
-        active: true
+        status: 'ACTIVE'
       }
     })
     

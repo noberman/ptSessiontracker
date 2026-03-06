@@ -131,7 +131,7 @@ export function getExpiringSoonPackageWhereClause(daysAhead: number = 14) {
 // Client State Derivation
 // =============================================================================
 
-export type ClientState = 'active' | 'not_started' | 'fading' | 'at_risk' | 'lost' | 'new'
+export type ClientState = 'active' | 'not_started' | 'fading' | 'at_risk' | 'lost' | 'lead'
 
 interface PackageForClientState {
   id: string
@@ -151,7 +151,7 @@ interface ClientForStateCheck {
  * Derive a client's state based on their packages and sessions
  *
  * Priority order (highest to lowest):
- * 1. new - No packages ever (just created)
+ * 1. lead - No packages ever (prospect / new client)
  * 2. lost - Had packages but none active (churned)
  * 3. at_risk - Has active package at risk (expiring soon OR low sessions)
  * 4. not_started - All active packages untouched (remaining === total)
@@ -161,9 +161,9 @@ interface ClientForStateCheck {
 export function getClientState(client: ClientForStateCheck): ClientState {
   const packages = client.packages || []
 
-  // No packages = new client
+  // No packages = lead (prospect / new client)
   if (packages.length === 0) {
-    return 'new'
+    return 'lead'
   }
 
   // Find active packages
@@ -243,11 +243,11 @@ export function getClientStateDisplay(state: ClientState): {
         bgColor: 'bg-red-100',
         description: 'No active packages'
       }
-    case 'new':
+    case 'lead':
       return {
-        label: 'New',
-        color: 'text-gray-700',
-        bgColor: 'bg-gray-100',
+        label: 'Lead',
+        color: 'text-purple-700',
+        bgColor: 'bg-purple-100',
         description: 'No packages yet'
       }
   }
@@ -361,7 +361,7 @@ export function getClientStateFilterWhereClause(states: ClientState[]): any {
         })
         break
 
-      case 'new':
+      case 'lead':
         // No packages at all
         stateConditions.push({
           packages: {

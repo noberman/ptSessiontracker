@@ -35,7 +35,7 @@ export default async function UserDetailPage({
           id: true,
           name: true,
           email: true,
-          active: true,
+          status: true,
           packages: {
             select: {
               id: true,
@@ -224,7 +224,7 @@ export default async function UserDetailPage({
                           <p className="text-sm font-medium text-text-primary">{client.name}</p>
                           <p className="text-xs text-text-secondary">{client.email}</p>
                         </div>
-                        {!client.active ? (
+                        {client.status === 'ARCHIVED' ? (
                           <Badge variant="gray" size="xs">Archived</Badge>
                         ) : (() => {
                           const clientState = getClientState({

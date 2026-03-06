@@ -31,7 +31,7 @@ export default async function EditClientPage({
       phone: true,
       locationId: true,
       primaryTrainerId: true,
-      active: true,
+      status: true,
     },
   })
 

@@ -48,7 +48,7 @@ export default async function NewPackagePage({
         where: {
           organizationId: session.user.organizationId,
           locationId: { in: accessibleLocationIds },
-          active: true,
+          status: 'ACTIVE',
         },
         select: {
           id: true,
@@ -63,7 +63,7 @@ export default async function NewPackagePage({
     clients = await prisma.client.findMany({
       where: {
         organizationId: session.user.organizationId,
-        active: true,
+        status: 'ACTIVE',
       },
       select: {
         id: true,

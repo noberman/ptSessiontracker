@@ -48,7 +48,7 @@ export async function GET(
         },
         clients: {
           where: {
-            active: true
+            status: 'ACTIVE'
           },
           select: {
             id: true,
@@ -254,7 +254,7 @@ export async function DELETE(
       prisma.client.count({
         where: {
           locationId: id,
-          active: true
+          status: 'ACTIVE'
         }
       }),
       prisma.session.count({

@@ -166,7 +166,7 @@ async function main() {
           ...client,
           phone: '555-0100',
           organizationId: snapFitness.id,  // Clients need to belong to an organization
-          active: true
+          status: 'ACTIVE'
         }
       })
     )

@@ -22,8 +22,15 @@ export async function GET(request: NextRequest) {
 
   const skip = (page - 1) * limit
 
-  const where: any = {
-    active: true,
+  const statusParam = searchParams.get('status')
+  const where: any = {}
+
+  // Filter by status (comma-separated, default: ACTIVE)
+  if (statusParam) {
+    const statuses = statusParam.split(',').filter(Boolean)
+    where.status = statuses.length === 1 ? statuses[0] : { in: statuses }
+  } else {
+    where.status = 'ACTIVE'
   }
 
   if (search) {
@@ -93,7 +100,7 @@ export async function GET(request: NextRequest) {
           name: true,
           email: true,
           phone: true,
-          active: true,
+          status: true,
           locationId: true,
           location: {
             select: {

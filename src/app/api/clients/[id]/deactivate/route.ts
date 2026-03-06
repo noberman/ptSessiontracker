@@ -51,8 +51,8 @@ export async function POST(
       )
     }
 
-    // Check if already inactive
-    if (!client.active) {
+    // Check if already archived
+    if (client.status === 'ARCHIVED') {
       return NextResponse.json(
         { error: 'Client is already deactivated' },
         { status: 400 }
@@ -82,7 +82,7 @@ export async function POST(
     await prisma.client.update({
       where: { id },
       data: {
-        active: false,
+        status: 'ARCHIVED',
         updatedAt: new Date()
       }
     })
@@ -107,9 +107,9 @@ export async function POST(
         action: 'DEACTIVATE_CLIENT',
         entityType: 'Client',
         entityId: id,
-        oldValue: { active: true },
-        newValue: { 
-          active: false,
+        oldValue: { status: client.status },
+        newValue: {
+          status: 'ARCHIVED',
           deactivatedBy: session.user.email,
           hadActivePackages: hasActivePackages,
           hadPendingSessions: hasPendingSessions
@@ -175,7 +175,7 @@ export async function PUT(
     }
 
     // Check if already active
-    if (client.active) {
+    if (client.status === 'ACTIVE') {
       return NextResponse.json(
         { error: 'Client is already active' },
         { status: 400 }
@@ -201,7 +201,7 @@ export async function PUT(
     await prisma.client.update({
       where: { id },
       data: {
-        active: true,
+        status: 'ACTIVE',
         updatedAt: new Date()
       }
     })
@@ -232,9 +232,9 @@ export async function PUT(
         action: 'REACTIVATE_CLIENT',
         entityType: 'Client',
         entityId: id,
-        oldValue: { active: false },
-        newValue: { 
-          active: true,
+        oldValue: { status: 'ARCHIVED' },
+        newValue: {
+          status: 'ACTIVE',
           reactivatedBy: session.user.email,
           packagesReactivated
         }

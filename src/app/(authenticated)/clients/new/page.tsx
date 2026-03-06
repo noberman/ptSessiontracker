@@ -4,7 +4,12 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ClientForm } from '@/components/clients/ClientForm'
 
-export default async function NewClientPage() {
+export default async function NewClientPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ name?: string; email?: string; locationId?: string }>
+}) {
+  const params = await searchParams
   const session = await getServerSession(authOptions)
 
   if (!session) {
@@ -113,10 +118,15 @@ export default async function NewClientPage() {
           </p>
         </div>
 
-        <ClientForm 
+        <ClientForm
           locations={locations}
           trainers={trainers as any}
           currentUserRole={session.user.role}
+          initialData={
+            params.name || params.email || params.locationId
+              ? { name: params.name, email: params.email, locationId: params.locationId }
+              : undefined
+          }
         />
       </div>
     </div>

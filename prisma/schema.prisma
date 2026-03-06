@@ -201,7 +201,7 @@ model Client {
   phone            String?
   locationId       String
   primaryTrainerId String?
-  active           Boolean       @default(true)
+  status           ClientStatus  @default(ACTIVE)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   organizationId   String?
@@ -499,6 +499,11 @@ enum DurationUnit {
   DAYS
   WEEKS
   MONTHS
+}
+
+enum ClientStatus {
+  ACTIVE
+  ARCHIVED
 }
 
 enum AppointmentType {

@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         trainer: { select: { id: true, name: true, email: true } },
-        client: { select: { id: true, name: true, email: true } },
+        client: { select: { id: true, name: true, email: true, status: true } },
         location: { select: { id: true, name: true } },
         package: { select: { id: true, name: true } },
         bookedBy: { select: { id: true, name: true, email: true } },
@@ -193,6 +193,7 @@ export async function POST(request: NextRequest) {
     // 1. If client provided → use client's location
     // 2. Else (prospect) → use trainer's first location
     let resolvedLocationId: string | null = null
+    let resolvedClientId: string | null = clientId || null
 
     if (clientId) {
       const client = await prisma.client.findFirst({
@@ -203,8 +204,41 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Client not found' }, { status: 404 })
       }
       resolvedLocationId = client.locationId
+    } else if (type === 'FITNESS_ASSESSMENT' && prospectName && prospectEmail) {
+      // Auto-create or find client for fitness assessments
+      resolvedLocationId = trainer.locations[0]?.locationId || null
+
+      if (resolvedLocationId) {
+        const existingClient = await prisma.client.findFirst({
+          where: { email: prospectEmail, organizationId: orgId },
+          select: { id: true, status: true },
+        })
+
+        if (existingClient) {
+          resolvedClientId = existingClient.id
+          // Re-activate archived clients
+          if (existingClient.status === 'ARCHIVED') {
+            await prisma.client.update({
+              where: { id: existingClient.id },
+              data: { status: 'ACTIVE' },
+            })
+          }
+        } else {
+          const newClient = await prisma.client.create({
+            data: {
+              name: prospectName,
+              email: prospectEmail,
+              locationId: resolvedLocationId,
+              organizationId: orgId,
+              status: 'ACTIVE',
+            },
+            select: { id: true },
+          })
+          resolvedClientId = newClient.id
+        }
+      }
     } else {
-      // Prospect — use trainer's first location
+      // Prospect without auto-create — use trainer's first location
       resolvedLocationId = trainer.locations[0]?.locationId || null
     }
 
@@ -273,7 +307,7 @@ export async function POST(request: NextRequest) {
     const appointment = await prisma.appointment.create({
       data: {
         trainerId,
-        clientId: clientId || null,
+        clientId: resolvedClientId,
         locationId: resolvedLocationId,
         packageId: packageId || null,
         organizationId: orgId,
@@ -288,7 +322,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         trainer: { select: { id: true, name: true, email: true } },
-        client: { select: { id: true, name: true, email: true } },
+        client: { select: { id: true, name: true, email: true, status: true } },
         location: { select: { id: true, name: true } },
         package: { select: { id: true, name: true } },
         bookedBy: { select: { id: true, name: true, email: true } },
@@ -304,7 +338,7 @@ export async function POST(request: NextRequest) {
         entityId: appointment.id,
         newValue: {
           trainerId,
-          clientId: clientId || null,
+          clientId: resolvedClientId,
           locationId: resolvedLocationId,
           type,
           scheduledAt: scheduledAtUtc.toISOString(),

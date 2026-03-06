@@ -19,17 +19,18 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
     const locationId = searchParams.get('locationId') || ''
     const primaryTrainerId = searchParams.get('primaryTrainerId') || ''
-    const active = searchParams.get('active') !== 'false' // Default to active only
-    
+    const statusParam = searchParams.get('status')
+
     const skip = (page - 1) * limit
 
     const where: any = {}
 
-    // Default to active clients unless explicitly requested
-    if (searchParams.has('active')) {
-      where.active = active
+    // Filter by status (comma-separated, default: ACTIVE)
+    if (statusParam) {
+      const statuses = statusParam.split(',').filter(Boolean)
+      where.status = statuses.length === 1 ? statuses[0] : { in: statuses }
     } else {
-      where.active = true
+      where.status = 'ACTIVE'
     }
 
     if (search) {
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
           name: true,
           email: true,
           phone: true,
-          active: true,
+          status: true,
           locationId: true,
           primaryTrainerId: true,
           location: {
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, email, phone, locationId, primaryTrainerId, isDemo = false } = body
+    const { name, email, phone, locationId, primaryTrainerId, isDemo = false, status } = body
 
     // Validate required fields
     if (!name || !email) {
@@ -173,13 +174,20 @@ export async function POST(request: NextRequest) {
 
     // Check if email already exists within the organization
     const existingClient = await prisma.client.findFirst({
-      where: { 
+      where: {
         email,
         organizationId: session.user.organizationId
       },
+      select: { id: true, status: true },
     })
 
     if (existingClient) {
+      if (existingClient.status === 'ARCHIVED') {
+        return NextResponse.json(
+          { error: 'A client with this email exists but is archived. Reactivate them from the client list instead.', existingClientId: existingClient.id },
+          { status: 409 }
+        )
+      }
       return NextResponse.json(
         { error: 'Client with this email already exists in your organization' },
         { status: 400 }
@@ -242,8 +250,9 @@ export async function POST(request: NextRequest) {
         phone: phone || null,
         locationId: finalLocationId || null, // Use provided or user's first location
         primaryTrainerId: primaryTrainerId || null,
-        organizationId: session.user.organizationId, // Set organizationId directly
-        isDemo, // Add isDemo flag
+        organizationId: session.user.organizationId,
+        isDemo,
+        status: 'ACTIVE',
       },
       select: {
         id: true,
@@ -252,7 +261,7 @@ export async function POST(request: NextRequest) {
         phone: true,
         locationId: true,
         primaryTrainerId: true,
-        active: true,
+        status: true,
         createdAt: true,
       },
     })

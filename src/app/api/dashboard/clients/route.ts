@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     // Base where clause for clients
     const baseWhere: any = {
       organizationId,
-      active: true, // Not archived
+      status: 'ACTIVE', // Not archived or lead
       primaryTrainerId: trainerId === 'unassigned' ? null : trainerId
     }
 

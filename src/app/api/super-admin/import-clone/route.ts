@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
           name: client.name,
           email: `clone_${client.email}`,
           organizationId: clonedOrg.id,
-          active: client.active
+          status: client.active === false ? 'ARCHIVED' : 'ACTIVE'
         }
         
         // Only add locationId if we have a valid mapped location

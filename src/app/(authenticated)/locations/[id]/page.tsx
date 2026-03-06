@@ -34,7 +34,7 @@ export default async function LocationDetailsPage({
     include: {
       clients: {
         where: {
-          active: true
+          status: 'ACTIVE'
         },
         select: {
           id: true,
@@ -64,7 +64,7 @@ export default async function LocationDetailsPage({
         select: {
           clients: {
             where: {
-              active: true
+              status: 'ACTIVE'
             }
           },
           sessions: {

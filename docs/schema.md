@@ -292,7 +292,7 @@ model Client {
   phone            String?
   locationId       String
   primaryTrainerId String?
-  active           Boolean       @default(true)
+  status           ClientStatus  @default(ACTIVE)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   organizationId   String?
@@ -317,7 +317,9 @@ model Client {
 - Must be assigned to a location
 - Can have one primary trainer (nullable for flexibility)
 - Can have multiple packages
-- Soft delete preserves session history
+- `status` field tracks client lifecycle: `ACTIVE` (default), `ARCHIVED` (deactivated)
+- "Lead" is a computed state (client with zero packages), not a DB status
+- Clients auto-created from fitness assessment bookings are `ACTIVE` and show as "Lead" (computed) until a package is assigned
 - isDemo flag marks demo/sample data
 
 ### Package
@@ -951,6 +953,18 @@ enum AppointmentStatus {
   CANCELLED   // Appointment was cancelled
 }
 ```
+
+### ClientStatus
+Defines the lifecycle status of a client.
+
+```prisma
+enum ClientStatus {
+  ACTIVE    // Regular active client
+  ARCHIVED  // Deactivated client (soft delete)
+}
+```
+
+> **Note:** "Lead" is a computed state (client with zero packages), not a DB status. Clients created from fitness assessment bookings start as `ACTIVE` and naturally display as "Lead" until a package is assigned.
 
 ## Relationships
 

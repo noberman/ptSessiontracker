@@ -16,7 +16,7 @@ interface Client {
   name: string
   email: string
   phone: string | null
-  active: boolean
+  status: 'ACTIVE' | 'ARCHIVED'
   clientState?: ClientState
   location?: {
     name: string
@@ -194,13 +194,11 @@ export function ClientTable({
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {!client.active ? (
-                    // Client is archived (soft deleted)
+                  {client.status === 'ARCHIVED' ? (
                     <Badge variant="gray" size="sm">
                       Archived
                     </Badge>
                   ) : client.clientState ? (
-                    // Show derived state tag
                     (() => {
                       const stateDisplay = getClientStateDisplay(client.clientState)
                       return (
@@ -213,7 +211,6 @@ export function ClientTable({
                       )
                     })()
                   ) : (
-                    // Fallback for backward compatibility
                     <Badge variant="success" size="sm">
                       Active
                     </Badge>

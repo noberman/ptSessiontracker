@@ -245,7 +245,7 @@ export async function PUT(
           where: {
             primaryTrainerId: id,
             locationId: locationId,
-            active: true
+            status: 'ACTIVE'
           },
           select: {
             id: true,
@@ -407,7 +407,7 @@ export async function DELETE(
       const clientsWithActivePackages = await prisma.client.count({
         where: {
           primaryTrainerId: id,
-          active: true,
+          status: 'ACTIVE',
           organizationId,
           packages: {
             some: getActivePackageWhereClause()
