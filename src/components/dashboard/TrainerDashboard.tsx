@@ -92,6 +92,7 @@ interface DashboardData {
   }>
   clientsNeedingAttention?: {
     notStarted: ClientWithPackage[]
+    fading: ClientWithPackage[]
     atRisk: ClientWithPackage[]
   }
 }
@@ -301,7 +302,9 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
 
       {/* Clients Needing Attention - Only show if there are any */}
       {data.clientsNeedingAttention &&
-       (data.clientsNeedingAttention.notStarted.length > 0 || data.clientsNeedingAttention.atRisk.length > 0) && (
+       (data.clientsNeedingAttention.notStarted.length > 0 ||
+        data.clientsNeedingAttention.fading.length > 0 ||
+        data.clientsNeedingAttention.atRisk.length > 0) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -310,7 +313,7 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Not Started Clients */}
               {data.clientsNeedingAttention.notStarted.length > 0 && (
                 <div>
@@ -331,6 +334,35 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
                           {client.packages[0] && (
                             <p className="text-xs text-text-secondary mt-1">
                               {client.packages[0].name} - {client.packages[0].remainingSessions}/{client.packages[0].totalSessions} sessions
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Fading Clients */}
+              {data.clientsNeedingAttention.fading.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                    <h3 className="text-sm font-medium text-text-primary">
+                      Fading ({data.clientsNeedingAttention.fading.length})
+                    </h3>
+                  </div>
+                  <p className="text-xs text-text-secondary mb-3">
+                    No session in 30+ days - reach out to re-engage
+                  </p>
+                  <div className="space-y-2">
+                    {data.clientsNeedingAttention.fading.map((client) => (
+                      <Link key={client.id} href={`/clients/${client.id}`}>
+                        <div className="p-3 bg-yellow-50 border border-yellow-100 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer">
+                          <p className="font-medium text-sm text-text-primary">{client.name}</p>
+                          {client.packages[0] && (
+                            <p className="text-xs text-text-secondary mt-1">
+                              {client.packages[0].name} - {client.packages[0].remainingSessions}/{client.packages[0].totalSessions} sessions left
                             </p>
                           )}
                         </div>

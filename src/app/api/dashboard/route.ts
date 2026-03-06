@@ -9,6 +9,7 @@ import {
   getExpiringSoonPackageWhereClause,
   getAtRiskPackageWhereClause,
   getClientStateFilterWhereClause,
+  getClientState,
   CLIENT_METRICS_CONFIG
 } from '@/lib/package-status'
 
@@ -139,8 +140,7 @@ export async function GET(request: Request) {
         // Client metrics
         totalClients,
         activeClients,
-        notStartedClients,
-        atRiskClients
+        allClientsForAttention
       ] = await Promise.all([
         // Total sessions this period
         prisma.session.count({ where: sessionsWhere }),
@@ -241,54 +241,31 @@ export async function GET(request: Request) {
           where: { ...clientsWhere, ...getClientStateFilterWhereClause(['active']) }
         }),
 
-        // Not Started clients
+        // Clients needing attention: fetch all trainer's active clients,
+        // compute state in-memory for accurate classification
         prisma.client.findMany({
-          where: {
-            ...clientsWhere,
-            ...getClientStateFilterWhereClause(['not_started'])
-          },
+          where: clientsWhere,
           select: {
             id: true,
             name: true,
             email: true,
             packages: {
-              where: getActivePackageWhereClause(),
-              orderBy: { createdAt: 'desc' },
-              take: 1,
               select: {
                 id: true,
                 name: true,
                 remainingSessions: true,
                 totalSessions: true,
                 expiresAt: true,
-                createdAt: true
+                createdAt: true,
+                effectiveStartDate: true,
+                packageTypeId: true,
               }
-            }
-          },
-          orderBy: { name: 'asc' }
-        }),
-
-        // At Risk clients (expiring soon OR low sessions, but only if they have exactly 1 active package)
-        prisma.client.findMany({
-          where: {
-            ...clientsWhere,
-            ...getClientStateFilterWhereClause(['at_risk'])
-          },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            packages: {
-              where: getActivePackageWhereClause(),
-              orderBy: { expiresAt: 'asc' },
-              select: {
-                id: true,
-                name: true,
-                remainingSessions: true,
-                totalSessions: true,
-                expiresAt: true
-              }
-            }
+            },
+            sessions: {
+              select: { sessionDate: true },
+              orderBy: { sessionDate: 'desc' as const },
+              take: 1,
+            },
           },
           orderBy: { name: 'asc' }
         })
@@ -299,13 +276,24 @@ export async function GET(request: Request) {
         : 0
 
       // Filter at-risk clients to only those with exactly 1 active package
-      // (if they have 2+ active packages, they've already renewed)
-      const filteredAtRiskClients = atRiskClients
-        .filter(client => client.packages.length === 1)
-        .map(client => ({
-          ...client,
-          packages: client.packages // Keep only the at-risk package info
-        }))
+      // Compute client states in-memory for accurate classification
+      const notStartedClients: typeof allClientsForAttention = []
+      const fadingClients: typeof allClientsForAttention = []
+      const atRiskClients: typeof allClientsForAttention = []
+
+      for (const client of allClientsForAttention) {
+        const state = getClientState({
+          packages: client.packages,
+          lastSessionDate: client.sessions[0]?.sessionDate ?? null,
+        })
+        if (state === 'not_started') notStartedClients.push(client)
+        else if (state === 'fading') fadingClients.push(client)
+        else if (state === 'at_risk') atRiskClients.push(client)
+      }
+
+      // Strip sessions array from response, keep only packages
+      const stripSessions = (clients: typeof allClientsForAttention) =>
+        clients.map(({ sessions, ...rest }) => rest)
 
       return NextResponse.json({
         stats: {
@@ -323,7 +311,7 @@ export async function GET(request: Request) {
             total: totalClients,
             active: activeClients,
             notStarted: notStartedClients.length,
-            atRisk: filteredAtRiskClients.length
+            atRisk: atRiskClients.length
           }
         },
         todaysSessions,
@@ -331,8 +319,9 @@ export async function GET(request: Request) {
         pendingValidationSessions: recentSessions,
         // Clients needing attention
         clientsNeedingAttention: {
-          notStarted: notStartedClients,
-          atRisk: filteredAtRiskClients
+          notStarted: stripSessions(notStartedClients),
+          fading: stripSessions(fadingClients),
+          atRisk: stripSessions(atRiskClients),
         },
         userRole: session.user.role
       })
