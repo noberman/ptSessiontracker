@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getUserAccessibleLocations } from '@/lib/user-locations'
-import { getClientState, getClientStateFilterWhereClause, type ClientState } from '@/lib/package-status'
+import { getClientState, type ClientState } from '@/lib/package-status'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -21,14 +21,13 @@ export async function GET(request: NextRequest) {
   const clientStatesParam = searchParams.get('clientStates') || ''
 
   const skip = (page - 1) * limit
+  const showArchived = searchParams.get('showArchived') === 'true'
 
-  const statusParam = searchParams.get('status')
   const where: any = {}
 
-  // Filter by status (comma-separated, default: ACTIVE)
-  if (statusParam) {
-    const statuses = statusParam.split(',').filter(Boolean)
-    where.status = statuses.length === 1 ? statuses[0] : { in: statuses }
+  // Handle status filtering
+  if (showArchived) {
+    where.status = { in: ['ACTIVE', 'ARCHIVED'] }
   } else {
     where.status = 'ACTIVE'
   }
@@ -48,28 +47,11 @@ export async function GET(request: NextRequest) {
     where.locationId = locationId
   }
 
-  // Handle client state filter
-  if (clientStatesParam) {
-    const clientStates = clientStatesParam.split(',').filter(Boolean) as ClientState[]
-    if (clientStates.length > 0) {
-      const stateFilter = getClientStateFilterWhereClause(clientStates)
-      if (stateFilter.OR) {
-        // Multiple states - need to combine with existing conditions
-        if (where.AND) {
-          where.AND.push(stateFilter)
-        } else {
-          where.AND = [stateFilter]
-        }
-      } else if (Object.keys(stateFilter).length > 0) {
-        // Single state condition
-        if (where.AND) {
-          where.AND.push(stateFilter)
-        } else {
-          Object.assign(where, stateFilter)
-        }
-      }
-    }
-  }
+  // Client state filtering is done in-memory after fetching (see below)
+  const clientStates = clientStatesParam
+    ? (clientStatesParam.split(',').filter(Boolean) as ClientState[])
+    : []
+  const hasStateFilter = clientStates.length > 0
 
   // Trainers only see their own clients
   if (session.user.role === 'TRAINER') {
@@ -90,61 +72,59 @@ export async function GET(request: NextRequest) {
   // ADMIN sees all (no additional filter)
   
   try {
-    const [clientsRaw, total] = await Promise.all([
-      prisma.client.findMany({
-        where,
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          status: true,
-          locationId: true,
-          location: {
-            select: {
-              name: true,
-            },
+    // When state filter is active, fetch all matching clients (no pagination at DB level)
+    // so we can accurately filter by computed state in-memory, then paginate the result.
+    const clientsRaw = await prisma.client.findMany({
+      where,
+      ...(hasStateFilter ? {} : { skip, take: limit }),
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        status: true,
+        locationId: true,
+        location: {
+          select: {
+            name: true,
           },
-          primaryTrainer: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-          // Include packages for state derivation
-          packages: {
-            select: {
-              id: true,
-              remainingSessions: true,
-              totalSessions: true,
-              expiresAt: true,
-            },
-          },
-          // Most recent session for lastSessionDate
-          sessions: {
-            select: { sessionDate: true },
-            orderBy: { sessionDate: 'desc' as const },
-            take: 1,
-          },
-          _count: {
-            select: {
-              packages: true,
-            },
-          },
-          createdAt: true,
-          updatedAt: true,
         },
-        orderBy: {
-          name: 'asc',
+        primaryTrainer: {
+          select: {
+            name: true,
+            email: true,
+          },
         },
-      }),
-      prisma.client.count({ where }),
-    ])
+        // Include packages for state derivation
+        packages: {
+          select: {
+            id: true,
+            remainingSessions: true,
+            totalSessions: true,
+            expiresAt: true,
+          },
+        },
+        // Most recent session for lastSessionDate
+        sessions: {
+          select: { sessionDate: true },
+          orderBy: { sessionDate: 'desc' as const },
+          take: 1,
+        },
+        _count: {
+          select: {
+            packages: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    })
 
     // Calculate client state for each client
-    const clients = clientsRaw.map(client => {
+    const allClients = clientsRaw.map(client => {
       const clientState = getClientState({
         packages: client.packages,
         lastSessionDate: client.sessions[0]?.sessionDate ?? null,
@@ -156,6 +136,16 @@ export async function GET(request: NextRequest) {
         clientState,
       }
     })
+
+    // Post-filter by computed state when state filter is active
+    const filteredClients = hasStateFilter
+      ? allClients.filter(c => c.clientState && clientStates.includes(c.clientState))
+      : allClients
+
+    const total = hasStateFilter ? filteredClients.length : await prisma.client.count({ where })
+    const clients = hasStateFilter
+      ? filteredClients.slice(skip, skip + limit)
+      : filteredClients
 
     return NextResponse.json({
       clients,

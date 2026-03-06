@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { ClientTable } from '@/components/clients/ClientTable'
 import { ClientSearch } from '@/components/clients/ClientSearch'
 import { Button } from '@/components/ui/Button'
-import { getClientState, getClientStateFilterWhereClause, type ClientState } from '@/lib/package-status'
+import { getClientState, type ClientState } from '@/lib/package-status'
 
 export default async function ClientsPage({
   searchParams,
@@ -126,26 +126,9 @@ export default async function ClientsPage({
     }
   }
 
-  // Handle client state filter
-  // Handle client state filter (computed states for ACTIVE clients)
-  if (clientStates.length > 0) {
-    const stateFilter = getClientStateFilterWhereClause(clientStates)
-    if (stateFilter.OR) {
-      // Multiple states - need to combine with existing conditions
-      if (where.AND) {
-        where.AND.push(stateFilter)
-      } else {
-        where.AND = [stateFilter]
-      }
-    } else if (Object.keys(stateFilter).length > 0) {
-      // Single state condition
-      if (where.AND) {
-        where.AND.push(stateFilter)
-      } else {
-        Object.assign(where, stateFilter)
-      }
-    }
-  }
+  // Client state filtering is done in-memory after fetching (see below)
+  // because the DB-level approximation diverges from the accurate in-memory computation.
+  const hasStateFilter = clientStates.length > 0
 
   // Get user's accessible locations for filtering
   const accessibleLocationIds: string[] = []
@@ -182,11 +165,12 @@ export default async function ClientsPage({
   }
   // Only ADMIN role gets organization-wide access without location restrictions
 
-  const [clientsRaw, total, locations, trainers] = await Promise.all([
+  // When state filter is active, fetch all matching clients (no pagination at DB level)
+  // so we can accurately filter by computed state in-memory, then paginate the result.
+  const [clientsRaw, locations, trainers] = await Promise.all([
     prisma.client.findMany({
       where,
-      skip,
-      take: limit,
+      ...(hasStateFilter ? {} : { skip, take: limit }),
       select: {
         id: true,
         name: true,
@@ -233,18 +217,17 @@ export default async function ClientsPage({
         name: 'asc',
       },
     }),
-    prisma.client.count({ where }),
     // Get locations for filter
     session.user.role === 'CLUB_MANAGER' && accessibleLocationIds.length > 0
       ? prisma.location.findMany({
-          where: { 
+          where: {
             id: { in: accessibleLocationIds },
             active: true
           },
           select: { id: true, name: true },
         })
       : prisma.location.findMany({
-          where: { 
+          where: {
             organizationId: session.user.organizationId,
             active: true
           },
@@ -258,7 +241,7 @@ export default async function ClientsPage({
         active: true,
         organizationId: session.user.organizationId,
         ...(session.user.role === 'CLUB_MANAGER' && accessibleLocationIds.length > 0
-          ? { 
+          ? {
               locations: {
                 some: {
                   locationId: { in: accessibleLocationIds }
@@ -277,7 +260,7 @@ export default async function ClientsPage({
   ])
 
   // Calculate client state for each client
-  const clients = clientsRaw.map(client => {
+  const allClients = clientsRaw.map(client => {
     const clientState = getClientState({
       packages: client.packages,
       lastSessionDate: client.sessions[0]?.sessionDate ?? null,
@@ -289,6 +272,16 @@ export default async function ClientsPage({
       clientState,
     }
   })
+
+  // Post-filter by computed state when state filter is active
+  const filteredClients = hasStateFilter
+    ? allClients.filter(c => c.clientState && clientStates.includes(c.clientState))
+    : allClients
+
+  const total = hasStateFilter ? filteredClients.length : await prisma.client.count({ where })
+  const clients = hasStateFilter
+    ? filteredClients.slice(skip, skip + limit)
+    : filteredClients
 
   const pagination = {
     page,
