@@ -1080,25 +1080,28 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
           {/* Mobile: Donut chart */}
           <div className="md:hidden">
             {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart margin={{ top: 5, right: 20, bottom: 5, left: 20 }}>
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
+                    cy="45%"
+                    innerRadius={55}
+                    outerRadius={90}
                     paddingAngle={2}
                     dataKey="value"
                     nameKey="name"
-                    label={({ name, value }) => `${name}: ${value}`}
+                    label={false}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
-                  <Legend />
+                  <Tooltip formatter={(value: number, name: string) => [`${value} sessions`, name]} />
+                  <Legend formatter={(value: string) => {
+                    const item = pieData.find(d => d.name === value)
+                    return item ? `${value}: ${item.value}` : value
+                  }} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
