@@ -1080,19 +1080,18 @@ export function ManagerDashboard({ userId, userName, userRole, locationIds, orgT
           {/* Mobile: Donut chart */}
           <div className="md:hidden">
             {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart margin={{ top: 5, right: 20, bottom: 5, left: 20 }}>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
+                    innerRadius={50}
+                    outerRadius={80}
                     paddingAngle={2}
                     dataKey="value"
                     nameKey="name"
                     label={({ name, value }) => `${name}: ${value}`}
-                    labelLine={false}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
