@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
+import { AppointmentCreateModal } from '@/components/calendar/AppointmentCreateModal'
 
 interface TrainerDashboardProps {
   userId: string
@@ -97,11 +98,12 @@ interface DashboardData {
   }
 }
 
-export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: TrainerDashboardProps) {
+export function TrainerDashboard({ userId, userName, orgTimezone = 'Asia/Singapore' }: TrainerDashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resendingIds, setResendingIds] = useState<Set<string>>(new Set())
   const [period, setPeriod] = useState('month')
+  const [createModalOpen, setCreateModalOpen] = useState(false)
 
   const fetchData = async () => {
     try {
@@ -213,12 +215,10 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
             </div>
           </div>
           {/* Desktop New Appointment button */}
-          <Link href="/calendar" className="hidden md:block">
-            <Button className="flex items-center">
-              <Plus className="w-4 h-4 mr-2" />
-              New Appointment
-            </Button>
-          </Link>
+          <Button className="hidden md:flex items-center" onClick={() => setCreateModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Appointment
+          </Button>
         </div>
       </div>
 
@@ -547,14 +547,24 @@ export function TrainerDashboard({ userName, orgTimezone = 'Asia/Singapore' }: T
       </Card>
 
       {/* Mobile Floating Action Button */}
-      <Link href="/calendar" className="md:hidden">
-        <Button 
-          className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg w-14 h-14 p-0 flex items-center justify-center"
-          size="lg"
-        >
-          <Plus className="w-6 h-6" />
-        </Button>
-      </Link>
+      <Button
+        className="md:hidden fixed bottom-6 right-6 z-50 rounded-full shadow-lg w-14 h-14 p-0 flex items-center justify-center"
+        size="lg"
+        onClick={() => setCreateModalOpen(true)}
+      >
+        <Plus className="w-6 h-6" />
+      </Button>
+
+      {/* Create Appointment Modal */}
+      <AppointmentCreateModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        trainerId={userId}
+        trainerName={userName}
+        date={new Date().toLocaleDateString('en-CA', { timeZone: orgTimezone })}
+        time="09:00"
+        onCreated={fetchData}
+      />
     </div>
   )
 }
