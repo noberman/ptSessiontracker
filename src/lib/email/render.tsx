@@ -2,12 +2,10 @@ import { render } from '@react-email/components'
 import React from 'react'
 import SessionValidationEmail from './templates/session-validation'
 import AppointmentConfirmationEmail from './templates/appointment-confirmation'
-import AppointmentCancellationEmail from './templates/appointment-cancellation'
 import AppointmentReminderEmail from './templates/appointment-reminder'
 import type {
   SessionValidationEmailData,
   AppointmentConfirmationEmailData,
-  AppointmentCancellationEmailData,
   AppointmentReminderEmailData,
 } from './types'
 import { format } from 'date-fns'
@@ -74,39 +72,6 @@ Time: ${formattedTime}
 Duration: ${data.duration} minutes
 Trainer: ${data.trainerName}
 Location: ${data.locationName}${data.notes ? `\nNotes: ${data.notes}` : ''}
-
-If you have any questions, please contact your trainer or gym management.
-
-PT Session Tracker
-  `.trim()
-
-  return { html, text }
-}
-
-/**
- * Render appointment cancellation email to HTML
- */
-export async function renderAppointmentCancellationEmail(
-  data: AppointmentCancellationEmailData
-): Promise<{ html: string; text: string }> {
-  const html = await render(<AppointmentCancellationEmail {...data} />)
-
-  const zonedDate = toZonedTime(data.scheduledAt, data.orgTimezone)
-  const formattedDate = format(zonedDate, 'EEEE, MMMM d, yyyy')
-  const formattedTime = format(zonedDate, 'h:mm a')
-  const typeLabel = data.appointmentType === 'FITNESS_ASSESSMENT' ? 'Fitness Assessment' : 'Session'
-
-  const text = `
-Appointment Cancelled
-
-Hi ${data.recipientName}, your appointment has been cancelled by ${data.cancelledByName}.
-
-Type: ${typeLabel}
-Date: ${formattedDate}
-Time: ${formattedTime}
-Duration: ${data.duration} minutes
-Trainer: ${data.trainerName}
-Location: ${data.locationName}
 
 If you have any questions, please contact your trainer or gym management.
 

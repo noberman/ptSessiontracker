@@ -63,13 +63,3 @@ export interface AppointmentReminderEmailData {
   orgTimezone: string
 }
 
-export interface AppointmentCancellationEmailData {
-  recipientName: string
-  appointmentType: string
-  scheduledAt: Date
-  duration: number
-  trainerName: string
-  locationName: string
-  cancelledByName: string
-  orgTimezone: string
-}

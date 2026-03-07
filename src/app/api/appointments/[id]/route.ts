@@ -4,8 +4,6 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { resolveAvailability } from '@/lib/availability'
 import { orgTimeToUtc } from '@/utils/timezone'
-import { renderAppointmentCancellationEmail } from '@/lib/email/render'
-import { EmailService } from '@/lib/email/sender'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -254,18 +252,6 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       },
     })
 
-    // Send cancellation email if status changed to CANCELLED
-    if (status === 'CANCELLED') {
-      await sendCancellationEmailIfFuture({
-        appointment: updated,
-        prospectName: existing.prospectName,
-        prospectEmail: existing.prospectEmail,
-        duration: updated.duration ?? existing.duration,
-        type: existing.type,
-        cancelledByName: session.user.name || 'Staff',
-      })
-    }
-
     return NextResponse.json(updated)
   } catch (error) {
     console.error('Failed to update appointment:', error)
@@ -327,16 +313,6 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       },
     })
 
-    // Send cancellation email only for future appointments
-    await sendCancellationEmailIfFuture({
-      appointment: cancelled,
-      prospectName: existing.prospectName,
-      prospectEmail: existing.prospectEmail,
-      duration: existing.duration,
-      type: existing.type,
-      cancelledByName: session.user.name || 'Staff',
-    })
-
     return NextResponse.json(cancelled)
   } catch (error) {
     console.error('Failed to cancel appointment:', error)
@@ -350,71 +326,3 @@ function timeToMinutes(time: string): number {
   return h * 60 + m
 }
 
-/** Send cancellation email if the appointment is in the future */
-async function sendCancellationEmailIfFuture({
-  appointment,
-  prospectName,
-  prospectEmail,
-  duration,
-  type,
-  cancelledByName,
-}: {
-  appointment: {
-    id: string
-    scheduledAt: Date
-    organizationId: string
-    trainer: { id: string; name: string }
-    client: { name: string; email: string } | null
-    location: { name: string }
-  }
-  prospectName: string | null
-  prospectEmail: string | null
-  duration: number
-  type: string
-  cancelledByName: string
-}) {
-  const isFuture = appointment.scheduledAt > new Date()
-  if (!isFuture) return
-
-  const recipientEmail = appointment.client?.email || prospectEmail
-  const recipientName = appointment.client?.name || prospectName
-  if (!recipientEmail || !recipientName) return
-
-  try {
-    const org = await prisma.organization.findUnique({
-      where: { id: appointment.organizationId },
-      select: { timezone: true },
-    })
-    const orgTimezone = org?.timezone || 'Asia/Singapore'
-
-    const { html, text } = await renderAppointmentCancellationEmail({
-      recipientName,
-      appointmentType: type,
-      scheduledAt: appointment.scheduledAt,
-      duration,
-      trainerName: appointment.trainer.name,
-      locationName: appointment.location.name,
-      cancelledByName,
-      orgTimezone,
-    })
-
-    await EmailService.sendWithRetry({
-      to: recipientEmail,
-      subject: `Appointment Cancelled with ${appointment.trainer.name}`,
-      html,
-      text,
-      template: 'appointment-cancellation',
-      metadata: {
-        appointmentId: appointment.id,
-        trainerId: appointment.trainer.id,
-      },
-    })
-
-    console.log('Cancellation email sent:', {
-      to: recipientEmail,
-      appointmentId: appointment.id,
-    })
-  } catch (emailError) {
-    console.error('Failed to send cancellation email:', emailError)
-  }
-}
