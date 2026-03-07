@@ -33,6 +33,8 @@ model Organization {
   // Calendar settings
   calendarEnabled       Boolean            @default(true)
   availabilityEditableBy String            @default("MANAGER_ONLY") // "MANAGER_ONLY" or "MANAGER_AND_TRAINER"
+  // Commission settings
+  commissionIncludesNoShows Boolean        @default(false)
   clients               Client[]
   // Commission v1 (to be removed after migration)
   commissionTiers       CommissionTier[]

@@ -42,6 +42,9 @@ model Organization {
   calendarEnabled       Boolean            @default(false)
   availabilityEditableBy String            @default("MANAGER_ONLY") // "MANAGER_ONLY" or "MANAGER_AND_TRAINER"
 
+  // Commission settings
+  commissionIncludesNoShows Boolean        @default(false)
+
   // Beta Access
   betaAccess            Boolean?           @default(false)
   betaExpiresAt         DateTime?          @db.Timestamptz(6)
@@ -76,6 +79,7 @@ model Organization {
 - timezone defaults to "Asia/Singapore" for date-based calculations
 - `calendarEnabled` feature flag controls access to calendar/scheduling features
 - `availabilityEditableBy` controls who can set trainer availability: "MANAGER_ONLY" or "MANAGER_AND_TRAINER"
+- `commissionIncludesNoShows` when true, no-show sessions (cancelled with NO_SHOW appointment status) are included in commission calculations
 
 ### CommissionProfile
 Defines a commission profile with a calculation method and trigger type. Organizations can have multiple profiles and assign them to individual users.
@@ -1170,9 +1174,10 @@ enum ClientStatus {
 
 ## Schema Versioning
 
-Current Version: **4.1.0**
+Current Version: **4.2.0**
 
 ### Version History
+- 4.2.0: Added `commissionIncludesNoShows` field to Organization model for optional no-show commission inclusion
 - 4.1.0: Added `saleOutcome` field to Appointment model for fitness assessment sale tracking
 - 4.0.0: Calendar & scheduling system (TrainerAvailability, Appointment, SessionFeedback), AppointmentType and AppointmentStatus enums, Organization calendar settings (calendarEnabled, availabilityEditableBy)
 - 3.0.0: Commission v2 system (CommissionProfile, CommissionTierV2, CommissionCalculation), UserLocation junction table, split payments, organization timezone, session cancellation support, demo data flags

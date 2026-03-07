@@ -68,6 +68,12 @@ export class CommissionCalculatorV2 {
       throw new Error(`User ${userId} has no commission profile assigned`)
     }
     
+    // Build session filter - optionally include no-show sessions
+    const includeNoShows = user.organization?.commissionIncludesNoShows ?? false
+    const cancelledFilter = includeNoShows
+      ? { OR: [{ cancelled: false }, { cancelled: true, appointment: { status: 'NO_SHOW' as const } }] }
+      : { cancelled: false }
+
     // Get ALL validated sessions for the period (no location filter) - used for tier calculation
     // Tier is always calculated across all locations
     const allSessions = await prisma.session.findMany({
@@ -78,7 +84,7 @@ export class CommissionCalculatorV2 {
           lte: period.end
         },
         validated: true,
-        cancelled: false,
+        ...cancelledFilter,
         package: {
           active: true
         }

@@ -184,7 +184,8 @@ export async function PUT(request: NextRequest, props: RouteParams) {
         ...(body.stripeCustomerId !== undefined && { stripeCustomerId: body.stripeCustomerId }),
         ...(body.stripeSubscriptionId !== undefined && { stripeSubscriptionId: body.stripeSubscriptionId }),
         ...(body.calendarEnabled !== undefined && { calendarEnabled: Boolean(body.calendarEnabled) }),
-        ...(body.availabilityEditableBy && ['MANAGER_ONLY', 'MANAGER_AND_TRAINER'].includes(body.availabilityEditableBy) && { availabilityEditableBy: body.availabilityEditableBy })
+        ...(body.availabilityEditableBy && ['MANAGER_ONLY', 'MANAGER_AND_TRAINER'].includes(body.availabilityEditableBy) && { availabilityEditableBy: body.availabilityEditableBy }),
+        ...(body.commissionIncludesNoShows !== undefined && { commissionIncludesNoShows: Boolean(body.commissionIncludesNoShows) })
       }
     })
     

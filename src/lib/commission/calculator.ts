@@ -164,13 +164,20 @@ export async function calculateTrainerCommission(
   const startDate = startOfMonth(month)
   const endDate = endOfMonth(month)
   
-  // Get trainer info
+  // Get trainer info with organization
   const trainer = await prisma.user.findUnique({
-    where: { id: trainerId }
+    where: { id: trainerId },
+    include: { organization: { select: { commissionIncludesNoShows: true } } }
   })
-  
+
   if (!trainer) return null
-  
+
+  // Build session filter - optionally include no-show sessions
+  const includeNoShows = trainer.organization?.commissionIncludesNoShows ?? false
+  const cancelledFilter = includeNoShows
+    ? { OR: [{ cancelled: false }, { cancelled: true, appointment: { status: 'NO_SHOW' as const } }] }
+    : { cancelled: false }
+
   // Get validated sessions for the month with location info
   // Only include sessions from active packages (exclude deleted/deactivated packages)
   const sessions = await prisma.session.findMany({
@@ -181,7 +188,7 @@ export async function calculateTrainerCommission(
         lte: endDate
       },
       validated: true,
-      cancelled: false,
+      ...cancelledFilter,
       package: { active: true }
     },
     include: {
