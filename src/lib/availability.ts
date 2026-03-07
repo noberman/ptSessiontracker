@@ -18,7 +18,7 @@ interface DayAvailability {
  * 1. Specific-date entries take precedence over recurring entries
  * 2. If a specific-date entry has isAvailable=false, the day is blocked
  * 3. If no specific-date entries exist, fall back to recurring dayOfWeek entries
- * 4. If no entries at all for a day, the trainer is not available
+ * 4. If no entries at all for a day, the trainer is fully available (00:00–23:45)
  *
  * All dates are interpreted in the organization's timezone.
  * startDate/endDate are plain YYYY-MM-DD strings representing calendar dates in org tz.
@@ -93,7 +93,8 @@ export function resolveAvailability(
           blocks,
         })
       } else {
-        result.set(dateKey, { isAvailable: false, blocks: [] })
+        // No availability defined — default to fully open
+        result.set(dateKey, { isAvailable: true, blocks: [{ startTime: '00:00', endTime: '23:45' }] })
       }
     }
 
