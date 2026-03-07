@@ -31,7 +31,7 @@ model Organization {
   betaPreviousTier      SubscriptionTier?
   timezone              String             @default("Asia/Singapore")
   // Calendar settings
-  calendarEnabled       Boolean            @default(false)
+  calendarEnabled       Boolean            @default(true)
   availabilityEditableBy String            @default("MANAGER_ONLY") // "MANAGER_ONLY" or "MANAGER_AND_TRAINER"
   clients               Client[]
   // Commission v1 (to be removed after migration)
